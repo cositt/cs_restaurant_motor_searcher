@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_restagrup_restaurant_search,restagrup.restaurant.search,model_restagrup_restaurant_search,base.group_user,1,1,1,1
+access_restagrup_restaurant_search_line,restagrup.restaurant.search.line,model_restagrup_restaurant_search_line,base.group_user,1,1,1,1

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="purchase_order_form_restaurant" model="ir.ui.view">
+        <field name="name">purchase.order.form.restaurant</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_restagrup_sale_order" type="object"
+                        class="oe_stat_button" icon="fa-file-text-o"
+                        invisible="not restagrup_sale_order_id">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Presupuesto</span>
+                    </div>
+                </button>
+            </xpath>
+            <xpath expr="//div[@name='button_box']" position="after">
+                <widget name="web_ribbon" title="Incidencia grave"
+                        invisible="restagrup_response_state != 'serious_issue'"
+                        bg_color="text-bg-danger"/>
+                <group invisible="not restagrup_response_state">
+                    <field name="restagrup_response_state" readonly="1"/>
+                    <field name="restagrup_response_summary" readonly="1"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

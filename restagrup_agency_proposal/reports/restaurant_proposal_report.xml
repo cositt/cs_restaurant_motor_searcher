@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_restaurant_proposal_document">
+        <t t-call="web.external_layout">
+            <t t-set="doc" t-value="doc.with_context(lang=doc.partner_id.lang)"/>
+            <div class="page">
+                <h2>Propuesta de restaurantes</h2>
+                <div class="row mb-4">
+                    <div class="col-6">
+                        <strong>Agencia:</strong> <span t-field="doc.partner_id.name"/>
+                    </div>
+                    <div class="col-6">
+                        <strong>Referencia:</strong> <span t-field="doc.name"/>
+                    </div>
+                </div>
+
+                <t t-foreach="doc.restagrup_proposal_groups()" t-as="group">
+                    <t t-set="restaurant" t-value="group[0]"/>
+                    <t t-set="lines" t-value="group[1]"/>
+                    <div class="mb-4" style="page-break-inside: avoid;">
+                        <h4 t-field="restaurant.name"/>
+                        <p class="text-muted mb-1">
+                            <span t-field="restaurant.city"/>
+                            <t t-if="restaurant.restaurant_cuisine_type">
+                                · <span t-field="restaurant.restaurant_cuisine_type"/>
+                            </t>
+                            <t t-if="restaurant.restaurant_capacity">
+                                · Aforo: <span t-field="restaurant.restaurant_capacity"/>
+                            </t>
+                            <t t-if="restaurant.restaurant_bus_parking">
+                                · Parking de autobús
+                            </t>
+                        </p>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Servicio</th>
+                                    <th>Fecha</th>
+                                    <th class="text-end">Comensales</th>
+                                    <th class="text-end">Precio/persona</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="lines" t-as="line">
+                                    <td><span t-field="line.name"/></td>
+                                    <td><span t-field="line.service_date"/></td>
+                                    <td class="text-end"><span t-field="line.product_uom_qty"/></td>
+                                    <td class="text-end"><span t-field="line.price_unit"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </div>
+        </t>
+    </template>
+
+    <template id="report_restaurant_proposal_raw">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="restagrup_agency_proposal.report_restaurant_proposal_document"
+                   t-lang="doc.partner_id.lang"/>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_restaurant_proposal" model="ir.actions.report">
+        <field name="name">Propuesta de restaurantes</field>
+        <field name="model">sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">restagrup_agency_proposal.report_restaurant_proposal_raw</field>
+        <field name="report_file">restagrup_agency_proposal.report_restaurant_proposal_raw</field>
+        <field name="print_report_name">'Propuesta restaurantes - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="sale.model_sale_order"/>
+        <field name="binding_type">report</field>
+    </record>
+</odoo>

@@ -1,0 +1,111 @@
+# -*- coding: utf-8 -*-
+from odoo.exceptions import UserError
+from odoo.tests.common import TransactionCase, tagged
+
+
+@tagged('post_install', '-at_install')
+class TestRestaurantSearchSale(TransactionCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.client_partner = cls.env['res.partner'].create({'name': 'Cliente Test'})
+        cls.lead = cls.env['crm.lead'].create({
+            'name': 'Grupo de prueba', 'partner_id': cls.client_partner.id,
+        })
+        cls.search = cls.env['restagrup.restaurant.search'].create({
+            'lead_id': cls.lead.id, 'city': 'Madrid', 'min_capacity': 20,
+        })
+        cls.restaurant_partner = cls.env['res.partner'].create({
+            'name': 'Restaurante Test', 'is_restaurant': True, 'city': 'Madrid',
+        })
+
+    def _create_chosen_line(self, search=None, quote_amount=200):
+        line = self.env['restagrup.restaurant.search.line'].create({
+            'search_id': (search or self.search).id, 'source': 'partner', 'name': 'Restaurante Test',
+            'partner_id': self.restaurant_partner.id, 'etiqueta': 'presupuesto_recibido',
+            'quote_amount': quote_amount,
+        })
+        line.action_toggle_chosen()
+        return line
+
+    def test_create_sale_order_requires_chosen_line(self):
+        search = self.env['restagrup.restaurant.search'].create({
+            'lead_id': self.lead.id, 'city': 'Madrid',
+        })
+        with self.assertRaises(UserError):
+            search.action_create_sale_order()
+
+    def test_create_sale_order_requires_partner_contact(self):
+        search = self.env['restagrup.restaurant.search'].create({
+            'lead_id': self.lead.id, 'city': 'Madrid',
+        })
+        line = self.env['restagrup.restaurant.search.line'].create({
+            'search_id': search.id, 'source': 'google', 'name': 'Sin contacto',
+            'etiqueta': 'presupuesto_recibido', 'quote_amount': 100,
+        })
+        line.action_toggle_chosen()
+        with self.assertRaises(UserError):
+            search.action_create_sale_order()
+
+    def test_create_sale_order_requires_lead_partner(self):
+        lead_no_partner = self.env['crm.lead'].create({'name': 'Sin cliente'})
+        search = self.env['restagrup.restaurant.search'].create({
+            'lead_id': lead_no_partner.id, 'city': 'Madrid',
+        })
+        self._create_chosen_line(search=search)
+        with self.assertRaises(UserError):
+            search.action_create_sale_order()
+
+    def test_create_sale_order_creates_correct_line(self):
+        search = self.env['restagrup.restaurant.search'].create({
+            'lead_id': self.lead.id, 'city': 'Madrid',
+        })
+        line = self._create_chosen_line(search=search, quote_amount=200)
+        search.action_create_sale_order()
+        order = search.sale_order_id
+        self.assertTrue(order)
+        self.assertEqual(order.partner_id, self.client_partner)
+        self.assertEqual(len(order.order_line), 1)
+        sale_line = order.order_line[0]
+        self.assertEqual(sale_line.restaurant_id, self.restaurant_partner)
+        self.assertEqual(sale_line.restagrup_search_line_id, line)
+        self.assertEqual(sale_line.price_unit, 200.0)  # sin margen configurado -> 0%
+
+    def test_create_sale_order_applies_margin(self):
+        self.env['ir.config_parameter'].sudo().set_param('restagrup.default_margin_percent', '20')
+        search = self.env['restagrup.restaurant.search'].create({
+            'lead_id': self.lead.id, 'city': 'Madrid',
+        })
+        self._create_chosen_line(search=search, quote_amount=200)
+        search.action_create_sale_order()
+        sale_line = search.sale_order_id.order_line[0]
+        self.assertEqual(sale_line.price_unit, 240.0)
+
+    def test_create_sale_order_is_idempotent(self):
+        search = self.env['restagrup.restaurant.search'].create({
+            'lead_id': self.lead.id, 'city': 'Madrid',
+        })
+        self._create_chosen_line(search=search, quote_amount=200)
+        search.action_create_sale_order()
+        first_order = search.sale_order_id
+        action = search.action_create_sale_order()
+        self.assertEqual(search.sale_order_id, first_order)
+        self.assertEqual(action['res_id'], first_order.id)
+
+    def test_pipeline_stage_sale_created(self):
+        search = self.env['restagrup.restaurant.search'].create({
+            'lead_id': self.lead.id, 'city': 'Madrid',
+        })
+        self._create_chosen_line(search=search, quote_amount=200)
+        self.assertEqual(search.pipeline_stage, 'chosen')
+        search.action_create_sale_order()
+        self.assertEqual(search.pipeline_stage, 'sale_created')
+
+    def test_restaurant_worked_with_reflects_purchase_orders(self):
+        partner = self.env['res.partner'].create({'name': 'Otro Rest', 'is_restaurant': True})
+        self.assertFalse(partner.restaurant_worked_with)
+        po = self.env['purchase.order'].create({'partner_id': partner.id})
+        self.assertTrue(partner.restaurant_worked_with)
+        po.write({'state': 'cancel'})
+        self.assertFalse(partner.restaurant_worked_with)

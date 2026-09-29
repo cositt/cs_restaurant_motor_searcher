@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <record id="restaurant_taberna_grupo" model="res.partner">
+            <field name="name">La Taberna del Grupo</field>
+            <field name="is_restaurant" eval="True"/>
+            <field name="company_type">company</field>
+            <field name="city">Madrid</field>
+            <field name="street">Calle Gran Vía 45</field>
+            <field name="email">reservas@lataberna.es</field>
+            <field name="phone">+34 91 123 4567</field>
+            <field name="restaurant_capacity">120</field>
+            <field name="restaurant_cuisine_type">Española</field>
+            <field name="restaurant_price_level">2</field>
+            <field name="restaurant_suitable_corporate" eval="True"/>
+            <field name="restaurant_suitable_school" eval="True"/>
+            <field name="restaurant_suitable_family" eval="True"/>
+            <field name="restaurant_internal_notes">Salón privado &gt;40 pax. Contactar con Pedro.</field>
+        </record>
+
+        <record id="restaurant_europa_barcelona" model="res.partner">
+            <field name="name">Restaurante Europa Barcelona</field>
+            <field name="is_restaurant" eval="True"/>
+            <field name="company_type">company</field>
+            <field name="city">Barcelona</field>
+            <field name="street">Passeig de Gràcia 80</field>
+            <field name="email">grupos@europabarcelona.com</field>
+            <field name="phone">+34 93 456 7890</field>
+            <field name="restaurant_capacity">200</field>
+            <field name="restaurant_cuisine_type">Mediterránea</field>
+            <field name="restaurant_price_level">3</field>
+            <field name="restaurant_suitable_corporate" eval="True"/>
+            <field name="restaurant_suitable_school" eval="False"/>
+            <field name="restaurant_suitable_family" eval="True"/>
+            <field name="restaurant_internal_notes">Depósito 30% para grupos &gt;50 pax.</field>
+        </record>
+
+        <record id="restaurant_asador_el_prado" model="res.partner">
+            <field name="name">Asador El Prado</field>
+            <field name="is_restaurant" eval="True"/>
+            <field name="company_type">company</field>
+            <field name="city">Madrid</field>
+            <field name="street">Calle Serrano 12</field>
+            <field name="email">info@asadorelprado.es</field>
+            <field name="phone">+34 91 789 0123</field>
+            <field name="restaurant_capacity">80</field>
+            <field name="restaurant_cuisine_type">Carnes y asados</field>
+            <field name="restaurant_price_level">3</field>
+            <field name="restaurant_suitable_corporate" eval="True"/>
+            <field name="restaurant_suitable_school" eval="False"/>
+            <field name="restaurant_suitable_family" eval="True"/>
+        </record>
+
+        <record id="restaurant_meson_los_arcos" model="res.partner">
+            <field name="name">Mesón Los Arcos</field>
+            <field name="is_restaurant" eval="True"/>
+            <field name="company_type">company</field>
+            <field name="city">Sevilla</field>
+            <field name="street">Calle Sierpes 33</field>
+            <field name="email">reservas@mesonlosarcos.com</field>
+            <field name="phone">+34 95 234 5678</field>
+            <field name="restaurant_capacity">150</field>
+            <field name="restaurant_cuisine_type">Andaluza</field>
+            <field name="restaurant_price_level">2</field>
+            <field name="restaurant_suitable_corporate" eval="True"/>
+            <field name="restaurant_suitable_school" eval="True"/>
+            <field name="restaurant_suitable_family" eval="True"/>
+            <field name="restaurant_internal_notes">Espectáculo flamenco bajo petición.</field>
+        </record>
+
+        <record id="restaurant_levante" model="res.partner">
+            <field name="name">Restaurante Levante</field>
+            <field name="is_restaurant" eval="True"/>
+            <field name="company_type">company</field>
+            <field name="city">Valencia</field>
+            <field name="street">Avenida del Puerto 156</field>
+            <field name="phone">+34 96 345 6789</field>
+            <field name="restaurant_capacity">180</field>
+            <field name="restaurant_cuisine_type">Arroces y paellas</field>
+            <field name="restaurant_price_level">2</field>
+            <field name="restaurant_suitable_corporate" eval="False"/>
+            <field name="restaurant_suitable_school" eval="True"/>
+            <field name="restaurant_suitable_family" eval="True"/>
+            <field name="restaurant_internal_notes">Especialistas paella grupos. Mínimo 20 pax.</field>
+        </record>
+
+        <record id="restaurant_casa_botin" model="res.partner">
+            <field name="name">Casa Botín</field>
+            <field name="is_restaurant" eval="True"/>
+            <field name="company_type">company</field>
+            <field name="city">Madrid</field>
+            <field name="street">Cuchilleros 17</field>
+            <field name="email">reservas@botin.es</field>
+            <field name="phone">+34 91 366 4217</field>
+            <field name="restaurant_capacity">60</field>
+            <field name="restaurant_cuisine_type">Castellana</field>
+            <field name="restaurant_price_level">3</field>
+            <field name="restaurant_suitable_corporate" eval="True"/>
+            <field name="restaurant_suitable_school" eval="False"/>
+            <field name="restaurant_suitable_family" eval="True"/>
+            <field name="restaurant_internal_notes">Restaurante más antiguo del mundo (Guinness). Reservar con 2 semanas.</field>
+        </record>
+
+    </data>
+</odoo>

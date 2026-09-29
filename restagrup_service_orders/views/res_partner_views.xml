@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_form_restaurant_worked_with" model="ir.ui.view">
+        <field name="name">res.partner.form.restaurant.worked.with</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="restagrup_restaurants.view_partner_form_restaurant"/>
+        <field name="arch" type="xml">
+            <field name="restaurant_internal_rating" position="before">
+                <field name="restaurant_worked_with"/>
+            </field>
+        </field>
+    </record>
+</odoo>

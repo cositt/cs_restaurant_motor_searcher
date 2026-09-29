@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_order_form_proposal" model="ir.ui.view">
+        <field name="name">sale.order.form.proposal</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="%(action_report_restaurant_proposal)d" type="action"
+                        string="Imprimir propuesta" class="btn-secondary"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

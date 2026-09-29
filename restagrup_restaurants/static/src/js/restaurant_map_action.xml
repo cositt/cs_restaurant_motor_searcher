@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="restagrup_restaurants.RestaurantMapAction">
+        <div class="o_restagrup_map_action">
+            <div class="o_restagrup_map_container" t-ref="map"/>
+        </div>
+    </t>
+</templates>

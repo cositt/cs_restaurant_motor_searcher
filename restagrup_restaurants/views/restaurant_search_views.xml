@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_restaurant_search_form" model="ir.ui.view">
+        <field name="name">restagrup.restaurant.search.form</field>
+        <field name="model">restagrup.restaurant.search</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_search" type="object" string="Buscar restaurantes"
+                            class="btn-primary" invisible="not city"/>
+                    <button name="action_view_on_map" type="object" string="Ver en mapa"
+                            class="btn-secondary" invisible="not line_ids"/>
+                    <field name="pipeline_stage" widget="statusbar"
+                           statusbar_visible="searching,quotes_requested,quotes_received,chosen"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="display_name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="lead_id" options="{'no_create': True}"/>
+                            <field name="city"/>
+                            <field name="street"/>
+                            <field name="zip"/>
+                            <field name="min_capacity"/>
+                            <field name="require_bus_parking"/>
+                        </group>
+                        <group>
+                            <field name="cuisine_type"/>
+                            <field name="max_price_level"/>
+                            <field name="chosen_line_id" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="user_id" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Tipo de local a buscar">
+                        <field name="search_type_restaurant"/>
+                        <field name="search_type_bar"/>
+                        <field name="search_type_cafe"/>
+                        <field name="search_type_fastfood"/>
+                    </group>
+                    <group string="Notas de la búsqueda">
+                        <field name="notes" nolabel="1"/>
+                    </group>
+                    <notebook>
+                        <page name="results" string="Resultados">
+                            <div class="d-flex align-items-center mb-2" style="gap:8px" invisible="not line_ids">
+                                <label for="sort_by" string="Ordenar por" class="mb-0"/>
+                                <field name="sort_by" nolabel="1" style="max-width:220px"/>
+                                <button name="action_apply_sort" type="object" string="Aplicar" class="btn-secondary btn-sm"/>
+                            </div>
+                            <field name="line_ids">
+                                <kanban class="o_restagrup_rest_kanban" create="false">
+                                    <field name="name"/>
+                                    <field name="source"/>
+                                    <field name="address"/>
+                                    <field name="phone"/>
+                                    <field name="email"/>
+                                    <field name="rating"/>
+                                    <field name="review_count"/>
+                                    <field name="partner_id"/>
+                                    <field name="cuisine_type"/>
+                                    <field name="price_label"/>
+                                    <field name="capacity"/>
+                                    <field name="bus_parking"/>
+                                    <field name="suitable_corporate"/>
+                                    <field name="suitable_school"/>
+                                    <field name="suitable_family"/>
+                                    <field name="internal_notes"/>
+                                    <field name="etiqueta"/>
+                                    <field name="quote_amount"/>
+                                    <field name="quote_days_pending"/>
+                                    <field name="quote_is_stale"/>
+                                    <field name="partner_restaurant_rating"/>
+                                    <field name="is_chosen"/>
+                                    <field name="google_maps_url"/>
+                                    <templates>
+                                        <t t-name="card">
+                                            <div class="o_restagrup_rest_card_header">
+                                                <h4>
+                                                    <t t-esc="record.name.value"/>
+                                                    <span t-if="record.is_chosen.raw_value" class="o_restagrup_chosen_star" title="Elegido"> ★</span>
+                                                </h4>
+                                                <span t-attf-class="o_restagrup_rest_source_badge source_{{record.source.raw_value}}">
+                                                    <t t-if="record.source.raw_value == 'partner'">En Odoo</t>
+                                                    <t t-else="">Google</t>
+                                                </span>
+                                            </div>
+                                                <div class="o_restagrup_rating_row" t-if="record.partner_id.raw_value">
+                                                    <span t-if="record.partner_restaurant_rating.raw_value"
+                                                          t-attf-class="badge-rating rating-{{record.partner_restaurant_rating.raw_value}}">
+                                                        <t t-esc="record.partner_restaurant_rating.value"/>
+                                                    </span>
+                                                    <button name="action_rate_liked" type="object" class="btn btn-link btn-sm" title="Nos gustó">👍</button>
+                                                    <button name="action_rate_neutral" type="object" class="btn btn-link btn-sm" title="Neutral">➖</button>
+                                                    <button name="action_rate_disliked" type="object" class="btn btn-link btn-sm" title="No repetir">👎</button>
+                                                </div>
+                                                <div class="o_restagrup_rest_dir" t-if="record.address.raw_value">
+                                                    📍 <t t-esc="record.address.value"/>
+                                                </div>
+                                                <div class="o_restagrup_rest_tags">
+                                                    <span class="tag" t-if="record.rating.raw_value">★ <t t-esc="record.rating.raw_value"/> (<t t-esc="record.review_count.raw_value"/>)</span>
+                                                    <span class="tag" t-if="record.cuisine_type.raw_value"><t t-esc="record.cuisine_type.value"/></span>
+                                                    <span class="tag" t-if="record.price_label.raw_value"><t t-esc="record.price_label.value"/></span>
+                                                    <span class="tag" t-if="record.capacity.raw_value">Hasta <t t-esc="record.capacity.raw_value"/> pax</span>
+                                                    <span class="tag" t-if="record.bus_parking.raw_value">🚌 Parking bus</span>
+                                                    <span class="tag" t-if="record.suitable_corporate.raw_value">Corporativo</span>
+                                                    <span class="tag" t-if="record.suitable_school.raw_value">Escolar</span>
+                                                    <span class="tag" t-if="record.suitable_family.raw_value">Familiar</span>
+                                                </div>
+                                                <div class="o_restagrup_rest_notes" t-if="record.internal_notes.raw_value">
+                                                    📝 <t t-esc="record.internal_notes.value"/>
+                                                </div>
+                                                <div class="o_restagrup_rest_actions">
+                                                    <a t-if="record.google_maps_url.raw_value" t-att-href="record.google_maps_url.raw_value"
+                                                       target="_blank" role="button" class="btn btn-outline-secondary btn-sm">Maps</a>
+                                                    <a t-if="record.phone.raw_value" t-attf-href="tel:{{record.phone.raw_value}}"
+                                                       role="button" class="btn btn-outline-secondary btn-sm"><t t-esc="record.phone.value"/></a>
+                                                    <a t-if="record.email.raw_value" t-attf-href="mailto:{{record.email.raw_value}}"
+                                                       role="button" class="btn btn-outline-secondary btn-sm">Email</a>
+                                                    <button t-if="!record.partner_id.raw_value" name="action_add_as_partner" type="object"
+                                                            class="btn btn-link btn-sm">Añadir como contacto</button>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap:6px">
+                                                    <span t-attf-class="badge-etiqueta etiqueta-{{record.etiqueta.raw_value}}">
+                                                        <t t-esc="record.etiqueta.value"/>
+                                                    </span>
+                                                    <span class="o_restagrup_quote_amount" t-if="record.quote_amount.raw_value">
+                                                        💶 <t t-esc="record.quote_amount.value"/> €
+                                                    </span>
+                                                    <span class="o_restagrup_stale_badge" t-if="record.quote_is_stale.raw_value">
+                                                        ⚠ <t t-esc="record.quote_days_pending.raw_value"/> días sin respuesta
+                                                    </span>
+                                                    <div class="o_restagrup_etiqueta_btn_row">
+                                                        <button name="action_mark_interesado" type="object" class="btn btn-outline-secondary">Interesado</button>
+                                                        <button name="action_mark_descartado" type="object" class="btn btn-outline-secondary">Descartar</button>
+                                                        <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido' and record.etiqueta.raw_value != 'solicitado'"
+                                                                name="action_request_quote" type="object" class="btn btn-outline-primary">Pedir presupuesto</button>
+                                                        <button t-if="record.etiqueta.raw_value == 'solicitado'"
+                                                                name="action_request_quote" type="object" class="btn btn-outline-primary">Reenviar petición</button>
+                                                        <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido'"
+                                                                name="action_open_quote_form" type="object" class="btn btn-outline-primary">Registrar presupuesto</button>
+                                                        <button t-if="record.etiqueta.raw_value == 'solicitado' or record.etiqueta.raw_value == 'presupuesto_recibido'"
+                                                                name="action_view_conversation" type="object" class="btn btn-outline-secondary">Ver conversación</button>
+                                                        <button name="action_toggle_chosen" type="object" class="btn btn-outline-success">
+                                                            <t t-if="record.is_chosen.raw_value">Quitar elegido</t>
+                                                            <t t-else="">Elegir</t>
+                                                        </button>
+                                                    </div>
+                                            </div>
+                                        </t>
+                                    </templates>
+                                </kanban>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_restaurant_search_line_quote_form" model="ir.ui.view">
+        <field name="name">restagrup.restaurant.search.line.quote.form</field>
+        <field name="model">restagrup.restaurant.search.line</field>
+        <field name="arch" type="xml">
+            <form string="Registrar presupuesto">
+                <group>
+                    <field name="name" readonly="1"/>
+                </group>
+                <group string="Extraer de la respuesta del restaurante (opcional)">
+                    <field name="quote_raw_text" nolabel="1" placeholder="Pega aquí el email o mensaje del restaurante..."/>
+                    <button name="action_extract_quote_from_text" type="object"
+                            string="Extraer con IA" class="btn-secondary"/>
+                </group>
+                <group>
+                    <field name="quote_amount"/>
+                    <field name="quote_notes"/>
+                </group>
+                <footer>
+                    <button name="action_register_quote" type="object" string="Registrar" class="btn-primary"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_restaurant_search_list" model="ir.ui.view">
+        <field name="name">restagrup.restaurant.search.list</field>
+        <field name="model">restagrup.restaurant.search</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="create_date" string="Fecha"/>
+                <field name="lead_id"/>
+                <field name="city"/>
+                <field name="min_capacity"/>
+                <field name="line_count" string="Resultados"/>
+                <field name="chosen_line_id" string="Elegido"/>
+                <field name="pipeline_stage" string="Estado" widget="badge"
+                       decoration-info="pipeline_stage == 'searching'"
+                       decoration-warning="pipeline_stage == 'quotes_requested'"
+                       decoration-primary="pipeline_stage == 'quotes_received'"
+                       decoration-success="pipeline_stage == 'chosen'"/>
+                <field name="user_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_restaurant_search" model="ir.actions.act_window">
+        <field name="name">Búsquedas de restaurantes</field>
+        <field name="res_model">restagrup.restaurant.search</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_restaurant_search" name="Buscar restaurantes" parent="menu_restagrup_root"
+              action="action_restaurant_search" sequence="20"/>
+</odoo>

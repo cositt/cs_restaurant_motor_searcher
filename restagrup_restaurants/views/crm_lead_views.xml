@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="crm_lead_view_form_restaurant_search" model="ir.ui.view">
+        <field name="name">crm.lead.form.restaurant.search</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <div name="button_box" position="inside">
+                <button name="action_view_restaurant_searches" type="object"
+                        class="oe_stat_button" icon="fa-cutlery"
+                        invisible="restagrup_restaurant_search_count == 0">
+                    <field name="restagrup_restaurant_search_count" widget="statinfo" string="Búsquedas rest."/>
+                </button>
+            </div>
+            <xpath expr="//div[hasclass('oe_title')]" position="after">
+                <div class="mb-2" invisible="restagrup_restaurant_search_count &gt; 0">
+                    <button name="action_search_restaurants" type="object" string="🍽 Buscar restaurantes"
+                            class="btn-secondary"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

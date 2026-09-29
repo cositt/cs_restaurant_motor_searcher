@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_restaurant_search_form_sale" model="ir.ui.view">
+        <field name="name">restagrup.restaurant.search.form.sale</field>
+        <field name="model">restagrup.restaurant.search</field>
+        <field name="inherit_id" ref="restagrup_restaurants.view_restaurant_search_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_create_sale_order" type="object"
+                        string="Crear presupuesto de venta" class="btn-primary"
+                        invisible="not chosen_line_id or sale_order_id"/>
+                <button name="action_create_sale_order" type="object"
+                        string="Ver presupuesto de venta" class="btn-secondary"
+                        invisible="not sale_order_id"/>
+            </xpath>
+            <field name="chosen_line_id" position="after">
+                <field name="sale_order_id" invisible="not sale_order_id"/>
+            </field>
+            <field name="partner_restaurant_rating" position="after">
+                <field name="partner_worked_with"/>
+            </field>
+            <xpath expr="//div[hasclass('o_restagrup_rating_row')]" position="inside">
+                <span t-if="record.partner_worked_with.raw_value" class="o_restagrup_worked_badge">✓ Ya trabajado</span>
+            </xpath>
+            <field name="pipeline_stage" position="attributes">
+                <attribute name="statusbar_visible">searching,quotes_requested,quotes_received,chosen,sale_created</attribute>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_restaurant_search_list_sale" model="ir.ui.view">
+        <field name="name">restagrup.restaurant.search.list.sale</field>
+        <field name="model">restagrup.restaurant.search</field>
+        <field name="inherit_id" ref="restagrup_restaurants.view_restaurant_search_list"/>
+        <field name="arch" type="xml">
+            <field name="pipeline_stage" position="attributes">
+                <attribute name="decoration-success">pipeline_stage in ('chosen', 'sale_created')</attribute>
+            </field>
+        </field>
+    </record>
+</odoo>

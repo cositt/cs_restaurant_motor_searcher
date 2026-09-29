@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="crm_lead_view_form_restagrup" model="ir.ui.view">
+        <field name="name">crm.lead.form.restagrup</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page name="restagrup_ai" string="Datos IA"
+                      invisible="not restagrup_extraction_state">
+                    <div class="alert alert-info" role="alert"
+                         invisible="restagrup_extraction_state != 'done'">
+                        Extraído automáticamente del email -- revisar antes de convertir en presupuesto.
+                    </div>
+                    <div class="alert alert-warning" role="alert"
+                         invisible="restagrup_extraction_state not in ('error', 'no_data')">
+                        No se pudieron extraer datos automáticamente. Rellenar a mano.
+                    </div>
+                    <group>
+                        <group>
+                            <field name="restagrup_extraction_state" readonly="1"/>
+                            <field name="restagrup_extraction_provider" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="restagrup_city"/>
+                            <field name="restagrup_pax"/>
+                            <field name="restagrup_service_date"/>
+                            <field name="restagrup_group_type"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

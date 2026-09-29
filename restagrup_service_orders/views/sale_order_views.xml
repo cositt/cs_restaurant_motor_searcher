@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_order_form_restaurant" model="ir.ui.view">
+        <field name="name">sale.order.form.restaurant</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='order_line']/form" position="inside">
+                <group string="Restagrup">
+                    <field name="restaurant_id"/>
+                    <field name="service_date"/>
+                    <field name="service_meal"/>
+                </group>
+            </xpath>
+            <xpath expr="//field[@name='order_line']/list/field[@name='name']" position="after">
+                <field name="restaurant_id" optional="show"/>
+                <field name="service_date" optional="show"/>
+                <field name="service_meal" optional="show"/>
+            </xpath>
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_restaurant_pos" type="object"
+                        class="oe_stat_button" icon="fa-cutlery"
+                        invisible="not restaurant_po_count">
+                    <field name="restaurant_po_count" widget="statinfo" string="Hojas de servicio"/>
+                </button>
+            </xpath>
+            <xpath expr="//header" position="inside">
+                <button name="action_send_restaurant_orders" type="object"
+                        string="Enviar hojas de servicio" class="btn-secondary"
+                        invisible="state != 'sale' or not restaurant_po_count"/>
+                <button name="action_resend_restaurant_orders" type="object"
+                        string="Reenviar cambios" class="btn-warning"
+                        invisible="not restaurant_changes_pending"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

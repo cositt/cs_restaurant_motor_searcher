@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_form_restaurant" model="ir.ui.view">
+        <field name="name">res.partner.form.restaurant</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/notebook" position="inside">
+                <page name="restaurant" string="Restaurante">
+                    <group>
+                        <field name="is_restaurant"/>
+                    </group>
+                    <group invisible="not is_restaurant">
+                        <group>
+                            <field name="restaurant_internal_rating"/>
+                            <field name="restaurant_capacity"/>
+                            <field name="restaurant_bus_parking"/>
+                            <field name="restaurant_closed_weekday"/>
+                            <field name="restaurant_language"/>
+                            <field name="restaurant_cuisine_type"/>
+                            <field name="restaurant_price_level"/>
+                        </group>
+                        <group>
+                            <field name="restaurant_suitable_corporate"/>
+                            <field name="restaurant_suitable_school"/>
+                            <field name="restaurant_suitable_family"/>
+                            <field name="restaurant_direct_contact"/>
+                            <field name="restaurant_iban"/>
+                        </group>
+                    </group>
+                    <group invisible="not is_restaurant">
+                        <field name="restaurant_internal_notes" nolabel="1" placeholder="Notas internas del equipo..."/>
+                    </group>
+                    <group string="Google Places" invisible="not is_restaurant" groups="base.group_no_one">
+                        <field name="restaurant_google_place_id" readonly="1"/>
+                        <field name="restaurant_google_rating" readonly="1"/>
+                        <field name="restaurant_google_review_count" readonly="1"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_partner_restaurant_list" model="ir.ui.view">
+        <field name="name">res.partner.list.restaurant</field>
+        <field name="model">res.partner</field>
+        <field name="arch" type="xml">
+            <list string="Restaurantes">
+                <field name="name"/>
+                <field name="city"/>
+                <field name="restaurant_capacity"/>
+                <field name="restaurant_bus_parking"/>
+                <field name="restaurant_cuisine_type"/>
+                <field name="phone"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_restaurant_list" model="ir.actions.act_window">
+        <field name="name">Restaurantes</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('is_restaurant', '=', True)]</field>
+        <field name="context">{'default_is_restaurant': True, 'default_company_type': 'company'}</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_partner_restaurant_list')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('base.view_partner_form')})]"/>
+    </record>
+
+    <menuitem id="menu_restagrup_root" name="Restagrup" sequence="60"
+              web_icon="restagrup_restaurants,static/description/icon.png"/>
+    <menuitem id="menu_restaurant_list" name="Restaurantes" parent="menu_restagrup_root"
+              action="action_restaurant_list" sequence="10"/>
+</odoo>
