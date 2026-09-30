@@ -28,21 +28,22 @@ class SaleOrder(models.Model):
         help='"confirmados/total", vacío si el pedido no tiene hojas de servicio.',
     )
 
+    @api.depends('restaurant_po_ids')
     def _compute_restaurant_po_count(self):
         for order in self:
-            order.restaurant_po_count = len(order.restaurant_po_ids)
+            order.restaurant_po_count = len(order.sudo().restaurant_po_ids)
 
     @api.depends('restaurant_po_ids.restagrup_needs_resend')
     def _compute_restaurant_changes_pending(self):
         for order in self:
             order.restaurant_changes_pending = bool(
-                order.restaurant_po_ids.filtered('restagrup_needs_resend')
+                order.sudo().restaurant_po_ids.filtered('restagrup_needs_resend')
             )
 
     @api.depends('restaurant_po_ids.state', 'restaurant_po_ids.restagrup_response_state')
     def _compute_restagrup_confirmation(self):
         for order in self:
-            active_pos = order.restaurant_po_ids.filtered(lambda po: po.state != 'cancel')
+            active_pos = order.sudo().restaurant_po_ids.filtered(lambda po: po.state != 'cancel')
             confirmed = len(active_pos.filtered(lambda po: po.restagrup_response_state == 'accepted'))
             order.restagrup_confirmed_count = confirmed
             order.restagrup_pending_count = len(active_pos) - confirmed
@@ -66,6 +67,8 @@ class SaleOrder(models.Model):
         searches.message_post_if_exists(body)
 
     def _sync_restaurant_purchase_orders(self):
+        # Las hojas de servicio las genera el sistema: quien confirma el presupuesto puede ser
+        # un comercial sin permisos de Compras, así que todo lo que toca purchase.order va con sudo.
         """Genera una hoja de servicio (purchase.order) por cada restaurante nuevo
         en las líneas de este presupuesto, y añade a las hojas ya existentes las
         líneas nuevas que aparezcan para un restaurante que ya tenía una."""
@@ -75,11 +78,11 @@ class SaleOrder(models.Model):
             if line.restaurant_id and not line.display_type:
                 lines_by_restaurant[line.restaurant_id] |= line
 
-        po_by_restaurant = {po.partner_id: po for po in self.restaurant_po_ids}
+        po_by_restaurant = {po.partner_id: po for po in self.sudo().restaurant_po_ids}
         for restaurant, lines in lines_by_restaurant.items():
             po = po_by_restaurant.get(restaurant)
             if not po:
-                self.env['purchase.order'].create({
+                self.env['purchase.order'].sudo().create({
                     'partner_id': restaurant.id,
                     'origin': self.name,
                     'restagrup_sale_order_id': self.id,
@@ -123,10 +126,10 @@ class SaleOrder(models.Model):
         template = self.env.ref('purchase.email_template_edi_purchase', raise_if_not_found=False)
         for order in self:
             order._sync_restaurant_purchase_orders()
-            draft_pos = order.restaurant_po_ids.filtered(lambda po: po.state == 'draft')
+            draft_pos = order.sudo().restaurant_po_ids.filtered(lambda po: po.state == 'draft')
             for po in draft_pos:
                 if template:
-                    template.send_mail(po.id, force_send=True)
+                    template.sudo().send_mail(po.id, force_send=True)
                 po.write({'state': 'sent'})
                 order._restagrup_log_on_searches(
                     _('Hoja de servicio enviada a %s.') % po.partner_id.name
@@ -141,7 +144,7 @@ class SaleOrder(models.Model):
         for order in self:
             order._sync_restaurant_purchase_orders()
             resent_any = False
-            for po in order.restaurant_po_ids.filtered('restagrup_needs_resend'):
+            for po in order.sudo().restaurant_po_ids.filtered('restagrup_needs_resend'):
                 resent_any = True
                 changed_lines = po._restagrup_changed_lines()
                 change_log = []
@@ -166,7 +169,7 @@ class SaleOrder(models.Model):
                         )
                     )
                 if template:
-                    template.send_mail(po.id, force_send=True)
+                    template.sudo().send_mail(po.id, force_send=True)
                 order._restagrup_log_on_searches(_('Cambios reenviados a %(restaurant)s: %(changes)s') % {
                     'restaurant': po.partner_id.name,
                     'changes': '; '.join(change_log) or _('sin cambios de cantidad'),
