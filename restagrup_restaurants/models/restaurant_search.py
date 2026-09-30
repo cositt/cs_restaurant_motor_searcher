@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import time
+from datetime import timedelta
 from urllib.parse import quote
 
 import requests
@@ -59,6 +60,11 @@ PIPELINE_STAGE_SELECTION = [
 # Antigüedad a partir de la cual una petición de presupuesto "solicitado" se marca
 # como colgada en el kanban -- aviso visual, no bloquea nada.
 QUOTE_STALE_DAYS = 3
+QUOTE_REMINDER_DEFAULT_TEXT = (
+    'Hola,\n\nOs escribimos de %(company)s: hace unos días os pedimos presupuesto para un'
+    ' evento y todavía no hemos recibido respuesta. ¿Podríais enviárnoslo o decirnos si no'
+    ' os es posible?\n\nGracias.'
+)
 
 SORT_BY_SELECTION = [
     ('default', 'Por defecto'),
@@ -503,6 +509,11 @@ class RestaurantSearchLine(models.Model):
              ' importe -- siempre a revisar antes de registrar, nunca se registra sola.',
     )
     quote_requested_date = fields.Datetime(string='Fecha de solicitud', copy=False)
+    quote_reminder_sent_date = fields.Datetime(
+        string='Recordatorio enviado', copy=False,
+        help='Fecha del recordatorio automático. Solo se manda uno por petición: se'
+             ' vacía al volver a pedir presupuesto.',
+    )
     quote_days_pending = fields.Integer(
         string='Días esperando presupuesto', compute='_compute_quote_days_pending',
     )
@@ -642,12 +653,7 @@ class RestaurantSearchLine(models.Model):
         contacto (solo lo tienen los resultados 'Ya en Odoo' o los Google ya
         convertidos a partner a mano, Google Places nunca devuelve email)."""
         self.ensure_one()
-        email_to = (self.partner_id.email or self.email or '').strip()
-        if not email_to:
-            raise UserError(_(
-                'Este resultado no tiene email de contacto. Añádelo como contacto'
-                ' (o edítalo en la ficha) antes de pedir presupuesto.'
-            ))
+        email_to = self._get_quote_email_to()
         search = self.search_id
         subject = _('Petición de presupuesto — %(city)s, %(pax)s pax') % {
             'city': search.city or '',
@@ -677,10 +683,70 @@ class RestaurantSearchLine(models.Model):
             outgoing_email_to=email_to,
         )
 
-        self.write({'etiqueta': 'solicitado', 'quote_requested_date': fields.Datetime.now()})
+        self.write({
+            'etiqueta': 'solicitado',
+            'quote_requested_date': fields.Datetime.now(),
+            'quote_reminder_sent_date': False,
+        })
         search.message_post_if_exists(_(
             'Presupuesto solicitado a %(name)s (%(email)s).'
         ) % {'name': self.name, 'email': email_to})
+
+    def _get_quote_email_to(self):
+        self.ensure_one()
+        email_to = (self.partner_id.email or self.email or '').strip()
+        if not email_to:
+            raise UserError(_(
+                'Este resultado no tiene email de contacto. Añádelo como contacto'
+                ' (o edítalo en la ficha) antes de pedir presupuesto.'
+            ))
+        return email_to
+
+    def action_send_quote_reminder(self):
+        """Recordatorio de una petición sin respuesta. Mismo mecanismo de hilo que
+        action_request_quote (message_post con outgoing_email_to), pero con un texto
+        propio y configurable -- no repite el cuerpo de la petición original."""
+        self.ensure_one()
+        email_to = self._get_quote_email_to()
+        search = self.search_id
+        subject = _('Recordatorio: petición de presupuesto — %(city)s, %(pax)s pax') % {
+            'city': search.city or '',
+            'pax': search.min_capacity or '?',
+        }
+        text = self.env['ir.config_parameter'].sudo().get_param(
+            'restagrup.quote_reminder_text',
+        ) or QUOTE_REMINDER_DEFAULT_TEXT % {'company': self.env.company.name}
+        body_html = Markup('<br/>').join(
+            Markup.escape(line) for line in text.splitlines() + ['', self.env.user.name]
+        )
+        self.message_post(
+            body=body_html,
+            subject=subject,
+            message_type='email',
+            subtype_xmlid='mail.mt_comment',
+            email_from=search.user_id.email or self.env.user.email,
+            outgoing_email_to=email_to,
+        )
+        self.write({'quote_reminder_sent_date': fields.Datetime.now()})
+
+    @api.model
+    def _cron_send_quote_reminders(self):
+        """Cron diario: un recordatorio por cada petición colgada que aún no lo
+        tenga. Una línea sin email no debe parar al resto."""
+        threshold = fields.Datetime.now() - timedelta(days=QUOTE_STALE_DAYS)
+        lines = self.search([
+            ('etiqueta', '=', 'solicitado'),
+            ('quote_requested_date', '<=', threshold),
+            ('quote_reminder_sent_date', '=', False),
+        ])
+        for line in lines:
+            try:
+                with self.env.cr.savepoint():
+                    line.action_send_quote_reminder()
+            except UserError as exc:
+                _logger.warning(
+                    'Recordatorio de presupuesto omitido para la línea %s: %s', line.id, exc,
+                )
 
     def message_update(self, msg_dict, update_vals=None):
         res = super().message_update(msg_dict, update_vals=update_vals)

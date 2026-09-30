@@ -284,3 +284,79 @@ class TestRestaurantSearch(TransactionCase):
         ):
             line.message_update({'body': '<p>480 euros.</p>'})
         self.assertFalse(line.quote_amount)
+
+    # --- recordatorio automático (cron) de peticiones colgadas ---
+
+    def _stale_line(self, **vals):
+        defaults = {
+            'etiqueta': 'solicitado',
+            'email': 'chef@example.com',
+            'quote_requested_date': Datetime.now() - timedelta(days=5),
+        }
+        defaults.update(vals)
+        return self._create_line(**defaults)
+
+    def _reminder_messages(self, line):
+        return line.message_ids.filtered(lambda m: m.message_type == 'email')
+
+    def test_send_quote_reminder_posts_thread_message_and_stamps_date(self):
+        line = self._stale_line()
+        line.action_send_quote_reminder()
+        messages = self._reminder_messages(line)
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages.outgoing_email_to, 'chef@example.com')
+        self.assertTrue(messages.message_id)
+        self.assertTrue(line.quote_reminder_sent_date)
+
+    def test_send_quote_reminder_uses_configured_text(self):
+        self.env['ir.config_parameter'].sudo().set_param(
+            'restagrup.quote_reminder_text', 'Texto propio de recordatorio XYZ',
+        )
+        line = self._stale_line()
+        line.action_send_quote_reminder()
+        self.assertIn('Texto propio de recordatorio XYZ', self._reminder_messages(line).body)
+
+    def test_send_quote_reminder_default_text_differs_from_request(self):
+        line = self._stale_line()
+        line.action_send_quote_reminder()
+        self.assertIn('recordatorio', self._reminder_messages(line).subject.lower())
+
+    def test_send_quote_reminder_requires_email(self):
+        line = self._stale_line(email=False)
+        with self.assertRaises(UserError):
+            line.action_send_quote_reminder()
+
+    def test_cron_sends_reminder_to_stale_lines_only(self):
+        stale = self._stale_line(name='Colgado')
+        recent = self._stale_line(name='Reciente', quote_requested_date=Datetime.now())
+        received = self._stale_line(name='Recibido', etiqueta='presupuesto_recibido')
+        self.env['restagrup.restaurant.search.line']._cron_send_quote_reminders()
+        self.assertEqual(len(self._reminder_messages(stale)), 1)
+        self.assertFalse(self._reminder_messages(recent))
+        self.assertFalse(self._reminder_messages(received))
+
+    def test_cron_does_not_resend_reminder_already_sent(self):
+        line = self._stale_line()
+        model = self.env['restagrup.restaurant.search.line']
+        model._cron_send_quote_reminders()
+        model._cron_send_quote_reminders()
+        self.assertEqual(len(self._reminder_messages(line)), 1)
+
+    def test_cron_skips_lines_without_email_and_keeps_going(self):
+        no_email = self._stale_line(name='Sin email', email=False)
+        with_email = self._stale_line(name='Con email')
+        self.env['restagrup.restaurant.search.line']._cron_send_quote_reminders()
+        self.assertFalse(self._reminder_messages(no_email))
+        self.assertEqual(len(self._reminder_messages(with_email)), 1)
+
+    def test_request_quote_again_resets_reminder_date(self):
+        line = self._stale_line()
+        line.action_send_quote_reminder()
+        line.action_request_quote()
+        self.assertFalse(line.quote_reminder_sent_date)
+
+    def test_reminder_cron_is_registered_and_daily(self):
+        cron = self.env.ref('restagrup_restaurants.ir_cron_send_quote_reminders')
+        self.assertEqual(cron.interval_type, 'days')
+        self.assertEqual(cron.interval_number, 1)
+        self.assertEqual(cron.model_id.model, 'restagrup.restaurant.search.line')

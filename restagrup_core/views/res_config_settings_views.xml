@@ -18,6 +18,11 @@
                             <field name="restagrup_groq_api_key" password="True"/>
                             <field name="restagrup_gemini_api_key" password="True"/>
                         </setting>
+                        <setting id="restagrup_quote_reminder"
+                                 help="Texto del recordatorio automático a restaurantes que no responden a la petición de presupuesto.">
+                            <field name="restagrup_quote_reminder_text"
+                                   placeholder="Vacío = texto por defecto"/>
+                        </setting>
                         <setting id="restagrup_margin"
                                  help="Margen aplicado automáticamente al crear un presupuesto de venta a partir de un restaurante elegido.">
                             <field name="restagrup_default_margin_percent"/> %
