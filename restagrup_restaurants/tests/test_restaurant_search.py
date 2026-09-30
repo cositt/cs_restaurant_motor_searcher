@@ -375,3 +375,51 @@ class TestRestaurantSearch(TransactionCase):
             self.env['ir.config_parameter'].sudo().get_param('restagrup.quote_reminder_text'),
             'Texto de prueba',
         )
+
+    # --- chatter en la búsqueda: aquí se ve todo lo que ocurre con el grupo ---
+
+    def _search_log(self):
+        return ' '.join(str(body) for body in self.search.message_ids.mapped('body'))
+
+    def _lead_log(self):
+        return ' '.join(str(body) for body in self.lead.message_ids.mapped('body'))
+
+    def test_search_has_its_own_chatter(self):
+        self.assertIn('message_ids', self.env['restagrup.restaurant.search']._fields)
+
+    def test_search_form_shows_chatter(self):
+        arch = self.env['restagrup.restaurant.search'].get_view(view_type='form')['arch']
+        self.assertIn('chatter', arch)
+
+    def test_request_quote_is_logged_on_search_and_still_on_lead(self):
+        self._create_line(email='chef@example.com').action_request_quote()
+        self.assertIn('Presupuesto solicitado', self._search_log())
+        self.assertIn('Presupuesto solicitado', self._lead_log())
+
+    def test_interested_and_discarded_are_logged_on_search(self):
+        line = self._create_line(name='Casa Interesante')
+        line.action_mark_interesado()
+        self.assertIn('Casa Interesante', self._search_log())
+        self.assertIn('interesad', self._search_log().lower())
+        line.action_mark_descartado()
+        self.assertIn('descartad', self._search_log().lower())
+
+    def test_choose_and_unchoose_are_logged_on_search(self):
+        line = self._create_line(name='Casa Elegida', etiqueta='presupuesto_recibido', quote_amount=100)
+        with patch.object(self.env.registry['restagrup.restaurant.search.line'], '_fetch_google_phone'):
+            line.action_toggle_chosen()
+            self.assertIn('Elegido', self._search_log())
+            self.assertIn('Casa Elegida', self._search_log())
+            line.action_toggle_chosen()
+        self.assertIn('Ya no es el elegido', self._search_log())
+
+    def test_restaurant_reply_is_logged_on_search_with_excerpt(self):
+        line = self._create_line(name='Casa Que Responde', etiqueta='solicitado', email='chef@example.com')
+        with patch(
+            'odoo.addons.restagrup_core.models.llm_connector.RestagrupLlmConnector.extract_json',
+            return_value=({'importe': 500, 'notas': 'Sin depósito'}, 'groq'),
+        ):
+            line.message_update({'body': '<p>Les podemos ofrecer el menú por 500 euros para el grupo.</p>'})
+        log = self._search_log()
+        self.assertIn('Casa Que Responde', log)
+        self.assertIn('500 euros', log)

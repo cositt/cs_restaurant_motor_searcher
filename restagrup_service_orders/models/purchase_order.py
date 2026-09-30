@@ -61,6 +61,14 @@ class PurchaseOrder(models.Model):
         self.message_post(body=_(
             'Respuesta clasificada por IA (%(provider)s): %(state)s.'
         ) % {'provider': provider, 'state': valid_states[state]})
+        if self.restagrup_sale_order_id:
+            self.restagrup_sale_order_id._restagrup_log_on_searches(_(
+                '%(restaurant)s respondió a la hoja de servicio (%(state)s): %(summary)s'
+            ) % {
+                'restaurant': self.partner_id.name,
+                'state': valid_states[state],
+                'summary': summary or _('sin resumen'),
+            })
 
         if state == 'serious_issue':
             self._restagrup_notify_serious_issue(summary)

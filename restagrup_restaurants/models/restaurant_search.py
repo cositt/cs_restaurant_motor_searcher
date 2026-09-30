@@ -60,6 +60,7 @@ PIPELINE_STAGE_SELECTION = [
 # Antigüedad a partir de la cual una petición de presupuesto "solicitado" se marca
 # como colgada en el kanban -- aviso visual, no bloquea nada.
 QUOTE_STALE_DAYS = 3
+REPLY_EXCERPT_CHARS = 300
 QUOTE_REMINDER_DEFAULT_TEXT = (
     'Hola,\n\nOs escribimos de %(company)s: hace unos días os pedimos presupuesto para un'
     ' evento y todavía no hemos recibido respuesta. ¿Podríais enviárnoslo o decirnos si no'
@@ -90,6 +91,7 @@ GOOGLE_PLACE_TYPE_FIELDS = [
 
 class RestaurantSearch(models.Model):
     _name = 'restagrup.restaurant.search'
+    _inherit = ['mail.thread']
     _description = 'Búsqueda de restaurantes para un grupo'
     _order = 'create_date desc'
     _rec_name = 'display_name'
@@ -253,9 +255,13 @@ class RestaurantSearch(models.Model):
         }
 
     def message_post_if_exists(self, body):
-        # crm.lead lleva chatter; dejamos constancia ahí de que se repitió una búsqueda sin resultados nuevos.
-        if self.lead_id:
-            self.lead_id.message_post(body=body)
+        """Deja constancia de un suceso de la búsqueda en su propio chatter (donde se ve
+        todo lo de este grupo: peticiones, respuestas, elecciones...) y en el del lead,
+        que resume la historia del grupo para quien no abra la búsqueda."""
+        for search in self:
+            search.message_post(body=body, subtype_xmlid='mail.mt_note')
+            if search.lead_id:
+                search.lead_id.message_post(body=body)
 
     def _full_address_text(self):
         """Dirección completa a partir de los campos independientes -- vacía si no
@@ -621,9 +627,13 @@ class RestaurantSearchLine(models.Model):
 
     def action_mark_interesado(self):
         self.write({'etiqueta': 'interesado'})
+        for line in self:
+            line.search_id.message_post_if_exists(_('%s: marcado como interesado.') % line.name)
 
     def action_mark_descartado(self):
         self.write({'etiqueta': 'descartado'})
+        for line in self:
+            line.search_id.message_post_if_exists(_('%s: descartado.') % line.name)
 
     def action_rate_liked(self):
         self._set_restaurant_rating('liked')
@@ -751,8 +761,23 @@ class RestaurantSearchLine(models.Model):
     def message_update(self, msg_dict, update_vals=None):
         res = super().message_update(msg_dict, update_vals=update_vals)
         for line in self:
+            line._restagrup_log_reply(msg_dict)
             line._restagrup_classify_quote_response(msg_dict)
         return res
+
+    def _restagrup_log_reply(self, msg_dict):
+        """Toda respuesta de un restaurante queda reflejada en el chatter de la búsqueda
+        con un extracto, se pueda clasificar o no (p. ej. una respuesta tardía de un
+        restaurante ya descartado)."""
+        self.ensure_one()
+        raw_body = msg_dict.get('body') or ''
+        text = html2plaintext(raw_body).strip() if raw_body else ''
+        if not text:
+            return
+        excerpt = text if len(text) <= REPLY_EXCERPT_CHARS else text[:REPLY_EXCERPT_CHARS].rstrip() + '…'
+        self.search_id.message_post_if_exists(_(
+            '%(name)s ha respondido: «%(excerpt)s»'
+        ) % {'name': self.name, 'excerpt': excerpt})
 
     def _restagrup_classify_quote_response(self, msg_dict):
         """Misma idea que purchase_order.py::_restagrup_classify_response (hoja de
@@ -869,6 +894,7 @@ class RestaurantSearchLine(models.Model):
         self.ensure_one()
         if self.search_id.chosen_line_id.id == self.id:
             self.search_id.chosen_line_id = False
+            self.search_id.message_post_if_exists(_('Ya no es el elegido: %s.') % self.name)
             return
         if self.etiqueta != 'presupuesto_recibido':
             raise UserError(_(
@@ -877,3 +903,6 @@ class RestaurantSearchLine(models.Model):
             ))
         self._fetch_google_phone()
         self.search_id.chosen_line_id = self.id
+        self.search_id.message_post_if_exists(_('Elegido: %(name)s (presupuesto %(amount)s €).') % {
+            'name': self.name, 'amount': self.quote_amount,
+        })

@@ -54,7 +54,16 @@ class SaleOrder(models.Model):
         res = super().action_confirm()
         for order in self:
             order._sync_restaurant_purchase_orders()
+            signed = _(' (firmado por %s)') % order.signed_by if order.signed_by else ''
+            order._restagrup_log_on_searches(_('Presupuesto de venta %(name)s confirmado%(signed)s.') % {
+                'name': order.name, 'signed': signed,
+            })
         return res
+
+    def _restagrup_log_on_searches(self, body):
+        """Refleja un suceso del presupuesto en el chatter de la búsqueda de origen."""
+        searches = self.env['restagrup.restaurant.search'].search([('sale_order_id', 'in', self.ids)])
+        searches.message_post_if_exists(body)
 
     def _sync_restaurant_purchase_orders(self):
         """Genera una hoja de servicio (purchase.order) por cada restaurante nuevo
@@ -109,6 +118,9 @@ class SaleOrder(models.Model):
                 if template:
                     template.send_mail(po.id, force_send=True)
                 po.write({'state': 'sent'})
+                order._restagrup_log_on_searches(
+                    _('Hoja de servicio enviada a %s.') % po.partner_id.name
+                )
 
     def action_resend_restaurant_orders(self):
         """Botón 'reenviar cambios': solo toca las hojas de servicio marcadas
@@ -145,6 +157,10 @@ class SaleOrder(models.Model):
                     )
                 if template:
                     template.send_mail(po.id, force_send=True)
+                order._restagrup_log_on_searches(_('Cambios reenviados a %(restaurant)s: %(changes)s') % {
+                    'restaurant': po.partner_id.name,
+                    'changes': '; '.join(change_log) or _('sin cambios de cantidad'),
+                })
             if resent_any:
                 order._restagrup_send_updated_proforma()
 
@@ -155,15 +171,19 @@ class SaleOrder(models.Model):
         self.ensure_one()
         template = self.env.ref('sale.email_template_edi_sale', raise_if_not_found=False)
         if not self.partner_id.email or not template:
-            self.message_post(body=_(
+            note = _(
                 'Los cambios se reenviaron a los restaurantes, pero no se pudo avisar a la'
                 ' agencia (%(agency)s): no tiene email. Avísala a mano.'
-            ) % {'agency': self.partner_id.name})
+            ) % {'agency': self.partner_id.name}
+            self.message_post(body=note)
+            self._restagrup_log_on_searches(note)
             return
         template.send_mail(self.id, force_send=True)
-        self.message_post(body=_(
+        note = _(
             'Presupuesto actualizado enviado a la agencia (%(email)s).'
-        ) % {'email': self.partner_id.email})
+        ) % {'email': self.partner_id.email}
+        self.message_post(body=note)
+        self._restagrup_log_on_searches(note)
 
     def action_view_restaurant_pos(self):
         self.ensure_one()
