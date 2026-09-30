@@ -6,3 +6,5 @@ from . import purchase_order_line
 from . import restaurant_search
 from . import restaurant_search_line
 from . import res_partner
+from . import product_template
+from . import menu_selection_wizard

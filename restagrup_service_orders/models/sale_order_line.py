@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class SaleOrderLine(models.Model):
@@ -7,6 +7,7 @@ class SaleOrderLine(models.Model):
 
     restaurant_id = fields.Many2one(
         'res.partner', string='Restaurante',
+        compute='_compute_restaurant_id', store=True, readonly=False, precompute=True,
         domain=[('is_restaurant', '=', True)],
         help='Restaurante que da este servicio. Al confirmar el presupuesto, las líneas se'
              ' agrupan por restaurante para generar su hoja de servicio.',
@@ -22,3 +23,15 @@ class SaleOrderLine(models.Model):
         help='Resultado del buscador de restaurantes (con su presupuesto) del que se'
              ' generó esta línea -- trazabilidad búsqueda → presupuesto → venta.',
     )
+
+    @api.depends('product_id')
+    def _compute_restaurant_id(self):
+        """Un menú (producto con restaurante) rellena solo el restaurante de la línea.
+        Si el producto no es un menú se respeta lo que hubiera, para no borrar una
+        asignación manual."""
+        for line in self:
+            menu_restaurant = line.product_id.restaurant_id
+            if menu_restaurant:
+                line.restaurant_id = menu_restaurant
+            elif not line.restaurant_id:
+                line.restaurant_id = False

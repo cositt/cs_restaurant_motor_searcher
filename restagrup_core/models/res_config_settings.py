@@ -23,6 +23,12 @@ class ResConfigSettings(models.TransientModel):
     restagrup_gemini_api_key = fields.Char(
         string='Gemini API Key', config_parameter='restagrup.gemini_api_key',
     )
+    restagrup_quote_reminder_text = fields.Char(
+        string='Texto del recordatorio de presupuesto',
+        config_parameter='restagrup.quote_reminder_text',
+        help='Mensaje que Odoo manda solo a un restaurante que no ha respondido a la'
+             ' petición de presupuesto (una vez, a los 3 días). Vacío = texto por defecto.',
+    )
     restagrup_default_margin_percent = fields.Float(
         string='Margen por defecto (%)', config_parameter='restagrup.default_margin_percent',
         help='Se aplica automáticamente sobre el presupuesto del restaurante al crear'

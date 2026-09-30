@@ -15,6 +15,18 @@ class SaleOrder(models.Model):
     )
     restaurant_po_count = fields.Integer(compute='_compute_restaurant_po_count')
     restaurant_changes_pending = fields.Boolean(compute='_compute_restaurant_changes_pending')
+    restagrup_confirmed_count = fields.Integer(
+        string='Restaurantes confirmados', compute='_compute_restagrup_confirmation',
+        help='Hojas de servicio (no canceladas) cuyo restaurante ya aceptó.',
+    )
+    restagrup_pending_count = fields.Integer(
+        string='Restaurantes sin confirmar', compute='_compute_restagrup_confirmation',
+        help='Hojas de servicio (no canceladas) que aún no han sido aceptadas.',
+    )
+    restagrup_confirmation_summary = fields.Char(
+        string='Confirmaciones', compute='_compute_restagrup_confirmation',
+        help='"confirmados/total", vacío si el pedido no tiene hojas de servicio.',
+    )
 
     def _compute_restaurant_po_count(self):
         for order in self:
@@ -25,6 +37,17 @@ class SaleOrder(models.Model):
         for order in self:
             order.restaurant_changes_pending = bool(
                 order.restaurant_po_ids.filtered('restagrup_needs_resend')
+            )
+
+    @api.depends('restaurant_po_ids.state', 'restaurant_po_ids.restagrup_response_state')
+    def _compute_restagrup_confirmation(self):
+        for order in self:
+            active_pos = order.restaurant_po_ids.filtered(lambda po: po.state != 'cancel')
+            confirmed = len(active_pos.filtered(lambda po: po.restagrup_response_state == 'accepted'))
+            order.restagrup_confirmed_count = confirmed
+            order.restagrup_pending_count = len(active_pos) - confirmed
+            order.restagrup_confirmation_summary = (
+                '%s/%s' % (confirmed, len(active_pos)) if active_pos else False
             )
 
     def action_confirm(self):
@@ -95,7 +118,9 @@ class SaleOrder(models.Model):
         template = self.env.ref('purchase.email_template_edi_purchase', raise_if_not_found=False)
         for order in self:
             order._sync_restaurant_purchase_orders()
+            resent_any = False
             for po in order.restaurant_po_ids.filtered('restagrup_needs_resend'):
+                resent_any = True
                 changed_lines = po._restagrup_changed_lines()
                 change_log = []
                 for line in changed_lines:
@@ -120,6 +145,25 @@ class SaleOrder(models.Model):
                     )
                 if template:
                     template.send_mail(po.id, force_send=True)
+            if resent_any:
+                order._restagrup_send_updated_proforma()
+
+    def _restagrup_send_updated_proforma(self):
+        """Tras reenviar cambios a los restaurantes, la agencia recibe también el
+        presupuesto actualizado desde el mismo botón. Sin email de agencia no se
+        rompe el reenvío a restaurantes: se deja una nota para que alguien la avise."""
+        self.ensure_one()
+        template = self.env.ref('sale.email_template_edi_sale', raise_if_not_found=False)
+        if not self.partner_id.email or not template:
+            self.message_post(body=_(
+                'Los cambios se reenviaron a los restaurantes, pero no se pudo avisar a la'
+                ' agencia (%(agency)s): no tiene email. Avísala a mano.'
+            ) % {'agency': self.partner_id.name})
+            return
+        template.send_mail(self.id, force_send=True)
+        self.message_post(body=_(
+            'Presupuesto actualizado enviado a la agencia (%(email)s).'
+        ) % {'email': self.partner_id.email})
 
     def action_view_restaurant_pos(self):
         self.ensure_one()

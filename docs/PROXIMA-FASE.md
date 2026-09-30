@@ -23,7 +23,16 @@ el PDF.
 
 ## Lo nuevo a construir, en orden sugerido
 
-### A. Recordatorio automático por cron (antes: solo botón manual)
+### A. Recordatorio automático por cron — ✅ CONSTRUIDO 2026-09-30 (solo dev, sin desplegar)
+
+Hecho en `restagrup_restaurants` con TDD (9 tests nuevos, módulo 36/36): campo
+`quote_reminder_sent_date`, `action_send_quote_reminder()`, `_cron_send_quote_reminders()`, cron
+diario `ir_cron_send_quote_reminders` (`data/ir_cron_data.xml`) y texto configurable en Ajustes →
+Restagrup (`restagrup.quote_reminder_text`, vacío = texto por defecto). **Un solo recordatorio por
+petición**: se rearma si se vuelve a pedir presupuesto. Una línea sin email se omite sin parar el
+resto. Pendiente: probar en navegador real y desplegar a prod (necesita SMTP saliente, ver TODO.md).
+
+Diseño original (histórico):
 
 Hoy: `quote_is_stale` calcula el badge "⚠ N días sin respuesta" y hay un botón manual
 "Reenviar petición" (llama a `action_request_quote` otra vez). El documento pide que
@@ -40,7 +49,22 @@ Hoy: `quote_is_stale` calcula el badge "⚠ N días sin respuesta" y hay un bot�
 - Reusa `message_post(..., outgoing_email_to=...)` igual que `action_request_quote()` —
   mismo mecanismo de hilo, no reinventar.
 
-### B. Confirmación del presupuesto con un clic desde el email (verificar antes de programar)
+### B. Confirmación del presupuesto con un clic desde el email — ✅ VERIFICADO 2026-09-30
+
+**Resultado (probado en dev con POST real a `/my/orders/<id>/accept`, sin login):**
+
+- Funciona de serie **con firma, sin pago**: el `sale.order` pasa a `sale`, queda `signed_by`, y
+  `restagrup_service_orders` genera la hoja de servicio (purchase.order) del restaurante.
+- **No existe "un clic" puro en Odoo 19**: el botón de aceptar del portal solo se muestra si el
+  pedido exige firma o pago (`_has_to_be_signed()` / `_has_to_be_paid()`). Con ambos en `False`,
+  `/accept` responde "El pedido no está en un estado que requiera la firma del cliente".
+- **Config obligatoria en Ajustes → Ventas → Confirmación online:** firma = sí, **pago = no**.
+  Por defecto la compañía trae firma **y** pago a `True`, así que la agencia tendría que pagar
+  online. Hay que cambiarlo en dev y en producción.
+- Si se quiere un clic real sin dibujar firma: habría que escribir una ruta propia tokenizada que
+  llame a `action_confirm()`. No se ha hecho; decisión pendiente de Juan.
+
+Texto original del paso (histórico):
 
 El documento describe: la agencia recibe el presupuesto, hace clic, y el `sale.order`
 pasa a confirmado solo. **Esto ya existe nativo en Odoo** (portal de presupuestos +
@@ -55,7 +79,20 @@ aceptación online) — antes de escribir código, verificar en el dev local:
 4. Si no funciona (falta configuración, o el flujo de `restagrup_service_orders` lo
    rompe en algún punto): ahí sí investigar qué lo bloquea antes de tocar código.
 
-### C. Menús como productos con precio (el cambio de modelo más grande)
+### C. Menús como productos con precio — ✅ CONSTRUIDO 2026-09-30 (solo dev, sin commitear)
+
+Diseño confirmado por Juan: extender `product.template` (no modelo nuevo). Hecho en
+`restagrup_service_orders` con TDD (14 tests, `tests/test_restaurant_menus.py`):
+- `product.template.restaurant_id` (valida `is_restaurant`) + `res.partner.menu_ids` + pestaña
+  "Menús" en la ficha del restaurante + campo en el formulario de producto.
+- `sale.order.line.restaurant_id` ahora se calcula desde el producto (editable a mano; no borra una
+  asignación manual si el producto no es un menú).
+- `action_create_sale_order`: si el restaurante elegido tiene menús vendibles, abre el asistente
+  `restagrup.menu.selection.wizard` (marcar menús + cantidad, por defecto `min_capacity`); una línea
+  por menú al **precio del producto, sin margen**. Sin menús: camino antiguo con `quote_amount`.
+- Pendiente: verlo en navegador real (pestaña, asistente); la guía de usuario aún no lo cubre.
+
+Diseño original (histórico):
 
 Hoy `restagrup.restaurant.search.line.quote_amount` es un float suelto y
 `quote_notes` es texto libre. El documento muestra menús como líneas de producto real
@@ -72,7 +109,14 @@ presupuesto sin copiar nada a mano.
   `restagrup_service_orders` (generación de la sale order). Hacerlo el último de los
   tres primeros para no bloquear A y B mientras se diseña bien el modelo de menús.
 
-### D. Resumen "qué restaurante confirmó / cuál no" en el expediente
+### D. Resumen "qué restaurante confirmó / cuál no" — ✅ CONSTRUIDO 2026-09-30 (solo dev)
+
+"Confirmado" = hoja de servicio no cancelada con `restagrup_response_state == 'accepted'` (la
+clasificación IA de la respuesta del restaurante). Campos `restagrup_confirmed_count`,
+`restagrup_pending_count`, `restagrup_confirmation_summary` ("1/3") en `sale_order.py` + stat button
+en la vista del presupuesto. Rechazado / falta info / poco claro cuentan como pendiente. 6 tests.
+
+Diseño original (histórico):
 
 Dato ya existe (`purchase.order.state` por cada hoja de servicio) — falta mostrarlo de
 un vistazo en el `sale.order`.
@@ -81,7 +125,13 @@ un vistazo en el `sale.order`.
   `restagrup_service_orders/models/sale_order.py`.
 - Un stat button o badge en la vista del presupuesto ("2/3 restaurantes confirmados").
 
-### E. Proforma actualizada auto-reenviada a la agencia
+### E. Proforma actualizada auto-reenviada a la agencia — ✅ CONSTRUIDO 2026-09-30 (solo dev)
+
+`action_resend_restaurant_orders` ahora, si reenvió algo a algún restaurante, manda también el
+presupuesto actualizado a la agencia (`sale.email_template_edi_sale`) y lo anota en el chatter. Sin
+email de agencia no falla: deja una nota para avisarla a mano. Sin cambios no manda nada. 3 tests.
+
+Diseño original (histórico):
 
 Hoy `action_resend_restaurant_orders` reenvía solo a los restaurantes. El documento dice
 que la proforma actualizada también sale sola a la agencia desde el mismo sitio.

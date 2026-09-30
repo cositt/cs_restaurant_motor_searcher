@@ -23,6 +23,12 @@
                         invisible="not restaurant_po_count">
                     <field name="restaurant_po_count" widget="statinfo" string="Hojas de servicio"/>
                 </button>
+                <button name="action_view_restaurant_pos" type="object"
+                        class="oe_stat_button" icon="fa-check-circle"
+                        invisible="not restagrup_confirmation_summary">
+                    <field name="restagrup_confirmation_summary" widget="statinfo"
+                           string="Restaurantes confirmados"/>
+                </button>
             </xpath>
             <xpath expr="//header" position="inside">
                 <button name="action_send_restaurant_orders" type="object"
