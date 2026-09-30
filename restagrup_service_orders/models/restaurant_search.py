@@ -116,17 +116,9 @@ class RestaurantSearch(models.Model):
         ) % {'name': order.name, 'restaurant': line.name})
 
     def _apply_default_margin(self, cost_amount):
-        """Precio de venta = coste × (1 + margen/100) -- el margen es global
-        (Ajustes > Restagrup), nunca se muestra desglosado al cliente en la línea.
-        Sin margen configurado, el precio de venta sale igual al coste (0%)."""
-        margin_percent = self.env['ir.config_parameter'].sudo().get_param(
-            'restagrup.default_margin_percent', 0,
-        )
-        try:
-            margin_percent = float(margin_percent or 0)
-        except ValueError:
-            margin_percent = 0.0
-        return cost_amount * (1 + margin_percent / 100)
+        """Precio al cliente = precio del restaurante + margen (20 % por defecto, ajustable en
+        Ajustes → Restagrup). El margen nunca se muestra desglosado en la línea del cliente."""
+        return self.env['restagrup.pricing'].apply_margin(cost_amount)
 
     def _action_view_sale_order(self):
         self.ensure_one()

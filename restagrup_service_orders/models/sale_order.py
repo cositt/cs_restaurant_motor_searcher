@@ -28,21 +28,22 @@ class SaleOrder(models.Model):
         help='"confirmados/total", vacío si el pedido no tiene hojas de servicio.',
     )
 
+    @api.depends('restaurant_po_ids')
     def _compute_restaurant_po_count(self):
         for order in self:
-            order.restaurant_po_count = len(order.restaurant_po_ids)
+            order.restaurant_po_count = len(order.sudo().restaurant_po_ids)
 
     @api.depends('restaurant_po_ids.restagrup_needs_resend')
     def _compute_restaurant_changes_pending(self):
         for order in self:
             order.restaurant_changes_pending = bool(
-                order.restaurant_po_ids.filtered('restagrup_needs_resend')
+                order.sudo().restaurant_po_ids.filtered('restagrup_needs_resend')
             )
 
     @api.depends('restaurant_po_ids.state', 'restaurant_po_ids.restagrup_response_state')
     def _compute_restagrup_confirmation(self):
         for order in self:
-            active_pos = order.restaurant_po_ids.filtered(lambda po: po.state != 'cancel')
+            active_pos = order.sudo().restaurant_po_ids.filtered(lambda po: po.state != 'cancel')
             confirmed = len(active_pos.filtered(lambda po: po.restagrup_response_state == 'accepted'))
             order.restagrup_confirmed_count = confirmed
             order.restagrup_pending_count = len(active_pos) - confirmed
@@ -54,9 +55,20 @@ class SaleOrder(models.Model):
         res = super().action_confirm()
         for order in self:
             order._sync_restaurant_purchase_orders()
+            signed = _(' (firmado por %s)') % order.signed_by if order.signed_by else ''
+            order._restagrup_log_on_searches(_('Presupuesto de venta %(name)s confirmado%(signed)s.') % {
+                'name': order.name, 'signed': signed,
+            })
         return res
 
+    def _restagrup_log_on_searches(self, body):
+        """Refleja un suceso del presupuesto en el chatter de la búsqueda de origen."""
+        searches = self.env['restagrup.restaurant.search'].search([('sale_order_id', 'in', self.ids)])
+        searches.message_post_if_exists(body)
+
     def _sync_restaurant_purchase_orders(self):
+        # Las hojas de servicio las genera el sistema: quien confirma el presupuesto puede ser
+        # un comercial sin permisos de Compras, así que todo lo que toca purchase.order va con sudo.
         """Genera una hoja de servicio (purchase.order) por cada restaurante nuevo
         en las líneas de este presupuesto, y añade a las hojas ya existentes las
         líneas nuevas que aparezcan para un restaurante que ya tenía una."""
@@ -66,11 +78,11 @@ class SaleOrder(models.Model):
             if line.restaurant_id and not line.display_type:
                 lines_by_restaurant[line.restaurant_id] |= line
 
-        po_by_restaurant = {po.partner_id: po for po in self.restaurant_po_ids}
+        po_by_restaurant = {po.partner_id: po for po in self.sudo().restaurant_po_ids}
         for restaurant, lines in lines_by_restaurant.items():
             po = po_by_restaurant.get(restaurant)
             if not po:
-                self.env['purchase.order'].create({
+                self.env['purchase.order'].sudo().create({
                     'partner_id': restaurant.id,
                     'origin': self.name,
                     'restagrup_sale_order_id': self.id,
@@ -88,6 +100,16 @@ class SaleOrder(models.Model):
                     ],
                 })
 
+    def _restagrup_restaurant_cost(self, sale_line):
+        """Precio que cobra el restaurante (lo que lleva su hoja de servicio): nunca el precio al
+        cliente, para no enseñarle el margen de Restagrup. Menú -> su coste; petición sin menús ->
+        el importe del presupuesto que dio el restaurante; línea manual -> el precio de la línea."""
+        product = sale_line.product_id
+        if product.restaurant_id and product.standard_price:
+            return product.standard_price
+        quote = sale_line.restagrup_search_line_id.quote_amount
+        return quote or sale_line.price_unit
+
     def _prepare_restaurant_po_line_vals(self, sale_line):
         planned = sale_line.service_date and fields.Datetime.to_datetime(sale_line.service_date)
         return {
@@ -95,7 +117,7 @@ class SaleOrder(models.Model):
             'name': sale_line.name,
             'product_qty': sale_line.product_uom_qty,
             'product_uom_id': sale_line.product_uom_id.id,
-            'price_unit': sale_line.price_unit,
+            'price_unit': self._restagrup_restaurant_cost(sale_line),
             'date_planned': planned or fields.Datetime.now(),
             'restagrup_sale_line_id': sale_line.id,
         }
@@ -104,11 +126,14 @@ class SaleOrder(models.Model):
         template = self.env.ref('purchase.email_template_edi_purchase', raise_if_not_found=False)
         for order in self:
             order._sync_restaurant_purchase_orders()
-            draft_pos = order.restaurant_po_ids.filtered(lambda po: po.state == 'draft')
+            draft_pos = order.sudo().restaurant_po_ids.filtered(lambda po: po.state == 'draft')
             for po in draft_pos:
                 if template:
-                    template.send_mail(po.id, force_send=True)
+                    template.sudo().send_mail(po.id, force_send=True)
                 po.write({'state': 'sent'})
+                order._restagrup_log_on_searches(
+                    _('Hoja de servicio enviada a %s.') % po.partner_id.name
+                )
 
     def action_resend_restaurant_orders(self):
         """Botón 'reenviar cambios': solo toca las hojas de servicio marcadas
@@ -119,7 +144,7 @@ class SaleOrder(models.Model):
         for order in self:
             order._sync_restaurant_purchase_orders()
             resent_any = False
-            for po in order.restaurant_po_ids.filtered('restagrup_needs_resend'):
+            for po in order.sudo().restaurant_po_ids.filtered('restagrup_needs_resend'):
                 resent_any = True
                 changed_lines = po._restagrup_changed_lines()
                 change_log = []
@@ -144,7 +169,11 @@ class SaleOrder(models.Model):
                         )
                     )
                 if template:
-                    template.send_mail(po.id, force_send=True)
+                    template.sudo().send_mail(po.id, force_send=True)
+                order._restagrup_log_on_searches(_('Cambios reenviados a %(restaurant)s: %(changes)s') % {
+                    'restaurant': po.partner_id.name,
+                    'changes': '; '.join(change_log) or _('sin cambios de cantidad'),
+                })
             if resent_any:
                 order._restagrup_send_updated_proforma()
 
@@ -155,15 +184,19 @@ class SaleOrder(models.Model):
         self.ensure_one()
         template = self.env.ref('sale.email_template_edi_sale', raise_if_not_found=False)
         if not self.partner_id.email or not template:
-            self.message_post(body=_(
+            note = _(
                 'Los cambios se reenviaron a los restaurantes, pero no se pudo avisar a la'
                 ' agencia (%(agency)s): no tiene email. Avísala a mano.'
-            ) % {'agency': self.partner_id.name})
+            ) % {'agency': self.partner_id.name}
+            self.message_post(body=note)
+            self._restagrup_log_on_searches(note)
             return
         template.send_mail(self.id, force_send=True)
-        self.message_post(body=_(
+        note = _(
             'Presupuesto actualizado enviado a la agencia (%(email)s).'
-        ) % {'email': self.partner_id.email})
+        ) % {'email': self.partner_id.email}
+        self.message_post(body=note)
+        self._restagrup_log_on_searches(note)
 
     def action_view_restaurant_pos(self):
         self.ensure_one()

@@ -31,6 +31,7 @@ class MenuSelectionWizardLine(models.TransientModel):
 
     wizard_id = fields.Many2one('restagrup.menu.selection.wizard', required=True, ondelete='cascade')
     product_tmpl_id = fields.Many2one('product.template', string='Menú', required=True)
-    list_price = fields.Float(related='product_tmpl_id.list_price', string='Precio unitario (€)')
+    restaurant_price = fields.Float(related='product_tmpl_id.standard_price', string='Precio del restaurante (€)')
+    client_price = fields.Float(related='product_tmpl_id.restagrup_client_price', string='Precio al cliente (€)')
     selected = fields.Boolean(string='Incluir', default=False)
     quantity = fields.Float(string='Cantidad', default=1.0)

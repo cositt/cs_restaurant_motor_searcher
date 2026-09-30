@@ -24,7 +24,7 @@
                                    placeholder="Vacío = texto por defecto"/>
                         </setting>
                         <setting id="restagrup_margin"
-                                 help="Margen aplicado automáticamente al crear un presupuesto de venta a partir de un restaurante elegido.">
+                                 help="Lo que Restagrup añade al precio del restaurante (20 % por defecto). El cliente paga el precio del restaurante más este porcentaje; la hoja de servicio del restaurante lleva su propio precio.">
                             <field name="restagrup_default_margin_percent"/> %
                         </setting>
                     </block>

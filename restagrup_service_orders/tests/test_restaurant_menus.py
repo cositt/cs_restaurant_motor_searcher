@@ -31,8 +31,9 @@ class TestRestaurantMenus(TransactionCase):
 
     @classmethod
     def _create_menu(cls, name, restaurant, price):
+        # 'price' es lo que cobra el restaurante (standard_price); el del cliente sale con el margen
         return cls.env['product.template'].create({
-            'name': name, 'type': 'service', 'list_price': price,
+            'name': name, 'type': 'service', 'standard_price': price,
             'sale_ok': True, 'restaurant_id': restaurant.id,
         })
 
@@ -121,21 +122,59 @@ class TestRestaurantMenus(TransactionCase):
         self.assertEqual(len(order.order_line), 2)
         by_tmpl = {l.product_template_id: l for l in order.order_line}
         self.assertEqual(by_tmpl[self.menu_lunch].product_uom_qty, 47)
-        self.assertEqual(by_tmpl[self.menu_lunch].price_unit, 32.0)
+        self.assertAlmostEqual(by_tmpl[self.menu_lunch].price_unit, 38.4)  # 32 + 20 %
         self.assertEqual(by_tmpl[self.menu_dinner].product_uom_qty, 30)
-        self.assertEqual(by_tmpl[self.menu_dinner].price_unit, 41.5)
+        self.assertAlmostEqual(by_tmpl[self.menu_dinner].price_unit, 49.8)  # 41,5 + 20 %
         for line in order.order_line:
             self.assertEqual(line.restaurant_id, self.restaurant)
             self.assertEqual(line.restagrup_search_line_id, chosen)
         self.assertEqual(order.partner_id, self.client_partner)
 
-    def test_wizard_price_is_menu_price_without_margin(self):
-        self.env['ir.config_parameter'].sudo().set_param('restagrup.default_margin_percent', '20')
+    def test_wizard_price_is_restaurant_price_plus_configured_margin(self):
+        self.env['ir.config_parameter'].sudo().set_param('restagrup.default_margin_percent', '25')
         self._chosen_line()
         wizard = self._open_wizard()
         wizard.line_ids.filtered(lambda l: l.product_tmpl_id == self.menu_lunch).selected = True
         wizard.action_confirm()
-        self.assertEqual(self.search.sale_order_id.order_line.price_unit, 32.0)
+        self.assertAlmostEqual(self.search.sale_order_id.order_line.price_unit, 40.0)  # 32 + 25 %
+
+    def test_wizard_price_defaults_to_restaurant_price_plus_20_percent(self):
+        self.env['ir.config_parameter'].sudo().search([('key', '=', 'restagrup.default_margin_percent')]).unlink()
+        self._chosen_line()
+        wizard = self._open_wizard()
+        wizard.line_ids.filtered(lambda l: l.product_tmpl_id == self.menu_lunch).selected = True
+        wizard.action_confirm()
+        self.assertAlmostEqual(self.search.sale_order_id.order_line.price_unit, 38.4)
+
+    def test_manual_line_with_menu_gets_restaurant_price_plus_margin(self):
+        order = self._order_with_line(self.menu_lunch)
+        self.assertAlmostEqual(order.order_line.price_unit, 38.4)
+
+    def test_menu_without_restaurant_price_falls_back_to_list_price(self):
+        menu = self.env['product.template'].create({
+            'name': 'Menú sin coste', 'type': 'service', 'list_price': 50.0,
+            'sale_ok': True, 'restaurant_id': self.restaurant.id,
+        })
+        order = self._order_with_line(menu)
+        self.assertAlmostEqual(order.order_line.price_unit, 50.0)
+
+    def test_client_price_field_shows_restaurant_price_plus_margin(self):
+        self.assertAlmostEqual(self.menu_lunch.restagrup_client_price, 38.4)
+
+    def test_client_price_is_zero_for_products_that_are_not_menus(self):
+        plain = self.env['product.template'].create({'name': 'Otro', 'type': 'service', 'standard_price': 10})
+        self.assertEqual(plain.restagrup_client_price, 0.0)
+
+    def test_service_sheet_carries_the_restaurant_price_not_the_client_price(self):
+        self._chosen_line()
+        wizard = self._open_wizard()
+        wizard.line_ids.write({'selected': True})
+        wizard.action_confirm()
+        order = self.search.sale_order_id
+        order.action_confirm()
+        self.assertEqual(
+            sorted(order.restaurant_po_ids.order_line.mapped('price_unit')), [32.0, 41.5],
+        )
 
     def test_wizard_requires_at_least_one_selected_menu(self):
         self._chosen_line()

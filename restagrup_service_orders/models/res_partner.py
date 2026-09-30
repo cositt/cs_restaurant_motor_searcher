@@ -22,5 +22,5 @@ class ResPartner(models.Model):
     def _compute_restaurant_worked_with(self):
         for partner in self:
             partner.restaurant_worked_with = bool(
-                partner.restaurant_purchase_order_ids.filtered(lambda po: po.state != 'cancel')
+                partner.sudo().restaurant_purchase_order_ids.filtered(lambda po: po.state != 'cancel')
             )

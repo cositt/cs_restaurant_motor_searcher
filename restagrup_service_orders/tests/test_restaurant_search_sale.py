@@ -70,7 +70,27 @@ class TestRestaurantSearchSale(TransactionCase):
         sale_line = order.order_line[0]
         self.assertEqual(sale_line.restaurant_id, self.restaurant_partner)
         self.assertEqual(sale_line.restagrup_search_line_id, line)
-        self.assertEqual(sale_line.price_unit, 200.0)  # sin margen configurado -> 0%
+        self.assertAlmostEqual(sale_line.price_unit, 240.0)  # sin ajuste configurado: +20 %
+
+    def test_create_sale_order_respects_an_explicit_zero_margin(self):
+        self.env['ir.config_parameter'].sudo().set_param('restagrup.default_margin_percent', '0')
+        search = self.env['restagrup.restaurant.search'].create({
+            'lead_id': self.lead.id, 'city': 'Madrid',
+        })
+        self._create_chosen_line(search=search, quote_amount=200)
+        search.action_create_sale_order()
+        self.assertAlmostEqual(search.sale_order_id.order_line[0].price_unit, 200.0)
+
+    def test_service_sheet_carries_the_restaurant_quote_not_the_client_price(self):
+        search = self.env['restagrup.restaurant.search'].create({
+            'lead_id': self.lead.id, 'city': 'Madrid',
+        })
+        self._create_chosen_line(search=search, quote_amount=200)
+        search.action_create_sale_order()
+        order = search.sale_order_id
+        self.assertAlmostEqual(order.order_line.price_unit, 240.0)
+        order.action_confirm()
+        self.assertAlmostEqual(order.restaurant_po_ids.order_line.price_unit, 200.0)
 
     def test_create_sale_order_applies_margin(self):
         self.env['ir.config_parameter'].sudo().set_param('restagrup.default_margin_percent', '20')

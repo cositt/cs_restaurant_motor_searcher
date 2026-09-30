@@ -30,8 +30,22 @@ class ResConfigSettings(models.TransientModel):
              ' petición de presupuesto (una vez, a los 3 días). Vacío = texto por defecto.',
     )
     restagrup_default_margin_percent = fields.Float(
-        string='Margen por defecto (%)', config_parameter='restagrup.default_margin_percent',
-        help='Se aplica automáticamente sobre el presupuesto del restaurante al crear'
-             ' el presupuesto de venta (precio venta = presupuesto × (1 + margen/100)).'
-             ' El equipo sigue pudiendo ajustar el precio a mano en la línea antes de enviarla.',
+        string='Margen por defecto (%)', default=20.0,
+        help='Lo que Restagrup añade al precio del restaurante (por defecto 20 %). Se aplica'
+             ' solo al crear el presupuesto de venta: precio al cliente = precio del restaurante'
+             ' × (1 + margen/100). La hoja de servicio del restaurante lleva su propio precio.'
+             ' El equipo puede ajustar el precio a mano en la línea antes de enviarla.',
     )
+
+    def get_values(self):
+        res = super().get_values()
+        res['restagrup_default_margin_percent'] = self.env['restagrup.pricing'].margin_percent()
+        return res
+
+    def set_values(self):
+        super().set_values()
+        # Se guarda a mano: con config_parameter Odoo borra el parámetro cuando vale 0 y volvería
+        # a aplicarse el 20 % por defecto, así que nadie podría poner "sin margen".
+        self.env['ir.config_parameter'].sudo().set_param(
+            'restagrup.default_margin_percent', repr(float(self.restagrup_default_margin_percent)),
+        )
