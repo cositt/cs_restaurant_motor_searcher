@@ -44,6 +44,51 @@ class RestaurantSearch(models.Model):
                 ' -- asígnalo antes de crear el presupuesto de venta.'
             ) % self.lead_id.name)
 
+        menus = self.env['product.template'].search([
+            ('restaurant_id', '=', line.partner_id.id), ('sale_ok', '=', True),
+        ])
+        if menus:
+            return self._action_open_menu_wizard(menus)
+        return self._create_sale_order_from_quote(line)
+
+    def _action_open_menu_wizard(self, menus):
+        self.ensure_one()
+        wizard = self.env['restagrup.menu.selection.wizard'].create({
+            'search_id': self.id,
+            'line_ids': [(0, 0, {
+                'product_tmpl_id': menu.id, 'quantity': self.min_capacity or 1,
+            }) for menu in menus],
+        })
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Elegir menús'),
+            'res_model': wizard._name,
+            'res_id': wizard.id,
+            'view_mode': 'form',
+            'views': [(False, 'form')],
+            'target': 'new',
+        }
+
+    def _create_sale_order_from_menus(self, selection):
+        """selection: lista de (product.product, cantidad). Una línea por menú, al
+        precio de venta del propio producto (sin margen: el menú ya lleva su precio)."""
+        self.ensure_one()
+        line = self.chosen_line_id
+        order = self.env['sale.order'].create({
+            'partner_id': self.lead_id.partner_id.id,
+            'origin': self.lead_id.name,
+            'order_line': [(0, 0, {
+                'product_id': product.id,
+                'product_uom_qty': qty,
+                'restaurant_id': line.partner_id.id,
+                'restagrup_search_line_id': line.id,
+            }) for product, qty in selection],
+        })
+        self._link_sale_order(order, line)
+        return order
+
+    def _create_sale_order_from_quote(self, line):
+        self.ensure_one()
         product = self.env.ref('restagrup_service_orders.product_restaurant_service')
         order = self.env['sale.order'].create({
             'partner_id': self.lead_id.partner_id.id,
@@ -61,11 +106,14 @@ class RestaurantSearch(models.Model):
                 'restagrup_search_line_id': line.id,
             })],
         })
+        self._link_sale_order(order, line)
+        return self._action_view_sale_order()
+
+    def _link_sale_order(self, order, line):
         self.sale_order_id = order.id
         self.message_post_if_exists(_(
             'Presupuesto de venta %(name)s creado a partir de %(restaurant)s.'
         ) % {'name': order.name, 'restaurant': line.name})
-        return self._action_view_sale_order()
 
     def _apply_default_margin(self, cost_amount):
         """Precio de venta = coste × (1 + margen/100) -- el margen es global

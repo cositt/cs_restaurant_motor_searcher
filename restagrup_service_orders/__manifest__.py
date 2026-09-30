@@ -19,6 +19,8 @@
         'views/purchase_order_views.xml',
         'views/restaurant_search_views.xml',
         'views/res_partner_views.xml',
+        'views/product_template_views.xml',
+        'views/menu_selection_wizard_views.xml',
     ],
     'installable': True,
     'application': False,

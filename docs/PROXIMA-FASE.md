@@ -79,7 +79,20 @@ aceptación online) — antes de escribir código, verificar en el dev local:
 4. Si no funciona (falta configuración, o el flujo de `restagrup_service_orders` lo
    rompe en algún punto): ahí sí investigar qué lo bloquea antes de tocar código.
 
-### C. Menús como productos con precio (el cambio de modelo más grande)
+### C. Menús como productos con precio — ✅ CONSTRUIDO 2026-09-30 (solo dev, sin commitear)
+
+Diseño confirmado por Juan: extender `product.template` (no modelo nuevo). Hecho en
+`restagrup_service_orders` con TDD (14 tests, `tests/test_restaurant_menus.py`):
+- `product.template.restaurant_id` (valida `is_restaurant`) + `res.partner.menu_ids` + pestaña
+  "Menús" en la ficha del restaurante + campo en el formulario de producto.
+- `sale.order.line.restaurant_id` ahora se calcula desde el producto (editable a mano; no borra una
+  asignación manual si el producto no es un menú).
+- `action_create_sale_order`: si el restaurante elegido tiene menús vendibles, abre el asistente
+  `restagrup.menu.selection.wizard` (marcar menús + cantidad, por defecto `min_capacity`); una línea
+  por menú al **precio del producto, sin margen**. Sin menús: camino antiguo con `quote_amount`.
+- Pendiente: verlo en navegador real (pestaña, asistente); la guía de usuario aún no lo cubre.
+
+Diseño original (histórico):
 
 Hoy `restagrup.restaurant.search.line.quote_amount` es un float suelto y
 `quote_notes` es texto libre. El documento muestra menús como líneas de producto real

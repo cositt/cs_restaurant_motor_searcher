@@ -8,6 +8,17 @@
             <field name="restaurant_internal_rating" position="before">
                 <field name="restaurant_worked_with"/>
             </field>
+            <xpath expr="//notebook" position="inside">
+                <page string="Menús" name="restaurant_menus" invisible="not is_restaurant">
+                    <field name="menu_ids" context="{'default_restaurant_id': id, 'default_type': 'service', 'default_sale_ok': True, 'default_purchase_ok': False}">
+                        <list>
+                            <field name="name"/>
+                            <field name="list_price" string="Precio de venta (€)"/>
+                            <field name="standard_price" string="Coste (€)"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
         </field>
     </record>
 </odoo>
