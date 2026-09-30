@@ -423,3 +423,10 @@ class TestRestaurantSearch(TransactionCase):
         log = self._search_log()
         self.assertIn('Casa Que Responde', log)
         self.assertIn('500 euros', log)
+
+    def test_reminder_is_logged_on_search(self):
+        line = self._stale_line(name='Casa Sin Respuesta')
+        line.action_send_quote_reminder()
+        log = self._search_log()
+        self.assertIn('Recordatorio enviado', log)
+        self.assertIn('Casa Sin Respuesta', log)

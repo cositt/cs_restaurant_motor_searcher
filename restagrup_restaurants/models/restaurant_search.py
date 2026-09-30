@@ -738,6 +738,9 @@ class RestaurantSearchLine(models.Model):
             outgoing_email_to=email_to,
         )
         self.write({'quote_reminder_sent_date': fields.Datetime.now()})
+        search.message_post_if_exists(_(
+            'Recordatorio enviado a %(name)s (%(email)s): lleva %(days)s días sin responder.'
+        ) % {'name': self.name, 'email': email_to, 'days': self.quote_days_pending})
 
     @api.model
     def _cron_send_quote_reminders(self):
