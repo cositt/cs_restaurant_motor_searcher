@@ -14,6 +14,7 @@
     'author': 'Cositt Technology',
     'depends': ['sale_management', 'purchase', 'restagrup_restaurants', 'restagrup_core'],
     'data': [
+        'security/ir.model.access.csv',
         'data/product_data.xml',
         'views/sale_order_views.xml',
         'views/purchase_order_views.xml',

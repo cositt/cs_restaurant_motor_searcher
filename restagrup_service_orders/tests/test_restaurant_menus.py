@@ -171,3 +171,22 @@ class TestRestaurantMenus(TransactionCase):
         action = self.search.action_create_sale_order()
         self.assertEqual(action['res_model'], 'sale.order')
         self.assertEqual(self.search.sale_order_id, order)
+
+    # --- permisos: los tests corren como superusuario, un comercial real no ---
+
+    def test_salesman_can_use_menu_wizard(self):
+        """Regresión: el asistente sin ir.model.access.csv fallaba en el navegador
+        con 'Ningún grupo permite esta operación' aunque los tests pasaran."""
+        salesman = self.env['res.users'].create({
+            'name': 'Comercial Test', 'login': 'comercial_menus_test',
+            'group_ids': [(6, 0, [
+                self.env.ref('base.group_user').id,
+                self.env.ref('sales_team.group_sale_salesman').id,
+            ])],
+        })
+        for model in ('restagrup.menu.selection.wizard', 'restagrup.menu.selection.wizard.line'):
+            for operation in ('read', 'create', 'write', 'unlink'):
+                self.assertTrue(
+                    self.env[model].with_user(salesman).has_access(operation),
+                    '%s: falta acceso de %s para un comercial' % (model, operation),
+                )
