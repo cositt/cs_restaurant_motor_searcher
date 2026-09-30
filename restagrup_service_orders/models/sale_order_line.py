@@ -35,3 +35,12 @@ class SaleOrderLine(models.Model):
                 line.restaurant_id = menu_restaurant
             elif not line.restaurant_id:
                 line.restaurant_id = False
+
+    def _get_display_price(self):
+        """Un menú de restaurante se vende al precio del restaurante (su coste) más el margen de
+        Restagrup, no a una tarifa propia. Sin coste cargado se usa el precio de tarifa."""
+        self.ensure_one()
+        product = self.product_id
+        if product.restaurant_id and product.standard_price:
+            return self.env['restagrup.pricing'].apply_margin(product.standard_price)
+        return super()._get_display_price()

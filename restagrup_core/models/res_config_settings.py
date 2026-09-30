@@ -31,7 +31,9 @@ class ResConfigSettings(models.TransientModel):
     )
     restagrup_default_margin_percent = fields.Float(
         string='Margen por defecto (%)', config_parameter='restagrup.default_margin_percent',
-        help='Se aplica automáticamente sobre el presupuesto del restaurante al crear'
-             ' el presupuesto de venta (precio venta = presupuesto × (1 + margen/100)).'
-             ' El equipo sigue pudiendo ajustar el precio a mano en la línea antes de enviarla.',
+        default=20.0,
+        help='Lo que Restagrup añade al precio del restaurante (por defecto 20 %). Se aplica'
+             ' solo al crear el presupuesto de venta: precio al cliente = precio del restaurante'
+             ' × (1 + margen/100). La hoja de servicio del restaurante lleva su propio precio.'
+             ' El equipo puede ajustar el precio a mano en la línea antes de enviarla.',
     )

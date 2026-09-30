@@ -11,7 +11,7 @@ class ProductTemplate(models.Model):
         domain=[('is_restaurant', '=', True)],
         help='Si se rellena, este producto es un menú de ese restaurante: al añadirlo a'
              ' un presupuesto, la línea toma sola el restaurante y genera su hoja de servicio.'
-             ' El precio de venta es el precio del producto, sin margen añadido.',
+             ' El "Coste" es lo que cobra el restaurante; el precio al cliente sale solo sumándole el margen',
     )
 
     @api.constrains('restaurant_id')
@@ -21,3 +21,18 @@ class ProductTemplate(models.Model):
                 raise ValidationError(_(
                     '"%s" no está marcado como restaurante, no se le pueden asignar menús.'
                 ) % product.restaurant_id.name)
+
+    restagrup_client_price = fields.Float(
+        string='Precio al cliente (€)', compute='_compute_restagrup_client_price',
+        digits='Product Price',
+        help='Precio del restaurante + margen de Restagrup. Es el precio que se pone al cliente en'
+             ' el presupuesto (solo para menús de restaurante).',
+    )
+
+    @api.depends('restaurant_id', 'standard_price')
+    def _compute_restagrup_client_price(self):
+        pricing = self.env['restagrup.pricing']
+        for product in self:
+            product.restagrup_client_price = (
+                pricing.apply_margin(product.standard_price) if product.restaurant_id else 0.0
+            )

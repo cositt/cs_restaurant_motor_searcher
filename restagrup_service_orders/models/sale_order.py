@@ -97,6 +97,16 @@ class SaleOrder(models.Model):
                     ],
                 })
 
+    def _restagrup_restaurant_cost(self, sale_line):
+        """Precio que cobra el restaurante (lo que lleva su hoja de servicio): nunca el precio al
+        cliente, para no enseñarle el margen de Restagrup. Menú -> su coste; petición sin menús ->
+        el importe del presupuesto que dio el restaurante; línea manual -> el precio de la línea."""
+        product = sale_line.product_id
+        if product.restaurant_id and product.standard_price:
+            return product.standard_price
+        quote = sale_line.restagrup_search_line_id.quote_amount
+        return quote or sale_line.price_unit
+
     def _prepare_restaurant_po_line_vals(self, sale_line):
         planned = sale_line.service_date and fields.Datetime.to_datetime(sale_line.service_date)
         return {
@@ -104,7 +114,7 @@ class SaleOrder(models.Model):
             'name': sale_line.name,
             'product_qty': sale_line.product_uom_qty,
             'product_uom_id': sale_line.product_uom_id.id,
-            'price_unit': sale_line.price_unit,
+            'price_unit': self._restagrup_restaurant_cost(sale_line),
             'date_planned': planned or fields.Datetime.now(),
             'restagrup_sale_line_id': sale_line.id,
         }
