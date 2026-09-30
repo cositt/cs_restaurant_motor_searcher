@@ -23,7 +23,7 @@ class ResConfigSettings(models.TransientModel):
     restagrup_gemini_api_key = fields.Char(
         string='Gemini API Key', config_parameter='restagrup.gemini_api_key',
     )
-    restagrup_quote_reminder_text = fields.Text(
+    restagrup_quote_reminder_text = fields.Char(
         string='Texto del recordatorio de presupuesto',
         config_parameter='restagrup.quote_reminder_text',
         help='Mensaje que Odoo manda solo a un restaurante que no ha respondido a la'

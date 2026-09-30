@@ -20,7 +20,7 @@
                         </setting>
                         <setting id="restagrup_quote_reminder"
                                  help="Texto del recordatorio automático a restaurantes que no responden a la petición de presupuesto.">
-                            <field name="restagrup_quote_reminder_text"
+                            <field name="restagrup_quote_reminder_text" widget="text"
                                    placeholder="Vacío = texto por defecto"/>
                         </setting>
                         <setting id="restagrup_margin"

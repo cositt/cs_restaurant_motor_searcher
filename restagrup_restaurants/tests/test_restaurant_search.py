@@ -360,3 +360,18 @@ class TestRestaurantSearch(TransactionCase):
         self.assertEqual(cron.interval_type, 'days')
         self.assertEqual(cron.interval_number, 1)
         self.assertEqual(cron.model_id.model, 'restagrup.restaurant.search.line')
+
+    # --- ajustes: la pantalla de Ajustes debe cargar con los campos de Restagrup ---
+
+    def test_settings_screen_loads_and_saves_reminder_text(self):
+        """Regresión: un campo Text con config_parameter hacía reventar TODA la pantalla
+        de Ajustes ('must have type boolean, integer, float, char...') y ningún test
+        lo veía porque nadie abría res.config.settings."""
+        settings_model = self.env['res.config.settings']
+        settings_model.default_get(list(settings_model._fields))
+        settings = settings_model.create({'restagrup_quote_reminder_text': 'Texto de prueba'})
+        settings.execute()
+        self.assertEqual(
+            self.env['ir.config_parameter'].sudo().get_param('restagrup.quote_reminder_text'),
+            'Texto de prueba',
+        )
