@@ -13,6 +13,7 @@
     'author': 'Cositt Technology',
     'depends': ['crm', 'restagrup_core'],
     'data': [
+        'security/ir.model.access.csv',
         'views/crm_lead_views.xml',
     ],
     'installable': True,

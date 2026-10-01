@@ -6,6 +6,24 @@
         <field name="inherit_id" ref="crm.crm_lead_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//notebook" position="inside">
+                <page name="restagrup_events" string="Eventos">
+                    <div class="alert alert-info" role="alert"
+                         invisible="restagrup_extraction_state != 'done' or not restagrup_event_ids">
+                        Eventos propuestos por la IA a partir del email -- revísalos antes de buscar restaurantes.
+                    </div>
+                    <field name="restagrup_event_ids" nolabel="1">
+                        <list editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="event_date"/>
+                            <field name="event_type_id" options="{'no_create': True}"/>
+                            <field name="city"/>
+                            <field name="pax"/>
+                            <field name="notes" optional="show"/>
+                            <field name="state" widget="badge" decoration-info="state == 'draft'"
+                                   decoration-success="state == 'searching'" readonly="1"/>
+                        </list>
+                    </field>
+                </page>
                 <page name="restagrup_ai" string="Datos IA"
                       invisible="not restagrup_extraction_state">
                     <div class="alert alert-info" role="alert"
