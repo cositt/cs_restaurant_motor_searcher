@@ -527,3 +527,26 @@ class TestRestaurantSearch(TransactionCase):
     def test_quote_client_price_is_zero_without_a_quote(self):
         line = self._create_line(etiqueta='solicitado')
         self.assertEqual(line.quote_client_price, 0)
+
+    # --- fecha en que llegó el presupuesto ---
+
+    def test_received_date_is_set_when_the_ai_extracts_the_amount(self):
+        line = self._line_with_ai_quote()
+        self.assertTrue(line.quote_received_date)
+
+    def test_received_date_is_set_when_a_manual_quote_is_registered(self):
+        line = self._create_line(etiqueta='solicitado', quote_amount=700)
+        self.assertFalse(line.quote_received_date)
+        line.action_register_quote()
+        self.assertTrue(line.quote_received_date)
+
+    def test_registering_keeps_the_date_the_quote_actually_arrived(self):
+        line = self._line_with_ai_quote()
+        arrived = Datetime.now() - timedelta(days=2)
+        line.quote_received_date = arrived
+        line.action_register_quote()
+        self.assertEqual(line.quote_received_date, arrived)
+
+    def test_no_received_date_without_a_quote(self):
+        line = self._create_line(etiqueta='solicitado', email='chef@example.com')
+        self.assertFalse(line.quote_received_date)

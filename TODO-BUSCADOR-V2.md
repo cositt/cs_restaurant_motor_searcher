@@ -125,6 +125,18 @@ precio al cliente (con margen), notas, fecha de respuesta, estado, botones Regis
 
 ## 3. Margen en la tabla interna + opción de mostrarlo al cliente
 
+> **✅ HECHO EN DEV (2026-10-01).** Rama `feature/margen-presupuesto`. Opción **B** (campos propios) con la
+> variante **S** para el cliente: con el interruptor "Mostrar margen al cliente" encendido, el PDF y el portal
+> añaden bajo los totales *"Incluye Gestión Restagrup (X %): Y € (base imponible)"*; el coste del restaurante
+> **nunca** se muestra. Los comerciales ven el margen en la tabla interna (decisión de Juan).
+> Schema aprobado: `restagrup_unit_cost` y `restagrup_margin_pct` (línea), `restagrup_show_margin` (pedido) y
+> `quote_received_date` (resultado de búsqueda, columna "Recibido" de la pestaña Presupuestos).
+> El % queda **congelado** en la línea: cambiar el margen en Ajustes no recalcula pedidos ya creados, ni al
+> cambiar los comensales. 24 tests nuevos; 132 en total, 0 fallos; verificado en navegador (vista interna y
+> portal, con el interruptor apagado y encendido). **Al desplegar a prod:** las líneas existentes se rellenan
+> solas (coste del menú o del presupuesto; % = el vigente en ese momento, no el histórico).
+> Pendiente: la plantilla del PDF "Imprimir propuesta" (por restaurante) no lleva la nota; no la necesita.
+
 En la tabla de líneas del presupuesto, el equipo ve coste del restaurante, % y € de margen. **El cliente no**,
 salvo que se active una opción por presupuesto.
 

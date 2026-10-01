@@ -171,6 +171,7 @@
                                     <field name="etiqueta" string="Estado" widget="badge"/>
                                     <field name="quote_amount" string="Restaurante (€)"/>
                                     <field name="quote_client_price" string="Cliente (€)"/>
+                                    <field name="quote_received_date" string="Recibido"/>
                                     <field name="quote_notes"/>
                                     <button name="action_register_quote" type="object" string="Confirmar"
                                             class="btn-primary" invisible="not quote_pending_confirmation"/>

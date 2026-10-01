@@ -523,6 +523,11 @@ class RestaurantSearchLine(models.Model):
     )
     quote_amount = fields.Float(string='Presupuesto (€)', digits=(16, 2))
     quote_notes = fields.Text(string='Notas del presupuesto')
+    quote_received_date = fields.Datetime(
+        string='Presupuesto recibido el', copy=False,
+        help='Cuándo llegó el presupuesto del restaurante: al extraerlo la IA de su respuesta, o al'
+             ' registrarlo a mano si no se había fijado antes.',
+    )
     quote_raw_text = fields.Text(
         string='Texto de la respuesta del restaurante',
         help='Pega aquí el email/mensaje del restaurante para que la IA proponga el'
@@ -841,6 +846,7 @@ class RestaurantSearchLine(models.Model):
         vals = {}
         if amount:
             vals['quote_amount'] = amount
+            vals['quote_received_date'] = fields.Datetime.now()
         if data.get('notas'):
             vals['quote_notes'] = data['notas']
         if vals:
@@ -871,7 +877,7 @@ class RestaurantSearchLine(models.Model):
                 'La IA no encontró un importe claro en el texto -- revísalo e'
                 ' introduce el presupuesto a mano.'
             ))
-        vals = {'quote_amount': amount}
+        vals = {'quote_amount': amount, 'quote_received_date': fields.Datetime.now()}
         if data.get('notas'):
             vals['quote_notes'] = data['notas']
         self.write(vals)
@@ -924,7 +930,10 @@ class RestaurantSearchLine(models.Model):
         self.ensure_one()
         if not self.quote_amount:
             raise UserError(_('Indica el importe del presupuesto antes de registrarlo.'))
-        self.write({'etiqueta': 'presupuesto_recibido'})
+        self.write({
+            'etiqueta': 'presupuesto_recibido',
+            'quote_received_date': self.quote_received_date or fields.Datetime.now(),
+        })
         self.search_id.message_post_if_exists(_(
             '%(name)s: presupuesto recibido — %(amount)s €.'
         ) % {'name': self.name, 'amount': self.quote_amount})
