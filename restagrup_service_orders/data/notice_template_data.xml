@@ -27,4 +27,12 @@
 <p>______</p>
 <p>Gracias.</p>]]></field>
     </record>
+    <record id="notice_template_cancellation" model="restagrup.notice.template">
+        <field name="name">Cancelación de servicio</field>
+        <field name="sequence">40</field>
+        <field name="subject">Cancelación del servicio — {evento}</field>
+        <field name="body"><![CDATA[<p>Hola {restaurante},</p>
+<p>Lamentamos comunicaros que el servicio de {evento} para <strong>{grupo}</strong> ({fecha}) queda cancelado.</p>
+<p>Disculpad las molestias y gracias por vuestra atención.</p>]]></field>
+    </record>
 </odoo>

@@ -48,6 +48,7 @@ ETIQUETA_SELECTION = [
     ('solicitado', 'Solicitado'),
     ('presupuesto_recibido', 'Presupuesto recibido'),
     ('descartado', 'Descartado'),
+    ('cancelado', 'Cancelado'),
 ]
 
 PIPELINE_STAGE_SELECTION = [
@@ -531,6 +532,9 @@ class RestaurantSearchLine(models.Model):
     )
     quote_amount = fields.Float(string='Presupuesto (€)', digits=(16, 2))
     quote_notes = fields.Text(string='Notas del presupuesto')
+    cancel_reason_id = fields.Many2one('restagrup.cancel.reason', string='Motivo de cancelación', copy=False)
+    cancel_note = fields.Text(string='Nota de cancelación', copy=False)
+    cancelled_date = fields.Datetime(string='Cancelado el', copy=False)
     quote_received_date = fields.Datetime(
         string='Presupuesto recibido el', copy=False,
         help='Cuándo llegó el presupuesto del restaurante: al extraerlo la IA de su respuesta, o al'

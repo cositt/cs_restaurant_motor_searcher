@@ -284,6 +284,21 @@ seguimiento, plantilla y texto libre; **permisos** del transient con comercial s
 
 ## 6. Cancelar o cambiar un restaurante
 
+> **✅ HECHO EN DEV (2026-10-01).** Rama `feature/cancelar-cambiar-restaurante`. Botón **Cancelar / cambiar
+> restaurante** en la búsqueda del evento: motivo (lista ampliable en Restagrup → Motivos de cancelación; 4
+> iniciales) y nota; sustituto opcional entre los restaurantes con presupuesto registrado; el presupuesto **se
+> ajusta al precio del nuevo** (casilla "mantener el precio al cliente": cambian solo coste y margen); aviso
+> opcional al restaurante cancelado (plantilla "Cancelación de servicio" o texto libre, con el seguimiento del
+> punto 5). La hoja de servicio del cancelado pasa a cancelada y se genera la del sustituto; el resultado queda
+> `cancelado` con motivo, nota y fecha. **La agencia no recibe nada.** Schema aprobado: tabla
+> `restagrup_cancel_reason`, tabla temporal del asistente, columnas `cancel_reason_id`, `cancel_note`,
+> `cancelled_date` en el resultado y el valor `cancelado` en el estado. 15 tests nuevos; 208 en total, 0 fallos;
+> verificado en navegador la apertura del asistente (la ejecución completa, con tests). **Límites:** (1) en un
+> presupuesto **ya confirmado** no se puede borrar una línea: se deja a 0 marcada "CANCELADO" y se avisa en el
+> chatter de que la agencia no ha sido avisada por Odoo; (2) las líneas de menú del cancelado se convierten en
+> una sola línea al precio del presupuesto del sustituto (no se reconstruyen los menús); (3) si el restaurante
+> tiene otras líneas en la misma hoja ya confirmada, se deja un aviso para revisarla a mano.
+
 Asunto interno entre Restagrup y el restaurante: **la agencia no interviene ni vuelve a firmar.**
 
 **Asistente "Cancelar / cambiar restaurante" sobre un evento**

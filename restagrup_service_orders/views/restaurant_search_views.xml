@@ -12,6 +12,9 @@
                 <button name="action_create_sale_order" type="object"
                         string="Ver presupuesto de venta" class="btn-secondary"
                         invisible="not sale_order_id"/>
+                <button name="action_open_change_wizard" type="object"
+                        string="Cancelar / cambiar restaurante" class="btn-secondary"
+                        invisible="not chosen_line_id"/>
             </xpath>
             <field name="chosen_line_id" position="after">
                 <field name="sale_order_id" invisible="not sale_order_id"/>

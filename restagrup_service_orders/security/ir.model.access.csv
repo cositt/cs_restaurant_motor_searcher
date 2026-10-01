@@ -6,3 +6,4 @@ access_restagrup_notice_template_manager,restagrup.notice.template manager,model
 access_restagrup_restaurant_notice,restagrup.restaurant.notice,model_restagrup_restaurant_notice,base.group_user,1,1,1,0
 access_restagrup_restaurant_notice_wizard,restagrup.restaurant.notice.wizard,model_restagrup_restaurant_notice_wizard,base.group_user,1,1,1,1
 access_restagrup_restaurant_notice_wizard_line,restagrup.restaurant.notice.wizard.line,model_restagrup_restaurant_notice_wizard_line,base.group_user,1,1,1,1
+access_restagrup_restaurant_change_wizard,restagrup.restaurant.change.wizard,model_restagrup_restaurant_change_wizard,base.group_user,1,1,1,1

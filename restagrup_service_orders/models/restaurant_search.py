@@ -108,6 +108,16 @@ class RestaurantSearch(models.Model):
         self._link_sale_order(order, line, created)
         return self._action_view_sale_order()
 
+    def action_open_change_wizard(self):
+        self.ensure_one()
+        if not self.chosen_line_id:
+            raise UserError(_('Elige primero un restaurante.'))
+        wizard = self.env['restagrup.restaurant.change.wizard'].create({'search_id': self.id})
+        return {
+            'type': 'ir.actions.act_window', 'name': _('Cancelar o cambiar restaurante'),
+            'res_model': wizard._name, 'res_id': wizard.id, 'view_mode': 'form', 'target': 'new',
+        }
+
     def _group_orders(self):
         """Presupuestos del grupo: los enlazados al lead y los de sus búsquedas (los creados antes de
         enlazarlos al lead)."""
