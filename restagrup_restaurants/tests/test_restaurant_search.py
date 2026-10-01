@@ -430,3 +430,123 @@ class TestRestaurantSearch(TransactionCase):
         log = self._search_log()
         self.assertIn('Recordatorio enviado', log)
         self.assertIn('Casa Sin Respuesta', log)
+
+    # --- importe propuesto por IA (llega por email) sin registrar: no bloquear el "Elegir" ---
+    # Bug 2026-10-01: la IA rellenaba quote_amount pero dejaba la etiqueta en 'solicitado'; la
+    # tarjeta mostraba el importe como si estuviera registrado y "Elegir" daba error.
+
+    LLM_PATH = 'odoo.addons.restagrup_core.models.llm_connector.RestagrupLlmConnector.extract_json'
+
+    def _line_with_ai_quote(self, **vals):
+        """Línea en 'solicitado' cuyo importe llegó por email y extrajo la IA (sin registrar)."""
+        line = self._create_line(etiqueta='solicitado', email='chef@example.com', **vals)
+        with patch(self.LLM_PATH, return_value=({'importe': 1176, 'notas': 'Depósito 30 %'}, 'groq')):
+            line.message_update({'body': '<p>Total 1.176 €, depósito del 30 %.</p>'})
+        return line
+
+    def test_ai_extracted_amount_is_flagged_pending_confirmation(self):
+        line = self._line_with_ai_quote()
+        self.assertEqual(line.quote_amount, 1176)
+        self.assertEqual(line.etiqueta, 'solicitado')
+        self.assertTrue(line.quote_pending_confirmation)
+
+    def test_pending_confirmation_clears_once_registered(self):
+        line = self._line_with_ai_quote()
+        line.action_register_quote()
+        self.assertEqual(line.etiqueta, 'presupuesto_recibido')
+        self.assertFalse(line.quote_pending_confirmation)
+
+    def test_no_amount_is_not_pending_confirmation(self):
+        line = self._create_line(etiqueta='solicitado', email='chef@example.com')
+        self.assertFalse(line.quote_pending_confirmation)
+
+    def test_choose_with_pending_ai_amount_opens_register_dialog_instead_of_error(self):
+        line = self._line_with_ai_quote()
+        action = line.action_toggle_chosen()
+        self.assertEqual(action['res_model'], 'restagrup.restaurant.search.line')
+        self.assertEqual(action['res_id'], line.id)
+        self.assertEqual(action['target'], 'new')
+        self.assertTrue(action['context']['choose_after_register'])
+        self.assertFalse(self.search.chosen_line_id, 'Todavía no se elige: primero se confirma el importe.')
+
+    def test_register_from_choose_dialog_registers_and_chooses(self):
+        line = self._line_with_ai_quote()
+        with patch.object(self.env.registry['restagrup.restaurant.search.line'], '_fetch_google_phone'):
+            line.with_context(choose_after_register=True).action_register_quote()
+        self.assertEqual(line.etiqueta, 'presupuesto_recibido')
+        self.assertEqual(self.search.chosen_line_id, line)
+
+    def test_plain_register_does_not_choose(self):
+        line = self._line_with_ai_quote()
+        line.action_register_quote()
+        self.assertFalse(self.search.chosen_line_id)
+
+    def test_choose_without_any_amount_still_raises(self):
+        line = self._create_line(etiqueta='solicitado', email='chef@example.com')
+        with self.assertRaises(UserError):
+            line.action_toggle_chosen()
+
+    # --- pestaña "Presupuestos": solo los restaurantes que han enviado presupuesto ---
+
+    def test_quoted_lines_only_include_restaurants_with_a_quote(self):
+        registered = self._create_line(name='Registrado', etiqueta='presupuesto_recibido', quote_amount=900)
+        proposed = self._line_with_ai_quote(name='Propuesto por IA')
+        self._create_line(name='Solo visto')
+        self._create_line(name='Solicitado sin respuesta', etiqueta='solicitado')
+        self._create_line(name='Descartado con importe', etiqueta='descartado', quote_amount=500)
+        self.assertEqual(self.search.quoted_line_ids, registered | proposed)
+
+    def test_quoted_lines_are_sorted_by_amount_ascending(self):
+        expensive = self._create_line(name='Caro', etiqueta='presupuesto_recibido', quote_amount=1500)
+        cheap = self._create_line(name='Barato', etiqueta='presupuesto_recibido', quote_amount=800)
+        middle = self._line_with_ai_quote(name='Medio')  # 1176 € propuestos por IA
+        self.assertEqual(self.search.quoted_line_ids.ids, [cheap.id, middle.id, expensive.id])
+
+    def test_quoted_lines_update_when_a_quote_is_registered(self):
+        line = self._create_line(name='Pendiente', etiqueta='solicitado')
+        self.assertNotIn(line, self.search.quoted_line_ids)
+        line.write({'quote_amount': 700})
+        line.action_register_quote()
+        self.assertIn(line, self.search.quoted_line_ids)
+
+    def test_quoted_lines_keep_the_chosen_restaurant(self):
+        line = self._create_line(name='Elegido', etiqueta='presupuesto_recibido', quote_amount=600)
+        with patch.object(self.env.registry['restagrup.restaurant.search.line'], '_fetch_google_phone'):
+            line.action_toggle_chosen()
+        self.assertIn(line, self.search.quoted_line_ids)
+
+    def test_quote_client_price_adds_the_default_margin(self):
+        line = self._create_line(etiqueta='presupuesto_recibido', quote_amount=1000)
+        self.assertEqual(line.quote_client_price, 1200)  # +20 % por defecto
+
+    def test_quote_client_price_follows_the_configured_margin(self):
+        self.env['ir.config_parameter'].sudo().set_param('restagrup.default_margin_percent', '10')
+        line = self._create_line(etiqueta='presupuesto_recibido', quote_amount=1000)
+        self.assertEqual(line.quote_client_price, 1100)
+
+    def test_quote_client_price_is_zero_without_a_quote(self):
+        line = self._create_line(etiqueta='solicitado')
+        self.assertEqual(line.quote_client_price, 0)
+
+    # --- fecha en que llegó el presupuesto ---
+
+    def test_received_date_is_set_when_the_ai_extracts_the_amount(self):
+        line = self._line_with_ai_quote()
+        self.assertTrue(line.quote_received_date)
+
+    def test_received_date_is_set_when_a_manual_quote_is_registered(self):
+        line = self._create_line(etiqueta='solicitado', quote_amount=700)
+        self.assertFalse(line.quote_received_date)
+        line.action_register_quote()
+        self.assertTrue(line.quote_received_date)
+
+    def test_registering_keeps_the_date_the_quote_actually_arrived(self):
+        line = self._line_with_ai_quote()
+        arrived = Datetime.now() - timedelta(days=2)
+        line.quote_received_date = arrived
+        line.action_register_quote()
+        self.assertEqual(line.quote_received_date, arrived)
+
+    def test_no_received_date_without_a_quote(self):
+        line = self._create_line(etiqueta='solicitado', email='chef@example.com')
+        self.assertFalse(line.quote_received_date)

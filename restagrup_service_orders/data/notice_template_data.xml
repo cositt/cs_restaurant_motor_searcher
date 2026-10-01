@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="notice_template_guests" model="restagrup.notice.template">
+        <field name="name">Cambio de comensales</field>
+        <field name="sequence">10</field>
+        <field name="subject">Cambio de comensales — {evento}</field>
+        <field name="body"><![CDATA[<p>Hola {restaurante},</p>
+<p>Os escribimos de parte de <strong>{grupo}</strong>: para el servicio de {evento}, el número de comensales ha cambiado. Ahora serán <strong>{comensales}</strong>.</p>
+<p>Por favor, confirmadnos que no hay ningún problema.</p>
+<p>Gracias.</p>]]></field>
+    </record>
+    <record id="notice_template_schedule" model="restagrup.notice.template">
+        <field name="name">Cambio de fecha u hora</field>
+        <field name="sequence">20</field>
+        <field name="subject">Cambio de fecha u hora — {evento}</field>
+        <field name="body"><![CDATA[<p>Hola {restaurante},</p>
+<p>Os escribimos de parte de <strong>{grupo}</strong>: el servicio de {evento} (previsto para el {fecha}) cambia de fecha u hora. Nueva fecha y hora: ______.</p>
+<p>Por favor, confirmadnos si podéis atenderlo.</p>
+<p>Gracias.</p>]]></field>
+    </record>
+    <record id="notice_template_general" model="restagrup.notice.template">
+        <field name="name">Aviso general</field>
+        <field name="sequence">30</field>
+        <field name="subject">Aviso — {evento}</field>
+        <field name="body"><![CDATA[<p>Hola {restaurante},</p>
+<p>Sobre el servicio de {evento} para <strong>{grupo}</strong> ({fecha}, {comensales} comensales):</p>
+<p>______</p>
+<p>Gracias.</p>]]></field>
+    </record>
+</odoo>

@@ -34,7 +34,8 @@ class PurchaseOrder(models.Model):
     def message_update(self, msg_dict, update_vals=None):
         res = super().message_update(msg_dict, update_vals=update_vals)
         for order in self:
-            order._restagrup_classify_response(msg_dict)
+            summary = order._restagrup_classify_response(msg_dict)
+            self.env['restagrup.restaurant.notice']._register_reply(order, msg_dict, summary=summary)
         return res
 
     def _restagrup_classify_response(self, msg_dict):
@@ -72,6 +73,7 @@ class PurchaseOrder(models.Model):
 
         if state == 'serious_issue':
             self._restagrup_notify_serious_issue(summary)
+        return summary
 
     def _restagrup_notify_serious_issue(self, summary):
         """Línea roja Conchita: incidencia grave -> avisar a un humano y no tocar

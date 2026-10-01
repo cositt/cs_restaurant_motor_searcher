@@ -22,5 +22,8 @@ class RestagrupPricing(models.AbstractModel):
             return DEFAULT_MARGIN_PERCENT
 
     @api.model
-    def apply_margin(self, restaurant_price):
-        return restaurant_price * (1 + self.margin_percent() / 100)
+    def apply_margin(self, restaurant_price, percent=None):
+        """percent: margen ya congelado en una línea; si no se indica, el vigente en Ajustes."""
+        if percent is None:
+            percent = self.margin_percent()
+        return restaurant_price * (1 + percent / 100)

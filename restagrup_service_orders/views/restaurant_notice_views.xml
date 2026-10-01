@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ===== Asistente "Avisar a restaurantes" ===== -->
+    <record id="view_restaurant_notice_wizard_form" model="ir.ui.view">
+        <field name="name">restagrup.restaurant.notice.wizard.form</field>
+        <field name="model">restagrup.restaurant.notice.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Avisar a restaurantes">
+                <group>
+                    <field name="lead_id"/>
+                    <field name="template_id" options="{'no_create': True}"/>
+                    <field name="subject"/>
+                </group>
+                <field name="body"
+                       placeholder="Escribe el aviso. Variables: {restaurante}, {grupo}, {evento}, {fecha}, {comensales}"/>
+                <separator string="Restaurantes a avisar"/>
+                <field name="line_ids" nolabel="1">
+                    <list editable="bottom" create="false" delete="false">
+                        <field name="has_email" column_invisible="True"/>
+                        <field name="selected" widget="boolean_toggle"/>
+                        <field name="restaurant_id" readonly="1"/>
+                        <field name="event_label" readonly="1"/>
+                        <field name="thread_label"/>
+                        <field name="has_email" string="Email" widget="boolean" readonly="1"/>
+                    </list>
+                </field>
+                <p class="text-muted">
+                    Solo se avisa a los restaurantes marcados. La agencia no recibe este aviso. Las respuestas
+                    solo se enlazan si el restaurante contesta a este mismo correo.
+                </p>
+                <footer>
+                    <button name="action_send" type="object" string="Enviar avisos" class="btn-primary"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- ===== Avisos enviados (seguimiento) ===== -->
+    <record id="view_restaurant_notice_list" model="ir.ui.view">
+        <field name="name">restagrup.restaurant.notice.list</field>
+        <field name="model">restagrup.restaurant.notice</field>
+        <field name="arch" type="xml">
+            <list decoration-success="state == 'replied'" decoration-warning="state == 'pending'" create="false">
+                <field name="sent_date"/>
+                <field name="lead_id"/>
+                <field name="restaurant_id"/>
+                <field name="event_label"/>
+                <field name="subject"/>
+                <field name="state" widget="badge" decoration-success="state == 'replied'"
+                       decoration-warning="state == 'pending'"/>
+                <field name="reply_date" optional="show"/>
+                <field name="reply_excerpt" optional="show"/>
+                <field name="reply_summary" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_restaurant_notice_form" model="ir.ui.view">
+        <field name="name">restagrup.restaurant.notice.form</field>
+        <field name="model">restagrup.restaurant.notice</field>
+        <field name="arch" type="xml">
+            <form string="Aviso a restaurante" create="false" edit="false">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="lead_id"/>
+                            <field name="restaurant_id"/>
+                            <field name="event_label"/>
+                            <field name="user_id"/>
+                        </group>
+                        <group>
+                            <field name="sent_date"/>
+                            <field name="state"/>
+                            <field name="reply_date"/>
+                        </group>
+                    </group>
+                    <group string="Aviso enviado">
+                        <field name="subject"/>
+                        <field name="body"/>
+                    </group>
+                    <group string="Respuesta" invisible="state != 'replied'">
+                        <field name="reply_excerpt"/>
+                        <field name="reply_summary"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_restaurant_notice" model="ir.actions.act_window">
+        <field name="name">Avisos enviados</field>
+        <field name="res_model">restagrup.restaurant.notice</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- ===== Plantillas de aviso ===== -->
+    <record id="view_notice_template_list" model="ir.ui.view">
+        <field name="name">restagrup.notice.template.list</field>
+        <field name="model">restagrup.notice.template</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="subject"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_notice_template_form" model="ir.ui.view">
+        <field name="name">restagrup.notice.template.form</field>
+        <field name="model">restagrup.notice.template</field>
+        <field name="arch" type="xml">
+            <form string="Plantilla de aviso">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="subject"/>
+                        <field name="active"/>
+                    </group>
+                    <field name="body"
+                           placeholder="Variables: {restaurante}, {grupo}, {evento}, {fecha}, {comensales}"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_notice_template" model="ir.actions.act_window">
+        <field name="name">Plantillas de aviso</field>
+        <field name="res_model">restagrup.notice.template</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- ===== Lead: botón, pestaña Avisos y columnas en Eventos ===== -->
+    <record id="crm_lead_view_form_restaurant_notices" model="ir.ui.view">
+        <field name="name">crm.lead.form.restaurant.notices</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_notify_restaurants" type="object" string="Avisar a restaurantes"
+                        class="btn-secondary" invisible="not restagrup_restaurant_search_count"/>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page name="restagrup_notices" string="Avisos" invisible="not restagrup_notice_ids">
+                    <field name="restagrup_notice_ids" nolabel="1" readonly="1">
+                        <list decoration-success="state == 'replied'" decoration-warning="state == 'pending'">
+                            <field name="sent_date"/>
+                            <field name="restaurant_id"/>
+                            <field name="event_label"/>
+                            <field name="subject"/>
+                            <field name="state" widget="badge" decoration-success="state == 'replied'"
+                                   decoration-warning="state == 'pending'"/>
+                            <field name="reply_excerpt"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="crm_lead_view_form_events_summary" model="ir.ui.view">
+        <field name="name">crm.lead.form.events.summary</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="restagrup_email_ai.crm_lead_view_form_restagrup"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='restagrup_event_ids']/list" position="inside">
+                <field name="chosen_restaurant_id" optional="show" readonly="1"/>
+                <field name="chosen_amount" optional="show" readonly="1"/>
+                <field name="sale_order_id" optional="show" readonly="1"/>
+                <field name="sheet_state" optional="show" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ===== Menú Clientes: resumen de los grupos ===== -->
+    <record id="view_restagrup_clients_list" model="ir.ui.view">
+        <field name="name">crm.lead.list.restagrup.clients</field>
+        <field name="model">crm.lead</field>
+        <field name="arch" type="xml">
+            <list string="Clientes / grupos" default_order="create_date desc">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="restagrup_pax" string="Comensales"/>
+                <field name="restagrup_event_count"/>
+                <field name="restagrup_chosen_summary"/>
+                <field name="restagrup_order_total" sum="Total"/>
+                <field name="restagrup_confirmation_summary"/>
+                <field name="restagrup_notice_pending_count"/>
+                <field name="stage_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_restagrup_clients" model="ir.actions.act_window">
+        <field name="name">Clientes</field>
+        <field name="res_model">crm.lead</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">['|', ('restagrup_event_ids', '!=', False), ('restagrup_restaurant_search_ids', '!=', False)]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Todavía no hay grupos con eventos ni búsquedas</p>
+            <p>Aquí aparecen los grupos con su resumen: eventos, restaurantes elegidos, presupuestado y confirmaciones.</p>
+        </field>
+    </record>
+    <record id="action_restagrup_clients_list" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_restagrup_clients_list"/>
+        <field name="act_window_id" ref="action_restagrup_clients"/>
+    </record>
+    <record id="action_restagrup_clients_form" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="crm.crm_lead_view_form"/>
+        <field name="act_window_id" ref="action_restagrup_clients"/>
+    </record>
+
+    <menuitem id="menu_restagrup_clients" name="Clientes" parent="restagrup_restaurants.menu_restagrup_root"
+              action="action_restagrup_clients" sequence="5"/>
+    <menuitem id="menu_restaurant_notices" name="Avisos enviados" parent="restagrup_restaurants.menu_restagrup_root"
+              action="action_restaurant_notice" sequence="70"/>
+    <menuitem id="menu_notice_templates" name="Plantillas de aviso" parent="restagrup_restaurants.menu_restagrup_root"
+              action="action_notice_template" sequence="80"/>
+</odoo>

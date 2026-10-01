@@ -101,6 +101,10 @@ class RestaurantSearch(models.Model):
         help='La oportunidad o petición de grupo para la que se buscan restaurantes.',
     )
     display_name = fields.Char(string='Nombre', compute='_compute_display_name', store=True)
+    event_id = fields.Many2one(
+        'restagrup.lead.event', string='Evento', ondelete='set null', index=True, copy=False,
+        help='Evento del grupo (comida, cena…) para el que se hace esta búsqueda.',
+    )
     city = fields.Char(string='Ciudad', required=True)
     street = fields.Char(string='Calle', help='Opcional -- afina la geolocalización de Google.')
     zip = fields.Char(
@@ -128,6 +132,12 @@ class RestaurantSearch(models.Model):
     )
     line_ids = fields.One2many('restagrup.restaurant.search.line', 'search_id', string='Resultados')
     line_count = fields.Integer(string='Nº resultados', compute='_compute_line_count')
+    quoted_line_ids = fields.One2many(
+        'restagrup.restaurant.search.line', 'search_id', string='Presupuestos',
+        compute='_compute_quoted_line_ids',
+        help='Solo los restaurantes que han enviado presupuesto (registrado o propuesto por la IA'
+             ' y pendiente de confirmar), del más barato al más caro.',
+    )
     sort_by = fields.Selection(
         selection=SORT_BY_SELECTION, string='Ordenar por', default='default',
         help='Reordena las tarjetas de resultados. No afecta a los datos, solo al orden en que se muestran.',
@@ -140,7 +150,7 @@ class RestaurantSearch(models.Model):
              ' restaurante elegido -- no es editable a mano.',
     )
 
-    @api.depends('city', 'zip', 'min_capacity')
+    @api.depends('city', 'zip', 'min_capacity', 'event_id.event_type_id', 'event_id.event_date')
     def _compute_display_name(self):
         for search in self:
             location = search.city or _('Sin ciudad')
@@ -149,12 +159,24 @@ class RestaurantSearch(models.Model):
             parts = [location]
             if search.min_capacity:
                 parts.append(_('%s pax') % search.min_capacity)
+            if search.event_id.event_type_id:
+                parts.append(search.event_id.event_type_id.name)
+            if search.event_id.event_date:
+                parts.append(search.event_id.event_date.strftime('%d/%m'))
             search.display_name = ' · '.join(parts)
 
     @api.depends('line_ids')
     def _compute_line_count(self):
         for search in self:
             search.line_count = len(search.line_ids)
+
+    @api.depends('line_ids.etiqueta', 'line_ids.quote_amount')
+    def _compute_quoted_line_ids(self):
+        for search in self:
+            quoted = search.line_ids.filtered(
+                lambda line: line.quote_amount and line.etiqueta in ('presupuesto_recibido', 'solicitado')
+            )
+            search.quoted_line_ids = quoted.sorted('quote_amount')
 
     @api.depends('chosen_line_id', 'line_ids.etiqueta')
     def _compute_pipeline_stage(self):
@@ -509,6 +531,11 @@ class RestaurantSearchLine(models.Model):
     )
     quote_amount = fields.Float(string='Presupuesto (€)', digits=(16, 2))
     quote_notes = fields.Text(string='Notas del presupuesto')
+    quote_received_date = fields.Datetime(
+        string='Presupuesto recibido el', copy=False,
+        help='Cuándo llegó el presupuesto del restaurante: al extraerlo la IA de su respuesta, o al'
+             ' registrarlo a mano si no se había fijado antes.',
+    )
     quote_raw_text = fields.Text(
         string='Texto de la respuesta del restaurante',
         help='Pega aquí el email/mensaje del restaurante para que la IA proponga el'
@@ -527,6 +554,16 @@ class RestaurantSearchLine(models.Model):
         string='Petición colgada', compute='_compute_quote_days_pending',
         help='Lleva más de %s días en "Solicitado" sin presupuesto recibido ni descartado.' % QUOTE_STALE_DAYS,
     )
+    quote_pending_confirmation = fields.Boolean(
+        string='Importe sin confirmar', compute='_compute_quote_pending_confirmation',
+        help='La IA propuso un importe a partir de la respuesta del restaurante, pero nadie lo ha'
+             ' registrado todavía. Hasta confirmarlo, el restaurante no cuenta como "presupuesto recibido".',
+    )
+    quote_client_price = fields.Float(
+        string='Precio al cliente (€)', compute='_compute_quote_client_price', digits=(16, 2),
+        help='Presupuesto del restaurante + margen de Restagrup (solo uso interno: se calcula con el'
+             ' margen de Ajustes → Restagrup en cada lectura).',
+    )
     is_chosen = fields.Boolean(string='Elegido', compute='_compute_is_chosen')
     google_maps_url = fields.Char(string='Enlace Maps', compute='_compute_google_maps_url')
     latitude = fields.Float(string='Latitud', digits=(16, 6))
@@ -542,6 +579,19 @@ class RestaurantSearchLine(models.Model):
     def _compute_is_chosen(self):
         for line in self:
             line.is_chosen = line.search_id.chosen_line_id.id == line.id
+
+    @api.depends('etiqueta', 'quote_amount')
+    def _compute_quote_pending_confirmation(self):
+        for line in self:
+            line.quote_pending_confirmation = bool(line.quote_amount) and line.etiqueta == 'solicitado'
+
+    @api.depends('quote_amount')
+    def _compute_quote_client_price(self):
+        pricing = self.env['restagrup.pricing']
+        for line in self:
+            line.quote_client_price = (
+                round(pricing.apply_margin(line.quote_amount), 2) if line.quote_amount else 0.0
+            )
 
     @api.depends('etiqueta', 'quote_requested_date')
     def _compute_quote_days_pending(self):
@@ -804,6 +854,7 @@ class RestaurantSearchLine(models.Model):
         vals = {}
         if amount:
             vals['quote_amount'] = amount
+            vals['quote_received_date'] = fields.Datetime.now()
         if data.get('notas'):
             vals['quote_notes'] = data['notas']
         if vals:
@@ -834,7 +885,7 @@ class RestaurantSearchLine(models.Model):
                 'La IA no encontró un importe claro en el texto -- revísalo e'
                 ' introduce el presupuesto a mano.'
             ))
-        vals = {'quote_amount': amount}
+        vals = {'quote_amount': amount, 'quote_received_date': fields.Datetime.now()}
         if data.get('notas'):
             vals['quote_notes'] = data['notas']
         self.write(vals)
@@ -887,10 +938,15 @@ class RestaurantSearchLine(models.Model):
         self.ensure_one()
         if not self.quote_amount:
             raise UserError(_('Indica el importe del presupuesto antes de registrarlo.'))
-        self.write({'etiqueta': 'presupuesto_recibido'})
+        self.write({
+            'etiqueta': 'presupuesto_recibido',
+            'quote_received_date': self.quote_received_date or fields.Datetime.now(),
+        })
         self.search_id.message_post_if_exists(_(
             '%(name)s: presupuesto recibido — %(amount)s €.'
         ) % {'name': self.name, 'amount': self.quote_amount})
+        if self.env.context.get('choose_after_register'):
+            self._choose_line()
         return {'type': 'ir.actions.act_window_close'}
 
     def action_toggle_chosen(self):
@@ -899,11 +955,32 @@ class RestaurantSearchLine(models.Model):
             self.search_id.chosen_line_id = False
             self.search_id.message_post_if_exists(_('Ya no es el elegido: %s.') % self.name)
             return
+        if self.quote_pending_confirmation:
+            # El importe llegó por email y lo propuso la IA, pero nadie lo ha confirmado:
+            # en vez de dar error, se abre el diálogo de registro y, al confirmarlo, se elige.
+            return self._action_open_register_and_choose()
         if self.etiqueta != 'presupuesto_recibido':
             raise UserError(_(
                 'Solo se puede elegir un restaurante con presupuesto recibido.'
                 ' Pide presupuesto y regístralo antes de elegirlo.'
             ))
+        self._choose_line()
+
+    def _action_open_register_and_choose(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Registrar presupuesto y elegir'),
+            'res_model': 'restagrup.restaurant.search.line',
+            'res_id': self.id,
+            'view_mode': 'form',
+            'view_id': self.env.ref('restagrup_restaurants.view_restaurant_search_line_quote_form').id,
+            'target': 'new',
+            'context': {'choose_after_register': True},
+        }
+
+    def _choose_line(self):
+        self.ensure_one()
         self._fetch_google_phone()
         self.search_id.chosen_line_id = self.id
         self.search_id.message_post_if_exists(_('Elegido: %(name)s (presupuesto %(amount)s €).') % {

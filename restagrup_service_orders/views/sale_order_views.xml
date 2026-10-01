@@ -9,13 +9,34 @@
                 <group string="Restagrup">
                     <field name="restaurant_id"/>
                     <field name="service_date"/>
-                    <field name="service_meal"/>
+                    <field name="service_event_type_id"/>
                 </group>
             </xpath>
             <xpath expr="//field[@name='order_line']/list/field[@name='name']" position="after">
                 <field name="restaurant_id" optional="show"/>
                 <field name="service_date" optional="show"/>
-                <field name="service_meal" optional="show"/>
+                <field name="service_event_type_id" optional="show"/>
+            </xpath>
+            <!-- Margen de Restagrup: solo en la vista interna. El cliente nunca ve estas columnas. -->
+            <xpath expr="//field[@name='order_line']/list/field[@name='price_unit']" position="after">
+                <field name="restagrup_unit_cost" optional="show"/>
+                <field name="restagrup_margin_pct" optional="show"/>
+                <field name="restagrup_margin_amount" optional="show"/>
+            </xpath>
+            <xpath expr="//field[@name='payment_term_id']" position="after">
+                <field name="restagrup_show_margin" widget="boolean_toggle"/>
+            </xpath>
+            <xpath expr="//group[@name='sale_total']" position="inside">
+                <field name="restagrup_cost_total" invisible="not restagrup_margin_total"/>
+                <field name="restagrup_margin_total" invisible="not restagrup_margin_total"/>
+                <field name="restagrup_margin_percent" invisible="not restagrup_margin_total"/>
+            </xpath>
+            <xpath expr="//header" position="after">
+                <div class="alert alert-info mb-0" role="alert" invisible="not restagrup_is_additional">
+                    <field name="restagrup_is_additional" invisible="1"/>
+                    Presupuesto adicional del grupo: el primero es
+                    <field name="restagrup_first_order_id" readonly="1" nolabel="1" class="oe_inline"/>.
+                </div>
             </xpath>
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button name="action_view_restaurant_pos" type="object"

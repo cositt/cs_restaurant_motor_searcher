@@ -8,3 +8,8 @@ from . import restaurant_search_line
 from . import res_partner
 from . import product_template
 from . import menu_selection_wizard
+from . import notice_template
+from . import restaurant_notice
+from . import notice_wizard
+from . import crm_lead
+from . import lead_event

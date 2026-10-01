@@ -28,6 +28,53 @@ class SaleOrder(models.Model):
         help='"confirmados/total", vacío si el pedido no tiene hojas de servicio.',
     )
 
+    restagrup_show_margin = fields.Boolean(
+        string='Mostrar margen al cliente', default=False, copy=False,
+        help='Apagado: el cliente solo ve los precios. Encendido: el presupuesto y el portal añaden bajo'
+             ' los totales una nota "Incluye gestión Restagrup" con el importe del margen. El coste del'
+             ' restaurante nunca se muestra.',
+    )
+    restagrup_cost_total = fields.Float(
+        string='Coste restaurantes (€)', compute='_compute_restagrup_margin_totals', digits='Product Price',
+    )
+    restagrup_margin_total = fields.Float(
+        string='Margen Restagrup (€)', compute='_compute_restagrup_margin_totals', digits='Product Price',
+    )
+    restagrup_margin_percent = fields.Float(
+        string='Margen Restagrup (%)', compute='_compute_restagrup_margin_totals', digits=(16, 2),
+    )
+
+    @api.depends(
+        'order_line.restagrup_unit_cost', 'order_line.product_uom_qty',
+        'order_line.price_subtotal', 'order_line.display_type',
+    )
+    def _compute_restagrup_margin_totals(self):
+        for order in self:
+            lines = order.order_line.filtered(lambda l: not l.display_type and l.restagrup_unit_cost)
+            cost = sum(l.restagrup_unit_cost * l.product_uom_qty for l in lines)
+            margin = sum(l.restagrup_margin_amount for l in lines)
+            order.restagrup_cost_total = cost
+            order.restagrup_margin_total = margin
+            order.restagrup_margin_percent = round(margin / cost * 100, 2) if cost else 0.0
+
+    restagrup_first_order_id = fields.Many2one(
+        'sale.order', string='Primer presupuesto del grupo', compute='_compute_restagrup_additional',
+    )
+    restagrup_is_additional = fields.Boolean(
+        string='Presupuesto adicional', compute='_compute_restagrup_additional',
+        help='El grupo ya tenía un presupuesto anterior (no cancelado) cuando se creó este.',
+    )
+
+    @api.depends('opportunity_id.order_ids.state')
+    def _compute_restagrup_additional(self):
+        for order in self:
+            own_id = order._origin.id
+            earlier = order.opportunity_id.sudo().order_ids.filtered(
+                lambda o: own_id and o.id < own_id and o.state != 'cancel'
+            ).sorted('id')[:1]
+            order.restagrup_first_order_id = earlier
+            order.restagrup_is_additional = bool(earlier)
+
     @api.depends('restaurant_po_ids')
     def _compute_restaurant_po_count(self):
         for order in self:

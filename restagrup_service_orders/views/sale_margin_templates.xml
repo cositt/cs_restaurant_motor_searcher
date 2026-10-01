@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Nota de margen para el cliente: solo con el interruptor "Mostrar margen al cliente" encendido.
+         Nunca se muestra el coste del restaurante, solo el importe incluido de gestión. -->
+    <template id="report_saleorder_margin_note" inherit_id="sale.report_saleorder_document">
+        <xpath expr="//div[@name='so_total_summary']" position="after">
+            <div t-if="doc.restagrup_show_margin and doc.restagrup_margin_total" class="row" name="restagrup_margin_note">
+                <div class="col-6 ms-auto">
+                    <p class="text-muted text-end small">
+                        Incluye Gestión Restagrup (<t t-out="'%g' % doc.restagrup_margin_percent"/> %):
+                        <span t-out="doc.restagrup_margin_total"
+                              t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                        (base imponible)
+                    </p>
+                </div>
+            </div>
+        </xpath>
+    </template>
+
+    <template id="portal_saleorder_margin_note" inherit_id="sale.sale_order_portal_content">
+        <xpath expr="//div[@id='total']" position="after">
+            <div t-if="sale_order.restagrup_show_margin and sale_order.restagrup_margin_total" name="restagrup_margin_note">
+                <p class="text-muted text-end small">
+                    Incluye Gestión Restagrup (<t t-out="'%g' % sale_order.restagrup_margin_percent"/> %):
+                    <span t-out="sale_order.restagrup_margin_total"
+                          t-options="{'widget': 'monetary', 'display_currency': sale_order.currency_id}"/>
+                    (base imponible)
+                </p>
+            </div>
+        </xpath>
+    </template>
+</odoo>
