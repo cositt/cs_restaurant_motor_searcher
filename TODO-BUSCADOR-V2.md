@@ -243,6 +243,21 @@ evento siguen funcionando.
 
 ## 5. Vista "Clientes/Grupos" + aviso conjunto a restaurantes
 
+> **✅ HECHO EN DEV (2026-10-01).** Rama `feature/clientes-avisos`. Menú **Restagrup → Clientes** (lista de grupos
+> con eventos, restaurantes elegidos, presupuestado, confirmados N/M y avisos sin respuesta), pestañas
+> **Eventos** (con restaurante, importe, presupuesto y estado de la hoja) y **Avisos** en el lead, botón
+> **Avisar a restaurantes** con asistente (restaurantes marcables, plantilla o texto libre, variables
+> `{restaurante} {grupo} {evento} {fecha} {comensales}`), y seguimiento por aviso (pendiente / respondido, fecha,
+> extracto y resumen IA). Sale por el hilo de la hoja de servicio si existe, o por el de la petición de
+> presupuesto si no. **La agencia no recibe nada.** Menús nuevos: Avisos enviados y Plantillas de aviso (3
+> iniciales: cambio de comensales, de fecha u hora, general). Schema aprobado: tablas `restagrup_restaurant_notice`,
+> `restagrup_notice_template` y el asistente (`..._wizard` + `_line`); ninguna columna en tablas existentes.
+> 20 tests nuevos; 193 en total, 0 fallos; verificado en navegador (asistente, plantilla, envío, pestañas
+> Eventos/Avisos y menú Clientes). **No verificado en navegador:** el paso a "Respondido" (cubierto por tests
+> con la respuesta simulada). **Límites:** (1) una respuesta solo se enlaza si contesta al mismo correo;
+> (2) si un restaurante está elegido en dos eventos del mismo presupuesto, recibe un aviso por evento;
+> (3) el aviso por el hilo de la petición de presupuesto aparece como un correo más en esa conversación.
+
 Nuevo menú **Restagrup → Clientes** con el resumen de cada grupo: datos del cliente (como el lead), eventos,
 restaurantes elegidos con importe, presupuestos y su estado, confirmaciones N/M.
 
