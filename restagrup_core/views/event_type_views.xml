@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_restagrup_event_type_list" model="ir.ui.view">
+        <field name="name">restagrup.event.type.list</field>
+        <field name="model">restagrup.event.type</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_restagrup_event_type" model="ir.actions.act_window">
+        <field name="name">Tipos de evento</field>
+        <field name="res_model">restagrup.event.type</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Añade un tipo de evento</p>
+            <p>Desayuno, comida, cena… Son los tipos que se pueden asignar a cada evento de un grupo.</p>
+        </field>
+    </record>
+</odoo>

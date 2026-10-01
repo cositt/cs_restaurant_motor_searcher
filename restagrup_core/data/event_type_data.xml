@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="event_type_breakfast" model="restagrup.event.type">
+        <field name="name">Desayuno</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="event_type_aperitif" model="restagrup.event.type">
+        <field name="name">Aperitivo</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="event_type_lunch" model="restagrup.event.type">
+        <field name="name">Comida</field>
+        <field name="sequence">30</field>
+    </record>
+    <record id="event_type_dinner" model="restagrup.event.type">
+        <field name="name">Cena</field>
+        <field name="sequence">40</field>
+    </record>
+    <record id="event_type_coffee_break" model="restagrup.event.type">
+        <field name="name">Coffee break</field>
+        <field name="sequence">50</field>
+    </record>
+    <record id="event_type_other" model="restagrup.event.type">
+        <field name="name">Otro</field>
+        <field name="sequence">90</field>
+    </record>
+</odoo>

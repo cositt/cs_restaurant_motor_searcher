@@ -12,7 +12,10 @@
     'author': 'Cositt Technology',
     'depends': ['base'],
     'data': [
+        'security/ir.model.access.csv',
+        'data/event_type_data.xml',
         'views/res_config_settings_views.xml',
+        'views/event_type_views.xml',
     ],
     'installable': True,
     'application': False,
