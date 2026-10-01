@@ -105,6 +105,13 @@ ofrece registrar; tras registrar, elegir y crear presupuesto de venta funcionan.
 
 ## 2. Pestaña "Presupuestos" dentro de Resultados
 
+> **✅ HECHO EN DEV (2026-10-01).** Rama `feature/pestana-presupuestos`. Pestaña **Presupuestos** con solo los
+> restaurantes con presupuesto (registrado o propuesto por IA, marcado en naranja), del más barato al más caro,
+> con importe del restaurante, precio al cliente (con margen), notas y botones Confirmar / Elegir / Ver conversación.
+> Campos calculados (`quoted_line_ids`, `quote_client_price`): **sin cambios de schema**. 7 tests nuevos; 108 en
+> total, 0 fallos; verificado en navegador. **Pendiente (decidir):** columna "fecha de respuesta", que necesita un
+> campo guardado nuevo (🗄️) y por eso no se hizo.
+
 Tabla limpia con **solo** los restaurantes que han enviado presupuesto: restaurante, importe del restaurante,
 precio al cliente (con margen), notas, fecha de respuesta, estado, botones Registrar/Elegir.
 

@@ -485,3 +485,45 @@ class TestRestaurantSearch(TransactionCase):
         line = self._create_line(etiqueta='solicitado', email='chef@example.com')
         with self.assertRaises(UserError):
             line.action_toggle_chosen()
+
+    # --- pestaña "Presupuestos": solo los restaurantes que han enviado presupuesto ---
+
+    def test_quoted_lines_only_include_restaurants_with_a_quote(self):
+        registered = self._create_line(name='Registrado', etiqueta='presupuesto_recibido', quote_amount=900)
+        proposed = self._line_with_ai_quote(name='Propuesto por IA')
+        self._create_line(name='Solo visto')
+        self._create_line(name='Solicitado sin respuesta', etiqueta='solicitado')
+        self._create_line(name='Descartado con importe', etiqueta='descartado', quote_amount=500)
+        self.assertEqual(self.search.quoted_line_ids, registered | proposed)
+
+    def test_quoted_lines_are_sorted_by_amount_ascending(self):
+        expensive = self._create_line(name='Caro', etiqueta='presupuesto_recibido', quote_amount=1500)
+        cheap = self._create_line(name='Barato', etiqueta='presupuesto_recibido', quote_amount=800)
+        middle = self._line_with_ai_quote(name='Medio')  # 1176 € propuestos por IA
+        self.assertEqual(self.search.quoted_line_ids.ids, [cheap.id, middle.id, expensive.id])
+
+    def test_quoted_lines_update_when_a_quote_is_registered(self):
+        line = self._create_line(name='Pendiente', etiqueta='solicitado')
+        self.assertNotIn(line, self.search.quoted_line_ids)
+        line.write({'quote_amount': 700})
+        line.action_register_quote()
+        self.assertIn(line, self.search.quoted_line_ids)
+
+    def test_quoted_lines_keep_the_chosen_restaurant(self):
+        line = self._create_line(name='Elegido', etiqueta='presupuesto_recibido', quote_amount=600)
+        with patch.object(self.env.registry['restagrup.restaurant.search.line'], '_fetch_google_phone'):
+            line.action_toggle_chosen()
+        self.assertIn(line, self.search.quoted_line_ids)
+
+    def test_quote_client_price_adds_the_default_margin(self):
+        line = self._create_line(etiqueta='presupuesto_recibido', quote_amount=1000)
+        self.assertEqual(line.quote_client_price, 1200)  # +20 % por defecto
+
+    def test_quote_client_price_follows_the_configured_margin(self):
+        self.env['ir.config_parameter'].sudo().set_param('restagrup.default_margin_percent', '10')
+        line = self._create_line(etiqueta='presupuesto_recibido', quote_amount=1000)
+        self.assertEqual(line.quote_client_price, 1100)
+
+    def test_quote_client_price_is_zero_without_a_quote(self):
+        line = self._create_line(etiqueta='solicitado')
+        self.assertEqual(line.quote_client_price, 0)

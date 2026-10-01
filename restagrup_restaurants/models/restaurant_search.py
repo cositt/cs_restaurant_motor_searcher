@@ -128,6 +128,12 @@ class RestaurantSearch(models.Model):
     )
     line_ids = fields.One2many('restagrup.restaurant.search.line', 'search_id', string='Resultados')
     line_count = fields.Integer(string='Nº resultados', compute='_compute_line_count')
+    quoted_line_ids = fields.One2many(
+        'restagrup.restaurant.search.line', 'search_id', string='Presupuestos',
+        compute='_compute_quoted_line_ids',
+        help='Solo los restaurantes que han enviado presupuesto (registrado o propuesto por la IA'
+             ' y pendiente de confirmar), del más barato al más caro.',
+    )
     sort_by = fields.Selection(
         selection=SORT_BY_SELECTION, string='Ordenar por', default='default',
         help='Reordena las tarjetas de resultados. No afecta a los datos, solo al orden en que se muestran.',
@@ -155,6 +161,14 @@ class RestaurantSearch(models.Model):
     def _compute_line_count(self):
         for search in self:
             search.line_count = len(search.line_ids)
+
+    @api.depends('line_ids.etiqueta', 'line_ids.quote_amount')
+    def _compute_quoted_line_ids(self):
+        for search in self:
+            quoted = search.line_ids.filtered(
+                lambda line: line.quote_amount and line.etiqueta in ('presupuesto_recibido', 'solicitado')
+            )
+            search.quoted_line_ids = quoted.sorted('quote_amount')
 
     @api.depends('chosen_line_id', 'line_ids.etiqueta')
     def _compute_pipeline_stage(self):
@@ -532,6 +546,11 @@ class RestaurantSearchLine(models.Model):
         help='La IA propuso un importe a partir de la respuesta del restaurante, pero nadie lo ha'
              ' registrado todavía. Hasta confirmarlo, el restaurante no cuenta como "presupuesto recibido".',
     )
+    quote_client_price = fields.Float(
+        string='Precio al cliente (€)', compute='_compute_quote_client_price', digits=(16, 2),
+        help='Presupuesto del restaurante + margen de Restagrup (solo uso interno: se calcula con el'
+             ' margen de Ajustes → Restagrup en cada lectura).',
+    )
     is_chosen = fields.Boolean(string='Elegido', compute='_compute_is_chosen')
     google_maps_url = fields.Char(string='Enlace Maps', compute='_compute_google_maps_url')
     latitude = fields.Float(string='Latitud', digits=(16, 6))
@@ -552,6 +571,14 @@ class RestaurantSearchLine(models.Model):
     def _compute_quote_pending_confirmation(self):
         for line in self:
             line.quote_pending_confirmation = bool(line.quote_amount) and line.etiqueta == 'solicitado'
+
+    @api.depends('quote_amount')
+    def _compute_quote_client_price(self):
+        pricing = self.env['restagrup.pricing']
+        for line in self:
+            line.quote_client_price = (
+                round(pricing.apply_margin(line.quote_amount), 2) if line.quote_amount else 0.0
+            )
 
     @api.depends('etiqueta', 'quote_requested_date')
     def _compute_quote_days_pending(self):

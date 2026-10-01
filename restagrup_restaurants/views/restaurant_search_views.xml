@@ -161,6 +161,28 @@
                                 </kanban>
                             </field>
                         </page>
+                        <page name="quotes" string="Presupuestos">
+                            <field name="quoted_line_ids" nolabel="1" readonly="1">
+                                <list create="false" delete="false" edit="false"
+                                      decoration-success="is_chosen" decoration-warning="quote_pending_confirmation">
+                                    <field name="is_chosen" column_invisible="True"/>
+                                    <field name="quote_pending_confirmation" column_invisible="True"/>
+                                    <field name="name" string="Restaurante"/>
+                                    <field name="etiqueta" string="Estado" widget="badge"/>
+                                    <field name="quote_amount" string="Restaurante (€)"/>
+                                    <field name="quote_client_price" string="Cliente (€)"/>
+                                    <field name="quote_notes"/>
+                                    <button name="action_register_quote" type="object" string="Confirmar"
+                                            class="btn-primary" invisible="not quote_pending_confirmation"/>
+                                    <button name="action_toggle_chosen" type="object" string="Elegir"
+                                            class="btn-outline-success" invisible="is_chosen"/>
+                                    <button name="action_toggle_chosen" type="object" string="Quitar elegido"
+                                            class="btn-outline-secondary" invisible="not is_chosen"/>
+                                    <button name="action_view_conversation" type="object" string="Ver conversación"
+                                            class="btn-link"/>
+                                </list>
+                            </field>
+                        </page>
                     </notebook>
                 </sheet>
                 <chatter/>
