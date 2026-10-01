@@ -159,6 +159,20 @@ margen encendido; usuario sin grupo interno no ve las columnas.
 
 ## 4A. La IA extrae varios eventos del correo (requisito nuevo)
 
+> **✅ HECHO EN DEV (2026-10-01).** Rama `feature/eventos-ia`. Schema aprobado y aplicado:
+> tablas `restagrup_event_type` (core, 6 tipos iniciales, ampliables desde Restagrup → Tipos de evento) y
+> `restagrup_lead_event` (email_ai), columna `event_id` en las búsquedas, y `restagrup_restaurants` pasa a
+> depender de `restagrup_email_ai` (ya usaba sus campos sin declararlo). La IA devuelve una lista de eventos
+> (ciudad, fecha, tipo, pax, notas) que entran como **borrador** en la pestaña "Eventos" del lead; cada
+> evento tiene su botón "Buscar" y hay "Buscar para todos los eventos". La búsqueda se llama p. ej.
+> `Sevilla · 40 pax · Cena · 16/11`. Máximo 20 eventos por correo; datos sucios se dejan vacíos, nunca se
+> inventan. 52 tests nuevos; 160 en total, 0 fallos; verificado en navegador.
+> **Prueba real contra Groq: 61/61 campos acertados** sobre 9 correos de ejemplo (ES/EN, 1 o varios lugares,
+> año omitido, sin datos, aviso automático). Es un corpus pequeño y limpio: se repite con correos reales de
+> agencias con `restagrup_email_ai/eval/eval_extraction.py` (instrucciones en su cabecera).
+> Pendiente para el 4B: tipo de evento en las líneas del presupuesto (hoy solo comida/cena) y presupuesto
+> acumulado/adicional. Nota: el estado de un evento no vuelve a "borrador" si se borra su búsqueda.
+
 El correo de la agencia puede pedir, p. ej.: *"15 nov comida en Málaga, 15 nov cena en Málaga, 16 nov cena en
 Sevilla, 42 personas"*. Hoy la IA devuelve un único lugar y una única fecha.
 
