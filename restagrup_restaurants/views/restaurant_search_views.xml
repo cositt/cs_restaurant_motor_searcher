@@ -246,6 +246,8 @@
 
     <menuitem id="menu_restaurant_search" name="Buscar restaurantes" parent="menu_restagrup_root"
               action="action_restaurant_search" sequence="20"/>
+    <menuitem id="menu_restagrup_cancel_reasons" name="Motivos de cancelación" parent="menu_restagrup_root"
+              action="restagrup_core.action_restagrup_cancel_reason" sequence="91"/>
     <menuitem id="menu_restagrup_event_types" name="Tipos de evento" parent="menu_restagrup_root"
               action="restagrup_core.action_restagrup_event_type" sequence="90"/>
 </odoo>

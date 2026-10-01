@@ -1,3 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_restagrup_event_type_user,restagrup.event.type user,model_restagrup_event_type,base.group_user,1,1,1,0
 access_restagrup_event_type_manager,restagrup.event.type manager,model_restagrup_event_type,base.group_system,1,1,1,1
+access_restagrup_cancel_reason_user,restagrup.cancel.reason user,model_restagrup_cancel_reason,base.group_user,1,1,1,0
+access_restagrup_cancel_reason_manager,restagrup.cancel.reason manager,model_restagrup_cancel_reason,base.group_system,1,1,1,1

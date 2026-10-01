@@ -11,5 +11,6 @@ from . import menu_selection_wizard
 from . import notice_template
 from . import restaurant_notice
 from . import notice_wizard
+from . import change_wizard
 from . import crm_lead
 from . import lead_event

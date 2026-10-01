@@ -36,6 +36,40 @@
         </field>
     </record>
 
+    <!-- ===== Asistente "Cancelar / cambiar restaurante" ===== -->
+    <record id="view_restaurant_change_wizard_form" model="ir.ui.view">
+        <field name="name">restagrup.restaurant.change.wizard.form</field>
+        <field name="model">restagrup.restaurant.change.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Cancelar o cambiar restaurante">
+                <group>
+                    <field name="search_id"/>
+                    <field name="chosen_line_id"/>
+                    <field name="reason_id" options="{'no_create': True}"/>
+                    <field name="note"/>
+                </group>
+                <group string="Sustituto (opcional)">
+                    <field name="replacement_line_id" options="{'no_create': True}"/>
+                    <field name="keep_client_price" invisible="not replacement_line_id"/>
+                </group>
+                <group string="Aviso al restaurante cancelado">
+                    <field name="notify_restaurant"/>
+                    <field name="template_id" options="{'no_create': True}" invisible="not notify_restaurant"/>
+                    <field name="subject" invisible="not notify_restaurant"/>
+                </group>
+                <field name="body" invisible="not notify_restaurant"
+                       placeholder="Variables: {restaurante}, {grupo}, {evento}, {fecha}, {comensales}"/>
+                <p class="text-muted">
+                    Con sustituto, el presupuesto se ajusta al precio del nuevo restaurante. La agencia no recibe ningún aviso.
+                </p>
+                <footer>
+                    <button name="action_confirm" type="object" string="Confirmar" class="btn-primary"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
     <!-- ===== Avisos enviados (seguimiento) ===== -->
     <record id="view_restaurant_notice_list" model="ir.ui.view">
         <field name="name">restagrup.restaurant.notice.list</field>
