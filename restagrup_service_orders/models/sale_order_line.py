@@ -17,6 +17,11 @@ class SaleOrderLine(models.Model):
         selection=[('lunch', 'Comida'), ('dinner', 'Cena')],
         string='Comida/Cena',
     )
+    service_event_type_id = fields.Many2one(
+        'restagrup.event.type', string='Tipo de evento', ondelete='restrict',
+        help='Desayuno, comida, cena… Sustituye al antiguo "Comida/Cena" (service_meal, que se conserva'
+             ' en la base de datos sin uso).',
+    )
     restagrup_search_line_id = fields.Many2one(
         'restagrup.restaurant.search.line', string='Búsqueda de restaurante origen',
         readonly=True, copy=False, index=True,
@@ -82,3 +87,19 @@ class SaleOrderLine(models.Model):
             frozen = self.restagrup_margin_pct if self.restagrup_unit_cost else None
             return self.env['restagrup.pricing'].apply_margin(product.standard_price, percent=frozen)
         return super()._get_display_price()
+
+    @api.model
+    def _restagrup_fill_event_type_from_meal(self):
+        """Migración: el antiguo "Comida/Cena" pasa al tipo de evento nuevo. No pisa un tipo ya elegido."""
+        mapping = {
+            'lunch': 'restagrup_core.event_type_lunch',
+            'dinner': 'restagrup_core.event_type_dinner',
+        }
+        for meal, xmlid in mapping.items():
+            event_type = self.env.ref(xmlid, raise_if_not_found=False)
+            if not event_type:
+                continue
+            lines = self.sudo().with_context(active_test=False).search([
+                ('service_meal', '=', meal), ('service_event_type_id', '=', False),
+            ])
+            lines.write({'service_event_type_id': event_type.id})

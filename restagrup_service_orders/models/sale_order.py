@@ -57,6 +57,24 @@ class SaleOrder(models.Model):
             order.restagrup_margin_total = margin
             order.restagrup_margin_percent = round(margin / cost * 100, 2) if cost else 0.0
 
+    restagrup_first_order_id = fields.Many2one(
+        'sale.order', string='Primer presupuesto del grupo', compute='_compute_restagrup_additional',
+    )
+    restagrup_is_additional = fields.Boolean(
+        string='Presupuesto adicional', compute='_compute_restagrup_additional',
+        help='El grupo ya tenía un presupuesto anterior (no cancelado) cuando se creó este.',
+    )
+
+    @api.depends('opportunity_id.order_ids.state')
+    def _compute_restagrup_additional(self):
+        for order in self:
+            own_id = order._origin.id
+            earlier = order.opportunity_id.sudo().order_ids.filtered(
+                lambda o: own_id and o.id < own_id and o.state != 'cancel'
+            ).sorted('id')[:1]
+            order.restagrup_first_order_id = earlier
+            order.restagrup_is_additional = bool(earlier)
+
     @api.depends('restaurant_po_ids')
     def _compute_restaurant_po_count(self):
         for order in self:
