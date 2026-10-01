@@ -13,10 +13,27 @@
                 </button>
             </div>
             <xpath expr="//div[hasclass('oe_title')]" position="after">
-                <div class="mb-2" invisible="restagrup_restaurant_search_count &gt; 0">
+                <div class="mb-2" invisible="restagrup_restaurant_search_count &gt; 0 or restagrup_event_ids">
                     <button name="action_search_restaurants" type="object" string="🍽 Buscar restaurantes"
                             class="btn-secondary"/>
                 </div>
+                <div class="mb-2" invisible="not restagrup_event_ids">
+                    <button name="action_search_all_events" type="object" string="🍽 Buscar para todos los eventos"
+                            class="btn-secondary"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Botón "Buscar" en cada fila de la pestaña Eventos (el modelo del evento vive en email_ai). -->
+    <record id="crm_lead_view_form_restaurant_search_events" model="ir.ui.view">
+        <field name="name">crm.lead.form.restaurant.search.events</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="restagrup_email_ai.crm_lead_view_form_restagrup"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='restagrup_event_ids']/list" position="inside">
+                <button name="action_search_restaurants" type="object" string="Buscar" icon="fa-search"
+                        invisible="not id or not city"/>
             </xpath>
         </field>
     </record>

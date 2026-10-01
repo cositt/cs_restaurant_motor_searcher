@@ -38,6 +38,14 @@ class CrmLead(models.Model):
             action['view_mode'] = 'list,form'
         return action
 
+    def action_search_all_events(self):
+        """Una búsqueda por cada evento en borrador que ya tenga ciudad; los que ya tienen búsqueda
+        no se duplican."""
+        self.ensure_one()
+        for event in self.restagrup_event_ids.filtered(lambda e: e.state == 'draft' and e.city):
+            event.action_search_restaurants()
+        return self.action_view_restaurant_searches()
+
     def action_search_restaurants(self):
         self.ensure_one()
         if not self.restagrup_city:

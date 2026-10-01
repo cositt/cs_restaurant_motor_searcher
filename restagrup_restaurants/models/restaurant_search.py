@@ -101,6 +101,10 @@ class RestaurantSearch(models.Model):
         help='La oportunidad o petición de grupo para la que se buscan restaurantes.',
     )
     display_name = fields.Char(string='Nombre', compute='_compute_display_name', store=True)
+    event_id = fields.Many2one(
+        'restagrup.lead.event', string='Evento', ondelete='set null', index=True, copy=False,
+        help='Evento del grupo (comida, cena…) para el que se hace esta búsqueda.',
+    )
     city = fields.Char(string='Ciudad', required=True)
     street = fields.Char(string='Calle', help='Opcional -- afina la geolocalización de Google.')
     zip = fields.Char(
@@ -146,7 +150,7 @@ class RestaurantSearch(models.Model):
              ' restaurante elegido -- no es editable a mano.',
     )
 
-    @api.depends('city', 'zip', 'min_capacity')
+    @api.depends('city', 'zip', 'min_capacity', 'event_id.event_type_id', 'event_id.event_date')
     def _compute_display_name(self):
         for search in self:
             location = search.city or _('Sin ciudad')
@@ -155,6 +159,10 @@ class RestaurantSearch(models.Model):
             parts = [location]
             if search.min_capacity:
                 parts.append(_('%s pax') % search.min_capacity)
+            if search.event_id.event_type_id:
+                parts.append(search.event_id.event_type_id.name)
+            if search.event_id.event_date:
+                parts.append(search.event_id.event_date.strftime('%d/%m'))
             search.display_name = ' · '.join(parts)
 
     @api.depends('line_ids')
