@@ -203,6 +203,21 @@ ninguno y estado "sin datos". **Además una prueba real contra Groq** con un cor
 
 ## 4B. Búsqueda por evento y presupuesto acumulado o adicional
 
+> **✅ HECHO EN DEV (2026-10-01).** Rama `feature/presupuesto-multievento`. "Crear presupuesto de venta" añade la
+> línea al presupuesto **sin firmar** (borrador o enviado) del grupo; si no hay, crea el primero; si el último
+> ya está **confirmado/firmado**, no lo toca y crea un **presupuesto adicional** (aviso azul "el primero es
+> S…" y nota en el chatter). Cada línea lleva el tipo y la fecha del evento y su descripción lo dice
+> (*"Cena · 16/11 — Servicio en X (Sevilla, 40 pax)"*). Los presupuestos quedan enlazados al lead
+> (`opportunity_id`). Si se añade a uno ya enviado, nota en el chatter para reenviarlo. Cada presupuesto genera
+> sus hojas de servicio. Un grupo de un solo evento va exactamente como antes (test de regresión).
+> Schema aprobado: columna `service_event_type_id` en la línea; migración (v19.0.1.1.0) copia comida/cena
+> antiguos al tipo nuevo (en dev: 8 de 8 líneas); `service_meal` se conserva sin usar. 13 tests nuevos; 173 en
+> total, 0 fallos; verificado en navegador (acumulado de 2 eventos, adicional con banner y desayuno).
+> **Al desplegar a prod:** reiniciar el servicio web tras actualizar (un campo nuevo sin reinicio da error en
+> el formulario). **Pendiente / límites conocidos:** (1) un presupuesto creado por otro comercial puede no ser
+> visible por la regla de "solo mis pedidos" y se crearía uno nuevo en lugar de añadir; (2) la regla de
+> firmado es "estado confirmado"; (3) el informe "Imprimir propuesta" por restaurante no se ha tocado.
+
 **Búsqueda por evento.** Cada evento genera su búsqueda (`event_id` 🗄️ en la búsqueda). El nombre pasa a
 `42 pax · Málaga · Cena · 15/11`. Pestaña **"Eventos del grupo"** en la búsqueda con las hermanas (mismo
 lead), su estado y su restaurante elegido, y botón "Añadir evento".
