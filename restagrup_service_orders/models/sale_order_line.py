@@ -24,6 +24,43 @@ class SaleOrderLine(models.Model):
              ' generó esta línea -- trazabilidad búsqueda → presupuesto → venta.',
     )
 
+    restagrup_unit_cost = fields.Float(
+        string='Coste restaurante (€)', compute='_compute_restagrup_cost', store=True,
+        readonly=False, precompute=True, digits='Product Price',
+        help='Lo que cobra el restaurante por unidad (coste del menú, o el importe de su presupuesto).'
+             ' Es de uso interno: nunca sale en el presupuesto del cliente.',
+    )
+    restagrup_margin_pct = fields.Float(
+        string='Margen aplicado (%)', compute='_compute_restagrup_cost', store=True,
+        readonly=False, precompute=True, digits=(16, 2),
+        help='Margen de Restagrup con el que se calculó esta línea. Queda congelado: cambiar el margen'
+             ' en Ajustes no toca las líneas ya creadas.',
+    )
+    restagrup_margin_amount = fields.Float(
+        string='Margen (€)', compute='_compute_restagrup_margin_amount', digits='Product Price',
+        help='Importe de la línea sin impuestos menos el coste del restaurante.',
+    )
+
+    @api.depends('product_id', 'restagrup_search_line_id')
+    def _compute_restagrup_cost(self):
+        pricing = self.env['restagrup.pricing']
+        for line in self:
+            product = line.product_id
+            if product.restaurant_id and product.standard_price:
+                cost = product.standard_price
+            else:
+                cost = line.restagrup_search_line_id.quote_amount
+            line.restagrup_unit_cost = cost or 0.0
+            line.restagrup_margin_pct = pricing.margin_percent() if cost else 0.0
+
+    @api.depends('price_subtotal', 'product_uom_qty', 'restagrup_unit_cost')
+    def _compute_restagrup_margin_amount(self):
+        for line in self:
+            line.restagrup_margin_amount = (
+                line.price_subtotal - line.restagrup_unit_cost * line.product_uom_qty
+                if line.restagrup_unit_cost else 0.0
+            )
+
     @api.depends('product_id')
     def _compute_restaurant_id(self):
         """Un menú (producto con restaurante) rellena solo el restaurante de la línea.
@@ -42,5 +79,6 @@ class SaleOrderLine(models.Model):
         self.ensure_one()
         product = self.product_id
         if product.restaurant_id and product.standard_price:
-            return self.env['restagrup.pricing'].apply_margin(product.standard_price)
+            frozen = self.restagrup_margin_pct if self.restagrup_unit_cost else None
+            return self.env['restagrup.pricing'].apply_margin(product.standard_price, percent=frozen)
         return super()._get_display_price()

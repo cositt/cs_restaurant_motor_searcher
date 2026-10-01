@@ -17,6 +17,7 @@
         'security/ir.model.access.csv',
         'data/product_data.xml',
         'views/sale_order_views.xml',
+        'views/sale_margin_templates.xml',
         'views/purchase_order_views.xml',
         'views/restaurant_search_views.xml',
         'views/res_partner_views.xml',
