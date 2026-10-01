@@ -527,6 +527,11 @@ class RestaurantSearchLine(models.Model):
         string='Petición colgada', compute='_compute_quote_days_pending',
         help='Lleva más de %s días en "Solicitado" sin presupuesto recibido ni descartado.' % QUOTE_STALE_DAYS,
     )
+    quote_pending_confirmation = fields.Boolean(
+        string='Importe sin confirmar', compute='_compute_quote_pending_confirmation',
+        help='La IA propuso un importe a partir de la respuesta del restaurante, pero nadie lo ha'
+             ' registrado todavía. Hasta confirmarlo, el restaurante no cuenta como "presupuesto recibido".',
+    )
     is_chosen = fields.Boolean(string='Elegido', compute='_compute_is_chosen')
     google_maps_url = fields.Char(string='Enlace Maps', compute='_compute_google_maps_url')
     latitude = fields.Float(string='Latitud', digits=(16, 6))
@@ -542,6 +547,11 @@ class RestaurantSearchLine(models.Model):
     def _compute_is_chosen(self):
         for line in self:
             line.is_chosen = line.search_id.chosen_line_id.id == line.id
+
+    @api.depends('etiqueta', 'quote_amount')
+    def _compute_quote_pending_confirmation(self):
+        for line in self:
+            line.quote_pending_confirmation = bool(line.quote_amount) and line.etiqueta == 'solicitado'
 
     @api.depends('etiqueta', 'quote_requested_date')
     def _compute_quote_days_pending(self):
@@ -891,6 +901,8 @@ class RestaurantSearchLine(models.Model):
         self.search_id.message_post_if_exists(_(
             '%(name)s: presupuesto recibido — %(amount)s €.'
         ) % {'name': self.name, 'amount': self.quote_amount})
+        if self.env.context.get('choose_after_register'):
+            self._choose_line()
         return {'type': 'ir.actions.act_window_close'}
 
     def action_toggle_chosen(self):
@@ -899,11 +911,32 @@ class RestaurantSearchLine(models.Model):
             self.search_id.chosen_line_id = False
             self.search_id.message_post_if_exists(_('Ya no es el elegido: %s.') % self.name)
             return
+        if self.quote_pending_confirmation:
+            # El importe llegó por email y lo propuso la IA, pero nadie lo ha confirmado:
+            # en vez de dar error, se abre el diálogo de registro y, al confirmarlo, se elige.
+            return self._action_open_register_and_choose()
         if self.etiqueta != 'presupuesto_recibido':
             raise UserError(_(
                 'Solo se puede elegir un restaurante con presupuesto recibido.'
                 ' Pide presupuesto y regístralo antes de elegirlo.'
             ))
+        self._choose_line()
+
+    def _action_open_register_and_choose(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Registrar presupuesto y elegir'),
+            'res_model': 'restagrup.restaurant.search.line',
+            'res_id': self.id,
+            'view_mode': 'form',
+            'view_id': self.env.ref('restagrup_restaurants.view_restaurant_search_line_quote_form').id,
+            'target': 'new',
+            'context': {'choose_after_register': True},
+        }
+
+    def _choose_line(self):
+        self.ensure_one()
         self._fetch_google_phone()
         self.search_id.chosen_line_id = self.id
         self.search_id.message_post_if_exists(_('Elegido: %(name)s (presupuesto %(amount)s €).') % {

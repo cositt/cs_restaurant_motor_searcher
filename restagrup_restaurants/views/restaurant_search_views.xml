@@ -73,6 +73,7 @@
                                     <field name="quote_is_stale"/>
                                     <field name="partner_restaurant_rating"/>
                                     <field name="is_chosen"/>
+                                    <field name="quote_pending_confirmation"/>
                                     <field name="google_maps_url"/>
                                     <templates>
                                         <t t-name="card">
@@ -125,8 +126,13 @@
                                                     <span t-attf-class="badge-etiqueta etiqueta-{{record.etiqueta.raw_value}}">
                                                         <t t-esc="record.etiqueta.value"/>
                                                     </span>
-                                                    <span class="o_restagrup_quote_amount" t-if="record.quote_amount.raw_value">
+                                                    <span class="o_restagrup_quote_amount"
+                                                          t-if="record.quote_amount.raw_value and !record.quote_pending_confirmation.raw_value">
                                                         💶 <t t-esc="record.quote_amount.value"/> €
+                                                    </span>
+                                                    <span class="o_restagrup_quote_pending" t-if="record.quote_pending_confirmation.raw_value"
+                                                          title="La IA propuso este importe a partir de la respuesta del restaurante. Confírmalo para poder elegirlo.">
+                                                        💶 <t t-esc="record.quote_amount.value"/> € · propuesto por IA, sin confirmar
                                                     </span>
                                                     <span class="o_restagrup_stale_badge" t-if="record.quote_is_stale.raw_value">
                                                         ⚠ <t t-esc="record.quote_days_pending.raw_value"/> días sin respuesta
@@ -138,6 +144,8 @@
                                                                 name="action_request_quote" type="object" class="btn btn-outline-primary">Pedir presupuesto</button>
                                                         <button t-if="record.etiqueta.raw_value == 'solicitado'"
                                                                 name="action_request_quote" type="object" class="btn btn-outline-primary">Reenviar petición</button>
+                                                        <button t-if="record.quote_pending_confirmation.raw_value"
+                                                                name="action_register_quote" type="object" class="btn btn-primary">Confirmar presupuesto</button>
                                                         <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido'"
                                                                 name="action_open_quote_form" type="object" class="btn btn-outline-primary">Registrar presupuesto</button>
                                                         <button t-if="record.etiqueta.raw_value == 'solicitado' or record.etiqueta.raw_value == 'presupuesto_recibido'"

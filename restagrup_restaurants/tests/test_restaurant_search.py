@@ -430,3 +430,58 @@ class TestRestaurantSearch(TransactionCase):
         log = self._search_log()
         self.assertIn('Recordatorio enviado', log)
         self.assertIn('Casa Sin Respuesta', log)
+
+    # --- importe propuesto por IA (llega por email) sin registrar: no bloquear el "Elegir" ---
+    # Bug 2026-10-01: la IA rellenaba quote_amount pero dejaba la etiqueta en 'solicitado'; la
+    # tarjeta mostraba el importe como si estuviera registrado y "Elegir" daba error.
+
+    LLM_PATH = 'odoo.addons.restagrup_core.models.llm_connector.RestagrupLlmConnector.extract_json'
+
+    def _line_with_ai_quote(self, **vals):
+        """Línea en 'solicitado' cuyo importe llegó por email y extrajo la IA (sin registrar)."""
+        line = self._create_line(etiqueta='solicitado', email='chef@example.com', **vals)
+        with patch(self.LLM_PATH, return_value=({'importe': 1176, 'notas': 'Depósito 30 %'}, 'groq')):
+            line.message_update({'body': '<p>Total 1.176 €, depósito del 30 %.</p>'})
+        return line
+
+    def test_ai_extracted_amount_is_flagged_pending_confirmation(self):
+        line = self._line_with_ai_quote()
+        self.assertEqual(line.quote_amount, 1176)
+        self.assertEqual(line.etiqueta, 'solicitado')
+        self.assertTrue(line.quote_pending_confirmation)
+
+    def test_pending_confirmation_clears_once_registered(self):
+        line = self._line_with_ai_quote()
+        line.action_register_quote()
+        self.assertEqual(line.etiqueta, 'presupuesto_recibido')
+        self.assertFalse(line.quote_pending_confirmation)
+
+    def test_no_amount_is_not_pending_confirmation(self):
+        line = self._create_line(etiqueta='solicitado', email='chef@example.com')
+        self.assertFalse(line.quote_pending_confirmation)
+
+    def test_choose_with_pending_ai_amount_opens_register_dialog_instead_of_error(self):
+        line = self._line_with_ai_quote()
+        action = line.action_toggle_chosen()
+        self.assertEqual(action['res_model'], 'restagrup.restaurant.search.line')
+        self.assertEqual(action['res_id'], line.id)
+        self.assertEqual(action['target'], 'new')
+        self.assertTrue(action['context']['choose_after_register'])
+        self.assertFalse(self.search.chosen_line_id, 'Todavía no se elige: primero se confirma el importe.')
+
+    def test_register_from_choose_dialog_registers_and_chooses(self):
+        line = self._line_with_ai_quote()
+        with patch.object(self.env.registry['restagrup.restaurant.search.line'], '_fetch_google_phone'):
+            line.with_context(choose_after_register=True).action_register_quote()
+        self.assertEqual(line.etiqueta, 'presupuesto_recibido')
+        self.assertEqual(self.search.chosen_line_id, line)
+
+    def test_plain_register_does_not_choose(self):
+        line = self._line_with_ai_quote()
+        line.action_register_quote()
+        self.assertFalse(self.search.chosen_line_id)
+
+    def test_choose_without_any_amount_still_raises(self):
+        line = self._create_line(etiqueta='solicitado', email='chef@example.com')
+        with self.assertRaises(UserError):
+            line.action_toggle_chosen()

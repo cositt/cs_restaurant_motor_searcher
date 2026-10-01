@@ -188,3 +188,10 @@
     color: #2471a3;
     white-space: nowrap;
 }
+
+/* Importe que propuso la IA a partir de un email y nadie ha confirmado todavía. */
+.o_restagrup_quote_pending {
+    font-size: 12px;
+    font-weight: 700;
+    color: #b9770e;
+}
