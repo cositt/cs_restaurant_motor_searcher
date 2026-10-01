@@ -6,3 +6,4 @@ from . import test_search_chatter
 from . import test_sales_only_user
 from . import test_margin_tracking
 from . import test_multi_event_order
+from . import test_restaurant_notices

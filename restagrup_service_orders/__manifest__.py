@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Restagrup - Pedidos de servicio',
-    'version': '19.0.1.1.0',
+    'version': '19.0.1.2.0',
     'category': 'Custom',
     'summary': 'Hoja de servicio por restaurante al confirmar el presupuesto, y aviso de cambios',
     'description': '''
@@ -16,6 +16,7 @@
     'data': [
         'security/ir.model.access.csv',
         'data/product_data.xml',
+        'data/notice_template_data.xml',
         'views/sale_order_views.xml',
         'views/sale_margin_templates.xml',
         'views/purchase_order_views.xml',
@@ -23,6 +24,7 @@
         'views/res_partner_views.xml',
         'views/product_template_views.xml',
         'views/menu_selection_wizard_views.xml',
+        'views/restaurant_notice_views.xml',
     ],
     'installable': True,
     'application': False,
