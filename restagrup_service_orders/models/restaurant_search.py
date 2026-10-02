@@ -38,7 +38,7 @@ class RestaurantSearch(models.Model):
                 'El restaurante elegido no está guardado como contacto -- añádelo'
                 ' como contacto antes de crear el presupuesto de venta.'
             ))
-        if not self.lead_id.partner_id:
+        if not self.lead_id._restagrup_ensure_billing_partner():
             raise UserError(_(
                 'El grupo/cliente "%s" no tiene un contacto de facturación asignado'
                 ' -- asígnalo antes de crear el presupuesto de venta.'

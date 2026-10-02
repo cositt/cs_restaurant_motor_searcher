@@ -8,3 +8,4 @@ from . import test_margin_tracking
 from . import test_multi_event_order
 from . import test_restaurant_notices
 from . import test_change_restaurant
+from . import test_lead_billing_contact

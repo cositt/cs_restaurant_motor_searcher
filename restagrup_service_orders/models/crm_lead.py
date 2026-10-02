@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import _, api, fields, models
+from odoo.tools.mail import email_normalize, parse_contact_from_email
 
 
 class CrmLead(models.Model):
@@ -31,6 +32,27 @@ class CrmLead(models.Model):
             lead.restagrup_order_total = sum(orders.mapped('amount_untaxed'))
             lead.restagrup_confirmation_summary = '%s/%s' % (confirmed, len(sheets)) if sheets else False
             lead.restagrup_notice_pending_count = len(lead.restagrup_notice_ids.filtered(lambda n: n.state == 'pending'))
+
+    def _restagrup_ensure_billing_partner(self):
+        """Un lead nacido de un correo llega sin contacto (Odoo solo lo rellena si el remitente ya existe).
+        Antes de facturar se busca el cliente por email -- nunca un restaurante -- y, si no existe, se crea
+        con los datos del remitente. Sin email no se inventa nada. Devuelve el contacto o un recordset vacío."""
+        self.ensure_one()
+        if self.partner_id:
+            return self.partner_id
+        email = email_normalize(self.email_from or '')
+        if not email:
+            return self.env['res.partner']
+        partner = self.env['res.partner'].sudo().search([
+            ('email_normalized', '=', email), ('is_restaurant', '=', False),
+        ], order='id', limit=1)
+        if not partner:
+            sender_name = self.contact_name or parse_contact_from_email(self.email_from)[0] or email
+            partner = self.env['res.partner'].create({
+                'name': sender_name, 'email': email, 'phone': self.phone or False,
+            })
+        self.sudo().partner_id = partner  # un lead sin asignar no es escribible por todos los comerciales
+        return partner
 
     def _restagrup_notice_line_vals(self):
         """Un restaurante a avisar por cada búsqueda con restaurante elegido, con la hoja de servicio por la
