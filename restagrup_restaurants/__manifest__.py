@@ -19,6 +19,7 @@
         'views/res_partner_views.xml',
         'views/restaurant_search_views.xml',
         'views/crm_lead_views.xml',
+        'views/pending_mail_views.xml',
         'data/restaurant_data.xml',
         'data/ir_cron_data.xml',
     ],

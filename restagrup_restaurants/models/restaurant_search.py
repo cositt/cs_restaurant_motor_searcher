@@ -284,7 +284,9 @@ class RestaurantSearch(models.Model):
         for search in self:
             search.message_post(body=body, subtype_xmlid='mail.mt_note')
             if search.lead_id:
-                search.lead_id.message_post(body=body)
+                # sudo: un lead de correo llega sin comercial y la regla "solo mis leads" impediría anotar
+                # a cualquier otro comercial; el autor sigue siendo quien actúa.
+                search.lead_id.sudo().message_post(body=body)
 
     def _full_address_text(self):
         """Dirección completa a partir de los campos independientes -- vacía si no
@@ -766,12 +768,9 @@ class RestaurantSearchLine(models.Model):
             ))
         return email_to
 
-    def action_send_quote_reminder(self):
-        """Recordatorio de una petición sin respuesta. Mismo mecanismo de hilo que
-        action_request_quote (message_post con outgoing_email_to), pero con un texto
-        propio y configurable -- no repite el cuerpo de la petición original."""
+    def _quote_reminder_content(self, signer_name):
+        """Asunto y texto plano (con firma) del recordatorio de una petición sin respuesta."""
         self.ensure_one()
-        email_to = self._get_quote_email_to()
         search = self.search_id
         subject = _('Recordatorio: petición de presupuesto — %(city)s, %(pax)s pax') % {
             'city': search.city or '',
@@ -780,11 +779,15 @@ class RestaurantSearchLine(models.Model):
         text = self.env['ir.config_parameter'].sudo().get_param(
             'restagrup.quote_reminder_text',
         ) or QUOTE_REMINDER_DEFAULT_TEXT % {'company': self.env.company.name}
-        body_html = Markup('<br/>').join(
-            Markup.escape(line) for line in text.splitlines() + ['', self.env.user.name]
-        )
+        return subject, '\n'.join(text.splitlines() + ['', signer_name])
+
+    def _post_quote_reminder(self, subject, body_text, email_to):
+        """Envía el recordatorio por el hilo de la línea (mismo mecanismo que action_request_quote:
+        message_post con outgoing_email_to) y lo anota. Solo se manda uno por petición."""
+        self.ensure_one()
+        search = self.search_id
         self.message_post(
-            body=body_html,
+            body=Markup('<br/>').join(Markup.escape(line) for line in body_text.splitlines()),
             subject=subject,
             message_type='email',
             subtype_xmlid='mail.mt_comment',
@@ -796,20 +799,35 @@ class RestaurantSearchLine(models.Model):
             'Recordatorio enviado a %(name)s (%(email)s): lleva %(days)s días sin responder.'
         ) % {'name': self.name, 'email': email_to, 'days': self.quote_days_pending})
 
+    def action_send_quote_reminder(self):
+        """Recordatorio de una petición sin respuesta, enviado ya (sin cola de aprobación): lo usa el
+        modo automático y quien lo dispara a mano. Texto propio y configurable -- no repite el cuerpo
+        de la petición original."""
+        self.ensure_one()
+        email_to = self._get_quote_email_to()
+        subject, body_text = self._quote_reminder_content(self.env.user.name)
+        self._post_quote_reminder(subject, body_text, email_to)
+
     @api.model
     def _cron_send_quote_reminders(self):
-        """Cron diario: un recordatorio por cada petición colgada que aún no lo
-        tenga. Una línea sin email no debe parar al resto."""
+        """Cron diario: un recordatorio por cada petición colgada que aún no lo tenga. Con el modo de
+        envíos "con aprobación" (por defecto) lo deja en la cola Pendientes de aprobar; en modo
+        automático lo envía. Una línea sin email no debe parar al resto."""
         threshold = fields.Datetime.now() - timedelta(days=QUOTE_STALE_DAYS)
         lines = self.search([
             ('etiqueta', '=', 'solicitado'),
             ('quote_requested_date', '<=', threshold),
             ('quote_reminder_sent_date', '=', False),
         ])
+        queue = self.env['restagrup.pending.mail']
+        automatic = queue._send_mode() == 'automatic'
         for line in lines:
             try:
                 with self.env.cr.savepoint():
-                    line.action_send_quote_reminder()
+                    if automatic:
+                        line.action_send_quote_reminder()
+                    else:
+                        queue._enqueue_quote_reminder(line)
             except UserError as exc:
                 _logger.warning(
                     'Recordatorio de presupuesto omitido para la línea %s: %s', line.id, exc,
