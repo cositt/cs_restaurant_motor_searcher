@@ -150,7 +150,10 @@ class SaleOrder(models.Model):
     def _restagrup_restaurant_cost(self, sale_line):
         """Precio que cobra el restaurante (lo que lleva su hoja de servicio): nunca el precio al
         cliente, para no enseñarle el margen de Restagrup. Menú -> su coste; petición sin menús ->
-        el importe del presupuesto que dio el restaurante; línea manual -> el precio de la línea."""
+        el importe del presupuesto que dio el restaurante; línea manual -> el precio de la línea.
+        Si la línea ya lleva su coste (repartido a partir del importe cotizado), es ese."""
+        if sale_line.restagrup_unit_cost:
+            return sale_line.restagrup_unit_cost
         product = sale_line.product_id
         if product.restaurant_id and product.standard_price:
             return product.standard_price
