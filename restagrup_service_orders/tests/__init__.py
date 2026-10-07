@@ -10,3 +10,5 @@ from . import test_restaurant_notices
 from . import test_change_restaurant
 from . import test_lead_billing_contact
 from . import test_agency_followup
+from . import test_resend_changes
+from . import test_incoming_orders_and_sender

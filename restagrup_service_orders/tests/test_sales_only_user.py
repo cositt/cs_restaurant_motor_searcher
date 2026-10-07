@@ -64,6 +64,17 @@ class TestSalesOnlyUser(TransactionCase):
         order.action_resend_restaurant_orders()
         self.assertFalse(order.sudo().restaurant_po_ids.restagrup_needs_resend)
 
+    def test_salesman_resend_with_significant_change_resets_confirmation(self):
+        order = self._order_as_salesman()
+        order.order_line[0].service_date = '2026-12-15'
+        order.action_confirm()
+        order.action_send_restaurant_orders()
+        order.sudo().restaurant_po_ids.restagrup_response_state = 'accepted'
+        order.order_line[0].service_hour = 15.0
+        order.action_resend_restaurant_orders()
+        self.assertFalse(order.sudo().restaurant_po_ids.restagrup_response_state)
+        self.assertEqual(order.restagrup_pending_count, 1)
+
     def test_partner_flag_still_true_after_a_sheet_exists(self):
         order = self._order_as_salesman()
         order.action_confirm()

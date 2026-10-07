@@ -29,6 +29,15 @@
                             <field name="restagrup_agency_reminder_text" widget="text"
                                    placeholder="Vacío = texto por defecto"/>
                         </setting>
+                        <setting id="restagrup_change_confirm"
+                                 help="Reenviar cambios: qué cambio de comensales vuelve la hoja del restaurante a «pendiente de confirmar». Fecha y hora siempre piden confirmación.">
+                            <field name="restagrup_change_confirm_pct"/>
+                        </setting>
+                        <setting id="restagrup_incoming"
+                                 help="Buzón central: la IA clasifica cada correo antes de crear el lead. Y desde qué dirección salen los envíos del sistema.">
+                            <field name="restagrup_classify_incoming"/>
+                            <field name="restagrup_system_sender" placeholder="Vacío = correo del usuario"/>
+                        </setting>
                         <setting id="restagrup_send_mode"
                                  help="Con aprobación: los correos que genera el sistema esperan en Restagrup > Pendientes de aprobar hasta que una persona los aprueba. Automático: salen solos.">
                             <field name="restagrup_send_mode"/>

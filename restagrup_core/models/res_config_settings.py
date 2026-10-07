@@ -40,6 +40,27 @@ class ResConfigSettings(models.TransientModel):
         help='Mensaje del recordatorio a la agencia (el enlace al presupuesto y la firma se añaden solos).'
              ' Vacío = texto por defecto.',
     )
+    restagrup_change_confirm_pct = fields.Float(
+        string='Cambio de comensales que pide confirmación (%)', config_parameter='restagrup.change_confirm_pct',
+        default=20.0,
+        help='Al reenviar cambios, un cambio de comensales por encima de este porcentaje (o cualquier cambio de'
+             ' fecha u hora) devuelve la hoja del restaurante a «pendiente de confirmar». Por debajo solo informa.'
+             ' Mínimo práctico: 1 (con 0 vuelve el valor por defecto).',
+    )
+    restagrup_classify_incoming = fields.Selection(
+        [('enabled', 'Activada'), ('disabled', 'Desactivada')],
+        string='Clasificación de correos entrantes', default='enabled',
+        config_parameter='restagrup.classify_incoming',
+        help='Activada: antes de crear un lead, la IA clasifica el correo; solo una petición nueva crea lead y'
+             ' el resto va a «Correos por revisar» o se enlaza al grupo que corresponda. Si la IA falla o duda,'
+             ' se crea el lead como siempre.',
+    )
+    restagrup_system_sender = fields.Char(
+        string='Remitente de los envíos del sistema', config_parameter='restagrup.system_sender',
+        help='Dirección desde la que salen los correos que genera el sistema (recordatorios, peticiones de datos,'
+             ' avisos): la cuenta dedicada. Vacío = el correo del usuario. Debe poder enviar con tu servidor'
+             ' de correo saliente.',
+    )
     restagrup_send_mode = fields.Selection(
         [('approval', 'Con aprobación'), ('automatic', 'Automático')],
         string='Modo de envíos automáticos', default='approval',

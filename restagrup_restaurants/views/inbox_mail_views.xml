@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_inbox_mail_list" model="ir.ui.view">
+        <field name="name">restagrup.inbox.mail.list</field>
+        <field name="model">restagrup.inbox.mail</field>
+        <field name="arch" type="xml">
+            <list string="Correos por revisar" decoration-muted="state == 'done'">
+                <field name="create_date" string="Recibido"/>
+                <field name="email_from"/>
+                <field name="name"/>
+                <field name="category" widget="badge"/>
+                <field name="summary"/>
+                <field name="state" widget="badge" decoration-success="state == 'done'" decoration-warning="state == 'to_review'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_inbox_mail_form" model="ir.ui.view">
+        <field name="name">restagrup.inbox.mail.form</field>
+        <field name="model">restagrup.inbox.mail</field>
+        <field name="arch" type="xml">
+            <form string="Correo por revisar">
+                <header>
+                    <button name="action_create_lead" type="object" string="Crear lead" class="btn-primary"
+                            invisible="lead_id"
+                            help="Si la IA se equivocó y esto era una petición: crea el lead con este texto."/>
+                    <button name="action_mark_done" type="object" string="Marcar como revisado"
+                            invisible="state == 'done'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="to_review,done"/>
+                </header>
+                <sheet>
+                    <h1><field name="name"/></h1>
+                    <group>
+                        <group>
+                            <field name="email_from"/>
+                            <field name="category"/>
+                        </group>
+                        <group>
+                            <field name="lead_id"/>
+                        </group>
+                    </group>
+                    <group string="Resumen IA">
+                        <field name="summary" nolabel="1"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_inbox_mail_search" model="ir.ui.view">
+        <field name="name">restagrup.inbox.mail.search</field>
+        <field name="model">restagrup.inbox.mail</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="email_from"/>
+                <filter name="to_review" string="Por revisar" domain="[('state', '=', 'to_review')]"/>
+                <filter name="incident" string="Incidencias" domain="[('category', '=', 'incident')]"/>
+                <group>
+                    <filter name="group_category" string="Categoría" context="{'group_by': 'category'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_inbox_mail" model="ir.actions.act_window">
+        <field name="name">Correos por revisar</field>
+        <field name="res_model">restagrup.inbox.mail</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_to_review': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Ningún correo por revisar</p>
+            <p>Aquí llegan los correos del buzón central que la IA no clasificó como petición nueva de grupo
+               (facturas, incidencias, cambios sin grupo reconocible…). No crean ningún lead.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_inbox_mail" name="Correos por revisar" parent="menu_restagrup_root"
+              action="action_inbox_mail" sequence="22"/>
+</odoo>
