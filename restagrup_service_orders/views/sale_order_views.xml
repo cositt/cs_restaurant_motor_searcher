@@ -9,12 +9,14 @@
                 <group string="Restagrup">
                     <field name="restaurant_id"/>
                     <field name="service_date"/>
+                    <field name="service_hour" widget="float_time"/>
                     <field name="service_event_type_id"/>
                 </group>
             </xpath>
             <xpath expr="//field[@name='order_line']/list/field[@name='name']" position="after">
                 <field name="restaurant_id" optional="show"/>
                 <field name="service_date" optional="show"/>
+                <field name="service_hour" widget="float_time" optional="show"/>
                 <field name="service_event_type_id" optional="show"/>
             </xpath>
             <!-- Margen de Restagrup: solo en la vista interna. El cliente nunca ve estas columnas. -->

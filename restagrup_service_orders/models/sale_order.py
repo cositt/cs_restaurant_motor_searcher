@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 from collections import defaultdict
-
-from markupsafe import Markup
+from datetime import datetime, time
 
 from odoo import _, api, fields, models
-from odoo.tools import float_compare
 
 
 class SaleOrder(models.Model):
@@ -160,8 +158,16 @@ class SaleOrder(models.Model):
         quote = sale_line.restagrup_search_line_id.quote_amount
         return quote or sale_line.price_unit
 
+    @staticmethod
+    def _restagrup_planned_datetime(sale_line):
+        """Fecha y hora del servicio como datetime sin zona (False si la línea no tiene fecha)."""
+        if not sale_line.service_date:
+            return False
+        minutes = int(round((sale_line.service_hour or 0.0) * 60))
+        return datetime.combine(sale_line.service_date, time(minutes // 60 % 24, minutes % 60))
+
     def _prepare_restaurant_po_line_vals(self, sale_line):
-        planned = sale_line.service_date and fields.Datetime.to_datetime(sale_line.service_date)
+        planned = self._restagrup_planned_datetime(sale_line)
         return {
             'product_id': sale_line.product_id.id,
             'name': sale_line.name,
@@ -185,51 +191,10 @@ class SaleOrder(models.Model):
                     _('Hoja de servicio enviada a %s.') % po.partner_id.name
                 )
 
-    def action_resend_restaurant_orders(self):
-        """Botón 'reenviar cambios': solo toca las hojas de servicio marcadas
-        como restagrup_needs_resend, actualiza las líneas que cambiaron
-        (comensales/notas), deja constancia en el chatter y reenvía el email --
-        únicamente a los restaurantes afectados, no a todos."""
-        template = self.env.ref('purchase.email_template_edi_purchase', raise_if_not_found=False)
-        for order in self:
-            order._sync_restaurant_purchase_orders()
-            resent_any = False
-            for po in order.sudo().restaurant_po_ids.filtered('restagrup_needs_resend'):
-                resent_any = True
-                changed_lines = po._restagrup_changed_lines()
-                change_log = []
-                for line in changed_lines:
-                    sale_line = line.restagrup_sale_line_id
-                    if float_compare(sale_line.product_uom_qty, line.product_qty, precision_digits=2) != 0:
-                        change_log.append(
-                            _('%(line)s: %(old)s → %(new)s comensales')
-                            % {'line': line.name, 'old': line.product_qty, 'new': sale_line.product_uom_qty}
-                        )
-                    if sale_line.name != line.name:
-                        change_log.append(_('%(line)s: notas actualizadas') % {'line': line.name})
-                    line.write({
-                        'product_qty': sale_line.product_uom_qty,
-                        'name': sale_line.name,
-                    })
-                if change_log:
-                    po.message_post(
-                        body=Markup('<p>%s</p><ul>%s</ul>') % (
-                            _('Cambios detectados en el presupuesto, reenviado al restaurante:'),
-                            Markup('').join(Markup('<li>%s</li>') % entry for entry in change_log),
-                        )
-                    )
-                if template:
-                    template.sudo().send_mail(po.id, force_send=True)
-                order._restagrup_log_on_searches(_('Cambios reenviados a %(restaurant)s: %(changes)s') % {
-                    'restaurant': po.partner_id.name,
-                    'changes': '; '.join(change_log) or _('sin cambios de cantidad'),
-                })
-            if resent_any:
-                order._restagrup_send_updated_proforma()
-
-    def _restagrup_send_updated_proforma(self):
+    def _restagrup_send_updated_proforma(self, agency_changes=None):
         """Tras reenviar cambios a los restaurantes, la agencia recibe también el
-        presupuesto actualizado desde el mismo botón. Sin email de agencia no se
+        presupuesto actualizado desde el mismo botón, con el resumen de qué cambió en cada restaurante
+        (`agency_changes`: lista de (restaurante, [texto del cambio])). Sin email de agencia no se
         rompe el reenvío a restaurantes: se deja una nota para que alguien la avise."""
         self.ensure_one()
         template = self.env.ref('sale.email_template_edi_sale', raise_if_not_found=False)
@@ -241,7 +206,7 @@ class SaleOrder(models.Model):
             self.message_post(body=note)
             self._restagrup_log_on_searches(note)
             return
-        template.send_mail(self.id, force_send=True)
+        self._restagrup_send_with_summary(template, self, self._restagrup_agency_summary(agency_changes or []))
         note = _(
             'Presupuesto actualizado enviado a la agencia (%(email)s).'
         ) % {'email': self.partner_id.email}

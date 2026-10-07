@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import _, api, fields, models
-from odoo.tools import float_compare, html2plaintext
+from odoo.tools import html2plaintext
 
 RESPONSE_CLASSIFICATION_PROMPT = """\
 Eres un asistente que lee la respuesta de un restaurante a una solicitud de servicio para
@@ -99,6 +99,8 @@ class PurchaseOrder(models.Model):
     @api.depends(
         'state', 'order_line.restagrup_sale_line_id.product_uom_qty',
         'order_line.restagrup_sale_line_id.name', 'order_line.product_qty', 'order_line.name',
+        'order_line.restagrup_sale_line_id.service_date', 'order_line.restagrup_sale_line_id.service_hour',
+        'order_line.restagrup_sale_line_id.product_id', 'order_line.date_planned', 'order_line.product_id',
     )
     def _compute_restagrup_needs_resend(self):
         for po in self:
@@ -108,18 +110,10 @@ class PurchaseOrder(models.Model):
             po.restagrup_needs_resend = bool(po._restagrup_changed_lines())
 
     def _restagrup_changed_lines(self):
-        """Líneas de esta hoja de servicio cuyo pedido de origen cambió (pax/notas)
-        desde que se generó o se reenvió por última vez."""
+        """Líneas de esta hoja de servicio cuyo pedido de origen cambió (comensales, notas, fecha, hora o
+        menú) desde que se generó o se reenvió por última vez."""
         self.ensure_one()
-        changed = self.env['purchase.order.line']
-        for line in self.order_line:
-            sale_line = line.restagrup_sale_line_id
-            if not sale_line:
-                continue
-            qty_changed = float_compare(sale_line.product_uom_qty, line.product_qty, precision_digits=2) != 0
-            if qty_changed or sale_line.name != line.name:
-                changed |= line
-        return changed
+        return self.order_line.filtered(lambda line: line._restagrup_changes())
 
     def action_view_restagrup_sale_order(self):
         self.ensure_one()

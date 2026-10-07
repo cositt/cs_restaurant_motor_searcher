@@ -16,3 +16,4 @@ from . import crm_lead
 from . import lead_event
 from . import sale_order_agency
 from . import pending_mail
+from . import sale_order_changes

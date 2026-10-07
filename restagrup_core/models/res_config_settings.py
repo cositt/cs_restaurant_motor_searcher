@@ -40,6 +40,13 @@ class ResConfigSettings(models.TransientModel):
         help='Mensaje del recordatorio a la agencia (el enlace al presupuesto y la firma se añaden solos).'
              ' Vacío = texto por defecto.',
     )
+    restagrup_change_confirm_pct = fields.Float(
+        string='Cambio de comensales que pide confirmación (%)', config_parameter='restagrup.change_confirm_pct',
+        default=20.0,
+        help='Al reenviar cambios, un cambio de comensales por encima de este porcentaje (o cualquier cambio de'
+             ' fecha u hora) devuelve la hoja del restaurante a «pendiente de confirmar». Por debajo solo informa.'
+             ' Mínimo práctico: 1 (con 0 vuelve el valor por defecto).',
+    )
     restagrup_send_mode = fields.Selection(
         [('approval', 'Con aprobación'), ('automatic', 'Automático')],
         string='Modo de envíos automáticos', default='approval',

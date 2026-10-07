@@ -13,6 +13,10 @@ class SaleOrderLine(models.Model):
              ' agrupan por restaurante para generar su hoja de servicio.',
     )
     service_date = fields.Date(string='Fecha de servicio')
+    service_hour = fields.Float(
+        string='Hora', help='Hora del servicio (p. ej. 13:30). Viaja a la hoja de servicio del restaurante; '
+                            'si cambia, «Reenviar cambios» lo detecta.',
+    )
     service_meal = fields.Selection(
         selection=[('lunch', 'Comida'), ('dinner', 'Cena')],
         string='Comida/Cena',
