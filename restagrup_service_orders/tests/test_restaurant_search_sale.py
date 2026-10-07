@@ -72,6 +72,40 @@ class TestRestaurantSearchSale(TransactionCase):
         self.assertEqual(sale_line.restagrup_search_line_id, line)
         self.assertAlmostEqual(sale_line.price_unit, 240.0)  # sin ajuste configurado: +20 %
 
+    # --- con importe cotizado: una línea con cantidad = comensales y precio por persona ---
+
+    def _per_person_search(self, pax, quote_amount):
+        search = self.env['restagrup.restaurant.search'].create({
+            'lead_id': self.lead.id, 'city': 'Madrid', 'min_capacity': pax,
+        })
+        self._create_chosen_line(search=search, quote_amount=quote_amount)
+        search.action_create_sale_order()
+        return search.sale_order_id
+
+    def test_quote_becomes_one_line_per_person(self):
+        order = self._per_person_search(32, 1024)
+        line = order.order_line
+        self.assertEqual(len(line), 1)
+        self.assertEqual(line.product_uom_qty, 32)
+        self.assertAlmostEqual(line.restagrup_unit_cost, 32.0)  # 1.024 / 32
+        self.assertAlmostEqual(line.price_unit, 38.4)           # 32 + 20 %
+        self.assertAlmostEqual(order.amount_untaxed, 1228.8)    # 1.024 + 20 %
+        self.assertAlmostEqual(line.restagrup_margin_amount, 204.8)
+
+    def test_without_headcount_the_quote_stays_one_global_line(self):
+        order = self._per_person_search(0, 1000)
+        self.assertEqual(order.order_line.product_uom_qty, 1)
+        self.assertAlmostEqual(order.order_line.restagrup_unit_cost, 1000.0)
+        self.assertAlmostEqual(order.amount_untaxed, 1200.0)
+
+    def test_service_sheet_carries_the_per_person_cost(self):
+        order = self._per_person_search(32, 1024)
+        order.action_confirm()
+        po_line = order.restaurant_po_ids.order_line
+        self.assertEqual(po_line.product_qty, 32)
+        self.assertAlmostEqual(po_line.price_unit, 32.0)
+        self.assertAlmostEqual(po_line.price_subtotal, 1024.0)
+
     def test_create_sale_order_respects_an_explicit_zero_margin(self):
         self.env['ir.config_parameter'].sudo().set_param('restagrup.default_margin_percent', '0')
         search = self.env['restagrup.restaurant.search'].create({

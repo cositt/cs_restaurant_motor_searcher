@@ -296,6 +296,10 @@ class TestRestaurantSearch(TransactionCase):
         defaults.update(vals)
         return self._create_line(**defaults)
 
+    def _automatic_mode(self):
+        # El modo por defecto es "con aprobación" (cola); estos tests cubren el envío directo.
+        self.env['ir.config_parameter'].sudo().set_param('restagrup.send_mode', 'automatic')
+
     def _reminder_messages(self, line):
         return line.message_ids.filtered(lambda m: m.message_type == 'email')
 
@@ -327,6 +331,7 @@ class TestRestaurantSearch(TransactionCase):
             line.action_send_quote_reminder()
 
     def test_cron_sends_reminder_to_stale_lines_only(self):
+        self._automatic_mode()
         stale = self._stale_line(name='Colgado')
         recent = self._stale_line(name='Reciente', quote_requested_date=Datetime.now())
         received = self._stale_line(name='Recibido', etiqueta='presupuesto_recibido')
@@ -336,6 +341,7 @@ class TestRestaurantSearch(TransactionCase):
         self.assertFalse(self._reminder_messages(received))
 
     def test_cron_does_not_resend_reminder_already_sent(self):
+        self._automatic_mode()
         line = self._stale_line()
         model = self.env['restagrup.restaurant.search.line']
         model._cron_send_quote_reminders()
@@ -343,6 +349,7 @@ class TestRestaurantSearch(TransactionCase):
         self.assertEqual(len(self._reminder_messages(line)), 1)
 
     def test_cron_skips_lines_without_email_and_keeps_going(self):
+        self._automatic_mode()
         no_email = self._stale_line(name='Sin email', email=False)
         with_email = self._stale_line(name='Con email')
         self.env['restagrup.restaurant.search.line']._cron_send_quote_reminders()

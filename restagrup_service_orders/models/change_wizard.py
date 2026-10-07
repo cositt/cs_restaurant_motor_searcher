@@ -93,22 +93,23 @@ class RestaurantChangeWizard(models.TransientModel):
             return
         pricing = self.env['restagrup.pricing']
         search = self.search_id
-        cost = new.quote_amount
+        qty, unit_cost = search._quote_figures(new.quote_amount)
+        total_cost = new.quote_amount
         if self.keep_client_price:
-            price = sum(old_lines.mapped('price_subtotal'))
-            pct = round((price / cost - 1) * 100, 2) if cost else 0.0
+            price = sum(old_lines.mapped('price_subtotal')) / qty
+            pct = round((price * qty / total_cost - 1) * 100, 2) if total_cost else 0.0
         else:
-            price, pct = pricing.apply_margin(cost), pricing.margin_percent()
+            price, pct = pricing.apply_margin(unit_cost), pricing.margin_percent()
         description = _('Servicio en %(restaurant)s — %(city)s, %(pax)s pax') % {
             'restaurant': new.name, 'city': search.city or '', 'pax': search.min_capacity or '?'}
         label = search._event_label()
         old_lines[:1].write({
             'product_id': self.env.ref('restagrup_service_orders.product_restaurant_service').id,
-            'product_uom_qty': 1,
+            'product_uom_qty': qty,
             'name': '%s — %s' % (label, description) if label else description,
             'restaurant_id': new.partner_id.id,
             'restagrup_search_line_id': new.id,
-            'restagrup_unit_cost': cost,
+            'restagrup_unit_cost': unit_cost,
             'restagrup_margin_pct': pct,
             'price_unit': price,
         })

@@ -38,7 +38,7 @@ class RestaurantSearch(models.Model):
                 'El restaurante elegido no está guardado como contacto -- añádelo'
                 ' como contacto antes de crear el presupuesto de venta.'
             ))
-        if not self.lead_id.partner_id:
+        if not self.lead_id._restagrup_ensure_billing_partner():
             raise UserError(_(
                 'El grupo/cliente "%s" no tiene un contacto de facturación asignado'
                 ' -- asígnalo antes de crear el presupuesto de venta.'
@@ -47,7 +47,8 @@ class RestaurantSearch(models.Model):
         menus = self.env['product.template'].search([
             ('restaurant_id', '=', line.partner_id.id), ('sale_ok', '=', True),
         ])
-        if menus:
+        if menus and not line.quote_amount:
+            # Sin importe cotizado no hay de dónde sacar el precio: se elige un menú del catálogo.
             return self._action_open_menu_wizard(menus)
         return self._create_sale_order_from_quote(line)
 
@@ -70,8 +71,9 @@ class RestaurantSearch(models.Model):
         }
 
     def _create_sale_order_from_menus(self, selection):
-        """selection: lista de (product.product, cantidad). Una línea por menú, al
-        precio de venta del propio producto (sin margen: el menú ya lleva su precio)."""
+        """selection: lista de (product.product, cantidad). Una línea por menú, al precio de catálogo del
+        restaurante más el margen. Solo se llega aquí sin importe cotizado: con importe, la línea sale
+        directa del presupuesto del restaurante (ver _create_sale_order_from_quote)."""
         self.ensure_one()
         line = self.chosen_line_id
         event_label = self._event_label()
@@ -87,6 +89,16 @@ class RestaurantSearch(models.Model):
         self._link_sale_order(order, line, created)
         return order
 
+    def _quote_figures(self, quote_amount):
+        """(cantidad, coste por unidad) de la línea de venta a partir de lo que cotizó el restaurante: una
+        unidad por comensal y el coste por persona (importe / comensales). Sin comensales o sin importe,
+        una sola línea global. El coste por unidad se guarda a céntimos, así que si el importe no es
+        divisible entre los comensales el total puede desviarse unos céntimos."""
+        self.ensure_one()
+        pax = int(self.min_capacity or 0)
+        qty = pax if pax > 0 and quote_amount else 1
+        return qty, quote_amount / qty
+
     def _create_sale_order_from_quote(self, line):
         self.ensure_one()
         product = self.env.ref('restagrup_service_orders.product_restaurant_service')
@@ -96,12 +108,14 @@ class RestaurantSearch(models.Model):
             'pax': self.min_capacity or '?',
         }
         event_label = self._event_label()
+        qty, unit_cost = self._quote_figures(line.quote_amount)
         order, created = self._add_lines_to_group_order([(0, 0, dict(
             self._event_line_vals(),
             product_id=product.id,
             name='%s — %s' % (event_label, description) if event_label else description,
-            product_uom_qty=1,
-            price_unit=self._apply_default_margin(line.quote_amount),
+            product_uom_qty=qty,
+            restagrup_unit_cost=unit_cost,
+            price_unit=self._apply_default_margin(unit_cost),
             restaurant_id=line.partner_id.id,
             restagrup_search_line_id=line.id,
         ))])

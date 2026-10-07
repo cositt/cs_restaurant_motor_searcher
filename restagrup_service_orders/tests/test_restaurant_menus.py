@@ -37,11 +37,11 @@ class TestRestaurantMenus(TransactionCase):
             'sale_ok': True, 'restaurant_id': restaurant.id,
         })
 
-    def _chosen_line(self, restaurant=None):
+    def _chosen_line(self, restaurant=None, quote_amount=0):
         line = self.env['restagrup.restaurant.search.line'].create({
             'search_id': self.search.id, 'source': 'partner', 'name': 'Elegido',
             'partner_id': (restaurant or self.restaurant).id,
-            'etiqueta': 'presupuesto_recibido', 'quote_amount': 1000,
+            'etiqueta': 'presupuesto_recibido', 'quote_amount': quote_amount,
         })
         line.action_toggle_chosen()
         return line
@@ -86,13 +86,22 @@ class TestRestaurantMenus(TransactionCase):
         order = self._order_with_line(plain)
         self.assertFalse(order.order_line.restaurant_id)
 
-    # --- crear presupuesto: wizard si hay menús, camino antiguo si no ---
+    # --- crear presupuesto: con importe cotizado, línea directa; sin él, asistente si hay menús ---
 
-    def test_create_sale_order_opens_wizard_when_restaurant_has_menus(self):
+    def test_create_sale_order_opens_wizard_when_restaurant_has_menus_and_no_quote(self):
         self._chosen_line()
         action = self.search.action_create_sale_order()
         self.assertEqual(action['res_model'], 'restagrup.menu.selection.wizard')
         self.assertFalse(self.search.sale_order_id)
+
+    def test_quote_amount_skips_the_menu_wizard_even_if_the_restaurant_has_menus(self):
+        self._chosen_line(quote_amount=1024)
+        action = self.search.action_create_sale_order()
+        self.assertEqual(action['res_model'], 'sale.order')
+        order = self.search.sale_order_id
+        self.assertEqual(len(order.order_line), 1)
+        self.assertEqual(order.order_line.product_uom_qty, 47)  # comensales de la búsqueda
+        self.assertAlmostEqual(order.order_line.restagrup_unit_cost, 1024 / 47, places=2)
 
     def test_create_sale_order_keeps_legacy_path_without_menus(self):
         self._chosen_line(restaurant=self.other_restaurant)
@@ -111,7 +120,7 @@ class TestRestaurantMenus(TransactionCase):
         self.assertFalse(any(l.selected for l in wizard.line_ids))
 
     def test_wizard_creates_one_sale_line_per_selected_menu(self):
-        chosen = self._chosen_line()
+        chosen = self._chosen_line(quote_amount=0)
         wizard = self._open_wizard()
         lunch = wizard.line_ids.filtered(lambda l: l.product_tmpl_id == self.menu_lunch)
         dinner = wizard.line_ids.filtered(lambda l: l.product_tmpl_id == self.menu_dinner)
@@ -132,7 +141,7 @@ class TestRestaurantMenus(TransactionCase):
 
     def test_wizard_price_is_restaurant_price_plus_configured_margin(self):
         self.env['ir.config_parameter'].sudo().set_param('restagrup.default_margin_percent', '25')
-        self._chosen_line()
+        self._chosen_line(quote_amount=0)
         wizard = self._open_wizard()
         wizard.line_ids.filtered(lambda l: l.product_tmpl_id == self.menu_lunch).selected = True
         wizard.action_confirm()
@@ -140,7 +149,7 @@ class TestRestaurantMenus(TransactionCase):
 
     def test_wizard_price_defaults_to_restaurant_price_plus_20_percent(self):
         self.env['ir.config_parameter'].sudo().search([('key', '=', 'restagrup.default_margin_percent')]).unlink()
-        self._chosen_line()
+        self._chosen_line(quote_amount=0)
         wizard = self._open_wizard()
         wizard.line_ids.filtered(lambda l: l.product_tmpl_id == self.menu_lunch).selected = True
         wizard.action_confirm()
@@ -166,7 +175,7 @@ class TestRestaurantMenus(TransactionCase):
         self.assertEqual(plain.restagrup_client_price, 0.0)
 
     def test_service_sheet_carries_the_restaurant_price_not_the_client_price(self):
-        self._chosen_line()
+        self._chosen_line(quote_amount=0)
         wizard = self._open_wizard()
         wizard.line_ids.write({'selected': True})
         wizard.action_confirm()

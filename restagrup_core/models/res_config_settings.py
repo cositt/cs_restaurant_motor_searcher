@@ -29,6 +29,15 @@ class ResConfigSettings(models.TransientModel):
         help='Mensaje que Odoo manda solo a un restaurante que no ha respondido a la'
              ' petición de presupuesto (una vez, a los 3 días). Vacío = texto por defecto.',
     )
+    restagrup_send_mode = fields.Selection(
+        [('approval', 'Con aprobación'), ('automatic', 'Automático')],
+        string='Modo de envíos automáticos', default='approval',
+        config_parameter='restagrup.send_mode',
+        help='Con aprobación (por defecto): los correos que genera el sistema (p. ej. el recordatorio a'
+             ' restaurantes) quedan en Restagrup > Pendientes de aprobar y no salen hasta que una persona'
+             ' los aprueba. Automático: salen solos. Los envíos que dispara una persona con un botón'
+             ' no pasan por la cola.',
+    )
     restagrup_default_margin_percent = fields.Float(
         string='Margen por defecto (%)', default=20.0,
         help='Lo que Restagrup añade al precio del restaurante (por defecto 20 %). Se aplica'

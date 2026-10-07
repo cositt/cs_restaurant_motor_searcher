@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_restagrup_pending_mail_list" model="ir.ui.view">
+        <field name="name">restagrup.pending.mail.list</field>
+        <field name="model">restagrup.pending.mail</field>
+        <field name="arch" type="xml">
+            <list string="Pendientes de aprobar" decoration-muted="state in ('discarded', 'sent')"
+                  decoration-danger="state == 'error'" create="0">
+                <header>
+                    <button name="action_approve" type="object" string="Aprobar y enviar" class="btn-primary"/>
+                    <button name="action_discard" type="object" string="Descartar"/>
+                </header>
+                <field name="create_date" string="Creado"/>
+                <field name="recipient_email"/>
+                <field name="lead_id"/>
+                <field name="line_id"/>
+                <field name="reason"/>
+                <field name="subject"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'pending'" decoration-success="state == 'sent'"
+                       decoration-danger="state == 'error'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_restagrup_pending_mail_form" model="ir.ui.view">
+        <field name="name">restagrup.pending.mail.form</field>
+        <field name="model">restagrup.pending.mail</field>
+        <field name="arch" type="xml">
+            <form string="Correo pendiente de aprobar" create="0">
+                <header>
+                    <button name="action_approve" type="object" string="Aprobar y enviar" class="btn-primary"
+                            invisible="state != 'pending'"/>
+                    <button name="action_discard" type="object" string="Descartar" invisible="state != 'pending'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="pending,sent"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="kind"/>
+                            <field name="lead_id"/>
+                            <field name="line_id"/>
+                            <field name="reason"/>
+                        </group>
+                        <group>
+                            <field name="recipient_email" readonly="state != 'pending'"/>
+                            <field name="approved_by"/>
+                            <field name="approved_date"/>
+                            <field name="error_message" invisible="not error_message"/>
+                        </group>
+                    </group>
+                    <group string="Mensaje (editable antes de aprobar)">
+                        <field name="subject" readonly="state != 'pending'"/>
+                        <field name="body" nolabel="1" colspan="2" readonly="state != 'pending'"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_restagrup_pending_mail_search" model="ir.ui.view">
+        <field name="name">restagrup.pending.mail.search</field>
+        <field name="model">restagrup.pending.mail</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="recipient_email"/>
+                <field name="lead_id"/>
+                <field name="subject"/>
+                <filter name="pending" string="Pendientes" domain="[('state', '=', 'pending')]"/>
+                <filter name="sent" string="Enviados" domain="[('state', '=', 'sent')]"/>
+                <filter name="discarded" string="Descartados" domain="[('state', '=', 'discarded')]"/>
+                <filter name="error" string="Con error" domain="[('state', '=', 'error')]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_restagrup_pending_mail" model="ir.actions.act_window">
+        <field name="name">Pendientes de aprobar</field>
+        <field name="res_model">restagrup.pending.mail</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_pending': 1}</field>
+    </record>
+
+    <menuitem id="menu_restagrup_pending_mail" name="Pendientes de aprobar" parent="menu_restagrup_root"
+              action="action_restagrup_pending_mail" sequence="15"/>
+</odoo>

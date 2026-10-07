@@ -52,11 +52,12 @@ class TestMarginTracking(TransactionCase):
         self.assertEqual(line.price_unit, 30.0)
         self.assertEqual(line.restagrup_margin_amount, 210.0)  # 42 x (30 - 25)
 
-    def test_quote_line_cost_is_the_restaurant_quote(self):
+    def test_quote_line_cost_is_the_restaurant_quote_per_person(self):
         line = self._quote_order(amount=1000).order_line
-        self.assertEqual(line.restagrup_unit_cost, 1000.0)
-        self.assertEqual(line.price_unit, 1200.0)
-        self.assertEqual(line.restagrup_margin_amount, 200.0)
+        self.assertEqual(line.product_uom_qty, 30)  # comensales de la búsqueda
+        self.assertAlmostEqual(line.restagrup_unit_cost, 1000 / 30, places=2)
+        self.assertAlmostEqual(line.price_unit, 1200 / 30, places=2)
+        self.assertAlmostEqual(line.restagrup_margin_amount, 200.0, delta=0.5)
         self.assertEqual(line.restagrup_margin_pct, 20.0)
 
     def test_line_without_restaurant_has_no_margin(self):

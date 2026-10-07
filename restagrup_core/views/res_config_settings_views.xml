@@ -23,6 +23,10 @@
                             <field name="restagrup_quote_reminder_text" widget="text"
                                    placeholder="Vacío = texto por defecto"/>
                         </setting>
+                        <setting id="restagrup_send_mode"
+                                 help="Con aprobación: los correos que genera el sistema esperan en Restagrup > Pendientes de aprobar hasta que una persona los aprueba. Automático: salen solos.">
+                            <field name="restagrup_send_mode"/>
+                        </setting>
                         <setting id="restagrup_margin"
                                  help="Lo que Restagrup añade al precio del restaurante (20 % por defecto). El cliente paga el precio del restaurante más este porcentaje; la hoja de servicio del restaurante lleva su propio precio.">
                             <field name="restagrup_default_margin_percent"/> %
