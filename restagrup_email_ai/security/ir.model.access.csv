@@ -1,2 +1,3 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_restagrup_lead_event,restagrup.lead.event,model_restagrup_lead_event,base.group_user,1,1,1,1
+access_restagrup_inbox_mail,restagrup.inbox.mail,model_restagrup_inbox_mail,base.group_user,1,1,1,1
