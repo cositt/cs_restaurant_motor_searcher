@@ -195,3 +195,21 @@
     font-weight: 700;
     color: #b9770e;
 }
+
+.o_restagrup_rest_warning {
+    font-size: 12px;
+    font-weight: 600;
+    color: #b9770e;
+    background: #fef5e7;
+    border-radius: 6px;
+    padding: 3px 8px;
+    margin: 4px 0;
+}
+
+.o_restagrup_rest_incomplete {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0;
+}

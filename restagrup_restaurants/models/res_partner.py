@@ -7,6 +7,12 @@ RESTAURANT_RATING_SELECTION = [
     ('disliked', 'No repetir'),
 ]
 
+# Datos sin los que no se puede valorar un restaurante para un grupo (A3).
+RESTAURANT_REQUIRED_FIELDS = (
+    'restaurant_capacity', 'restaurant_closed_weekday', 'restaurant_language',
+    'restaurant_group_manager', 'restaurant_group_mobile',
+)
+
 
 class ResPartner(models.Model):
     _inherit = 'res.partner'
@@ -21,10 +27,21 @@ class ResPartner(models.Model):
         selection=[
             ('mon', 'Lunes'), ('tue', 'Martes'), ('wed', 'Miércoles'),
             ('thu', 'Jueves'), ('fri', 'Viernes'), ('sat', 'Sábado'), ('sun', 'Domingo'),
+            ('none', 'Sin día de cierre'),
         ],
         string='Día de cierre',
+        help="'Sin día de cierre' = abre todos los días. Vacío = dato aún sin rellenar.",
     )
     restaurant_language = fields.Char(string='Idioma')
+    restaurant_gratuities = fields.Char(
+        string='Gratuidades', help='Condiciones de gratuidad para grupos, p. ej. «1 por cada 25».',
+    )
+    restaurant_group_manager = fields.Char(string='Responsable de grupos')
+    restaurant_group_mobile = fields.Char(string='Móvil del responsable')
+    restaurant_preferred_channel = fields.Selection(
+        selection=[('email', 'Email'), ('whatsapp', 'WhatsApp')],
+        string='Canal preferido', default='email',
+    )
     restaurant_iban = fields.Char(string='Cuenta bancaria')
     restaurant_direct_contact = fields.Char(string='Contacto directo')
     restaurant_cuisine_type = fields.Char(string='Tipo de cocina')
@@ -44,6 +61,27 @@ class ResPartner(models.Model):
     restaurant_google_place_id = fields.Char(string='Google Place ID', index=True, copy=False)
     restaurant_google_rating = fields.Float(string='Rating Google')
     restaurant_google_review_count = fields.Integer(string='Nº reseñas Google')
+
+    restaurant_missing_fields = fields.Char(
+        string='Datos que faltan', compute='_compute_restaurant_missing_fields',
+        help='Datos de la ficha de grupo aún sin rellenar (aforo, día de cierre, idioma, responsable y móvil).',
+    )
+    restaurant_is_incomplete = fields.Boolean(
+        string='Ficha incompleta', compute='_compute_restaurant_missing_fields',
+    )
+
+    @api.depends('is_restaurant', *RESTAURANT_REQUIRED_FIELDS)
+    def _compute_restaurant_missing_fields(self):
+        for partner in self:
+            missing = partner._restaurant_missing_labels() if partner.is_restaurant else []
+            partner.restaurant_missing_fields = ', '.join(missing)
+            partner.restaurant_is_incomplete = bool(missing)
+
+    def _restaurant_missing_labels(self):
+        """Etiquetas de los datos obligatorios de la ficha que están vacíos. El parking no cuenta: un
+        booleano no distingue «no hay» de «sin rellenar»."""
+        self.ensure_one()
+        return [self._fields[name].string for name in RESTAURANT_REQUIRED_FIELDS if not self[name]]
 
     @api.onchange('is_restaurant')
     def _onchange_is_restaurant(self):

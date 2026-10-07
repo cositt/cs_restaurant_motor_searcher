@@ -60,6 +60,13 @@ PIPELINE_STAGE_SELECTION = [
 
 # Antigüedad a partir de la cual una petición de presupuesto "solicitado" se marca
 # como colgada en el kanban -- aviso visual, no bloquea nada.
+# Índice de date.weekday() -> código del selection de res.partner.restaurant_closed_weekday, y el plural
+# con el que se nombra el día en el aviso («Cierra los lunes», «Cierra los sábados»).
+WEEKDAY_CODES = ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')
+WEEKDAY_PLURALS = {
+    'mon': 'lunes', 'tue': 'martes', 'wed': 'miércoles', 'thu': 'jueves', 'fri': 'viernes',
+    'sat': 'sábados', 'sun': 'domingos',
+}
 QUOTE_STALE_DAYS = 3
 REPLY_EXCERPT_CHARS = 300
 QUOTE_REMINDER_DEFAULT_TEXT = (
@@ -571,6 +578,15 @@ class RestaurantSearchLine(models.Model):
              ' margen de Ajustes → Restagrup en cada lectura).',
     )
     is_chosen = fields.Boolean(string='Elegido', compute='_compute_is_chosen')
+    partner_incomplete = fields.Boolean(
+        string='Ficha incompleta', compute='_compute_partner_data_sheet',
+        help='El contacto vinculado tiene datos de grupo sin rellenar (A3).',
+    )
+    missing_fields_text = fields.Char(string='Datos que faltan', compute='_compute_partner_data_sheet')
+    warnings_text = fields.Char(
+        string='Avisos', compute='_compute_warnings_text',
+        help='Choques conocidos con la petición: aforo menor que los comensales o día de cierre en el evento.',
+    )
     google_maps_url = fields.Char(string='Enlace Maps', compute='_compute_google_maps_url')
     latitude = fields.Float(string='Latitud', digits=(16, 6))
     longitude = fields.Float(string='Longitud', digits=(16, 6))
@@ -598,6 +614,33 @@ class RestaurantSearchLine(models.Model):
             line.quote_client_price = (
                 round(pricing.apply_margin(line.quote_amount), 2) if line.quote_amount else 0.0
             )
+
+    @api.depends(
+        'partner_id.is_restaurant', 'partner_id.restaurant_capacity', 'partner_id.restaurant_closed_weekday',
+        'partner_id.restaurant_language', 'partner_id.restaurant_group_manager',
+        'partner_id.restaurant_group_mobile',
+    )
+    def _compute_partner_data_sheet(self):
+        for line in self:
+            missing = line.partner_id._restaurant_missing_labels() if line.partner_id.is_restaurant else []
+            line.partner_incomplete = bool(missing)
+            line.missing_fields_text = ', '.join(missing)
+
+    @api.depends(
+        'capacity', 'partner_id.restaurant_closed_weekday',
+        'search_id.min_capacity', 'search_id.event_id.event_date', 'search_id.lead_id.restagrup_service_date',
+    )
+    def _compute_warnings_text(self):
+        for line in self:
+            search = line.search_id
+            warnings = []
+            if line.capacity and search.min_capacity and line.capacity < search.min_capacity:
+                warnings.append(_('Aforo %(cap)s < %(pax)s pax') % {'cap': line.capacity, 'pax': search.min_capacity})
+            event_date = search.event_id.event_date or search.lead_id.restagrup_service_date
+            closed = line.partner_id.restaurant_closed_weekday
+            if event_date and closed in WEEKDAY_PLURALS and WEEKDAY_CODES[event_date.weekday()] == closed:
+                warnings.append(_('Cierra los %(day)s (evento en ese día)') % {'day': WEEKDAY_PLURALS[closed]})
+            line.warnings_text = ' · '.join(warnings)
 
     @api.depends('etiqueta', 'quote_requested_date')
     def _compute_quote_days_pending(self):
@@ -652,19 +695,13 @@ class RestaurantSearchLine(models.Model):
         if phone:
             self.phone = phone
 
-    def action_add_as_partner(self):
+    def _partner_vals_from_google(self):
+        """Datos que trae el resultado (Google Places o lo escrito a mano) para la ficha del contacto."""
         self.ensure_one()
-        if self.partner_id:
-            return
-        self._fetch_google_phone()
-        partner = self.env['res.partner'].create({
-            'name': self.name,
-            'is_restaurant': True,
-            'city': self.search_id.city,
+        return {
             'street': self.address,
             'phone': self.phone,
             'email': self.email,
-            'company_type': 'company',
             'restaurant_google_place_id': self.google_place_id,
             'restaurant_google_rating': self.rating,
             'restaurant_google_review_count': self.review_count,
@@ -674,9 +711,56 @@ class RestaurantSearchLine(models.Model):
             # base_geolocalize tenga que geocodificar de cero.
             'partner_latitude': self.latitude,
             'partner_longitude': self.longitude,
-            'date_localization': fields.Date.context_today(self) if self.latitude else False,
-        })
+        }
+
+    def action_add_as_partner(self):
+        self.ensure_one()
+        if self.partner_id:
+            return
+        self._fetch_google_phone()
+        vals = self._partner_vals_from_google()
+        existing = self.google_place_id and self.env['res.partner'].search(
+            [('restaurant_google_place_id', '=', self.google_place_id)], limit=1,
+        )
+        if existing:
+            # La ficha ya existe: Google solo rellena lo que esté vacío, nunca pisa lo que alguien escribió.
+            existing.write({name: value for name, value in vals.items() if value and not existing[name]})
+            self.write({'partner_id': existing.id, 'source': 'partner'})
+            return
+        partner = self.env['res.partner'].create(dict(
+            vals,
+            name=self.name,
+            is_restaurant=True,
+            city=self.search_id.city,
+            company_type='company',
+            date_localization=fields.Date.context_today(self) if self.latitude else False,
+        ))
         self.write({'partner_id': partner.id, 'source': 'partner'})
+
+    def _data_request_content(self, signer_name):
+        """Asunto y texto del correo que pide al restaurante solo los datos que faltan en su ficha."""
+        self.ensure_one()
+        missing = self.partner_id._restaurant_missing_labels()
+        subject = _('Datos para trabajar con grupos — %s') % self.env.company.name
+        lines = [
+            _('Hola,'), '',
+            _('Para poder proponeros grupos nos faltan estos datos de %s:') % self.name, '',
+        ] + ['- %s' % label for label in missing] + ['', _('Gracias,'), signer_name]
+        return subject, '\n'.join(lines)
+
+    def action_request_missing_data(self):
+        """Pide al restaurante los datos vacíos de su ficha. Con el modo «con aprobación» el correo va a la
+        cola Pendientes de aprobar; en automático sale ya."""
+        self.ensure_one()
+        queue = self.env['restagrup.pending.mail']
+        if not self.partner_id.restaurant_is_incomplete:
+            raise UserError(_('La ficha de este restaurante ya está completa (o aún no es un contacto).'))
+        self._get_quote_email_to()  # sin email no hay a quién pedírselo
+        if queue._send_mode() == 'automatic':
+            subject, body = self._data_request_content(self.env.user.name)
+            self._post_email(subject, body, self._get_quote_email_to())
+            return
+        queue._enqueue_data_request(self)
 
     def action_mark_visto(self):
         self.write({'etiqueta': 'visto'})
@@ -781,19 +865,25 @@ class RestaurantSearchLine(models.Model):
         ) or QUOTE_REMINDER_DEFAULT_TEXT % {'company': self.env.company.name}
         return subject, '\n'.join(text.splitlines() + ['', signer_name])
 
-    def _post_quote_reminder(self, subject, body_text, email_to):
-        """Envía el recordatorio por el hilo de la línea (mismo mecanismo que action_request_quote:
-        message_post con outgoing_email_to) y lo anota. Solo se manda uno por petición."""
+    def _post_email(self, subject, body_text, email_to):
+        """Correo real por el hilo de la línea (un mail.thread, no un mail.mail suelto): queda enlazado y una
+        respuesta que conserve References se enlaza sola."""
         self.ensure_one()
-        search = self.search_id
         self.message_post(
             body=Markup('<br/>').join(Markup.escape(line) for line in body_text.splitlines()),
             subject=subject,
             message_type='email',
             subtype_xmlid='mail.mt_comment',
-            email_from=search.user_id.email or self.env.user.email,
+            email_from=self.search_id.user_id.email or self.env.user.email,
             outgoing_email_to=email_to,
         )
+
+    def _post_quote_reminder(self, subject, body_text, email_to):
+        """Envía el recordatorio por el hilo de la línea (mismo mecanismo que action_request_quote:
+        message_post con outgoing_email_to) y lo anota. Solo se manda uno por petición."""
+        self.ensure_one()
+        search = self.search_id
+        self._post_email(subject, body_text, email_to)
         self.write({'quote_reminder_sent_date': fields.Datetime.now()})
         search.message_post_if_exists(_(
             'Recordatorio enviado a %(name)s (%(email)s): lleva %(days)s días sin responder.'
