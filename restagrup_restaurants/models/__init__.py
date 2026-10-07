@@ -5,3 +5,4 @@ from . import crm_lead
 from . import lead_event
 from . import pending_mail
 from . import restaurant_search_line_data
+from . import ai_dashboard

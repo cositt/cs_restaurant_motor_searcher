@@ -2,7 +2,7 @@
 """A5: clasificación con IA del correo entrante antes de crear un lead."""
 import logging
 
-from odoo import api, models
+from odoo import _, api, models
 from odoo.tools import email_normalize, html2plaintext
 
 _logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class MailThread(models.AbstractModel):
         creates_lead = [r for r in routes or () if r[0] == 'crm.lead' and not r[1]]
         if not creates_lead or not self._restagrup_classify_enabled():
             return routes
-        category, summary = self._restagrup_classify(message_dict)
+        category, summary, log = self._restagrup_classify(message_dict)
         if category in (None, 'new_request'):
             return routes
         new_routes = []
@@ -57,23 +57,26 @@ class MailThread(models.AbstractModel):
             if target:
                 new_routes.append((target[0], target[1], None, route[3], route[4]))
             else:
-                new_routes.append((INBOX_MODEL, False, {'category': category, 'summary': summary}, route[3], route[4]))
+                log.state = 'pending'  # lo revisa una persona desde la bandeja
+                new_routes.append((INBOX_MODEL, False, {
+                    'category': category, 'summary': summary, 'ai_log_id': log.id}, route[3], route[4]))
         return new_routes
 
     @api.model
     def _restagrup_classify(self, message_dict):
-        """(categoría, resumen), o (None, None) si no se puede clasificar: ante la duda no se desvía nada y
-        el correo crea el lead como siempre."""
+        """(categoría, resumen, registro de la IA), o (None, None, registro) si no se puede clasificar: ante la
+        duda no se desvía nada y el correo crea el lead como siempre."""
         raw_body = message_dict.get('body') or ''
         text = '%s\n\n%s' % (message_dict.get('subject') or '', html2plaintext(raw_body).strip() if raw_body else '')
-        data, _provider = self.env['restagrup.llm.connector'].extract_json(
-            CLASSIFY_SYSTEM_PROMPT, text.strip()[:MAX_TEXT_CHARS])
+        label = '%s — %s' % (message_dict.get('subject') or _('(sin asunto)'), message_dict.get('email_from') or '')
+        data, _provider, log = self.env['restagrup.llm.connector'].run(
+            'mail_classification', CLASSIFY_SYSTEM_PROMPT, text.strip()[:MAX_TEXT_CHARS], label=label, review=False)
         category = data.get('categoria') if isinstance(data, dict) else None
         if category not in CATEGORIES:
             if data is not None:
                 _logger.info('Clasificación de correo desconocida %r: se crea el lead.', category)
-            return None, None
-        return category, (data.get('resumen') or '')[:500] or False
+            return None, None, log
+        return category, (data.get('resumen') or '')[:500] or False, log
 
     @api.model
     def _restagrup_match_existing(self, category, message_dict):

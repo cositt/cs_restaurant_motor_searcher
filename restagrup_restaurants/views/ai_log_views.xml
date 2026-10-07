@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_ai_log_list" model="ir.ui.view">
+        <field name="name">restagrup.ai.log.list</field>
+        <field name="model">restagrup.ai.log</field>
+        <field name="arch" type="xml">
+            <list string="Actividad de la IA" decoration-danger="state == 'error'" decoration-muted="state == 'auto'">
+                <field name="create_date" string="Fecha"/>
+                <field name="kind"/>
+                <field name="source_label"/>
+                <field name="provider" optional="show"/>
+                <field name="model_name" optional="hide"/>
+                <field name="state" widget="badge" decoration-success="state == 'confirmed'"
+                       decoration-warning="state in ('pending', 'corrected')" decoration-danger="state == 'error'"/>
+                <field name="reviewed_by" optional="show"/>
+                <field name="reviewed_date" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_ai_log_form" model="ir.ui.view">
+        <field name="name">restagrup.ai.log.form</field>
+        <field name="model">restagrup.ai.log</field>
+        <field name="arch" type="xml">
+            <form string="Actividad de la IA" create="0" edit="0">
+                <header>
+                    <button name="action_open_source" type="object" string="Abrir el origen"
+                            invisible="not source_res_id"/>
+                    <field name="state" widget="statusbar" statusbar_visible="pending,confirmed,corrected"/>
+                </header>
+                <sheet>
+                    <h1><field name="name"/></h1>
+                    <group>
+                        <group>
+                            <field name="kind"/>
+                            <field name="source_label"/>
+                            <field name="provider"/>
+                            <field name="model_name"/>
+                        </group>
+                        <group>
+                            <field name="reviewed_by"/>
+                            <field name="reviewed_date"/>
+                            <field name="error_message" invisible="not error_message"/>
+                        </group>
+                    </group>
+                    <group string="Texto que leyó la IA">
+                        <field name="input_excerpt" nolabel="1"/>
+                    </group>
+                    <group string="Lo que propuso">
+                        <field name="output" nolabel="1"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_ai_log_search" model="ir.ui.view">
+        <field name="name">restagrup.ai.log.search</field>
+        <field name="model">restagrup.ai.log</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="source_label"/>
+                <field name="kind"/>
+                <filter name="pending" string="Pendientes" domain="[('state', '=', 'pending')]"/>
+                <filter name="confirmed" string="Confirmados" domain="[('state', '=', 'confirmed')]"/>
+                <filter name="corrected" string="Corregidos" domain="[('state', '=', 'corrected')]"/>
+                <filter name="discarded" string="Descartados" domain="[('state', '=', 'discarded')]"/>
+                <filter name="error" string="Errores" domain="[('state', '=', 'error')]"/>
+                <group>
+                    <filter name="group_kind" string="Tipo" context="{'group_by': 'kind'}"/>
+                    <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
+                    <filter name="group_provider" string="Proveedor" context="{'group_by': 'provider'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_ai_log" model="ir.actions.act_window">
+        <field name="name">Registro de la IA</field>
+        <field name="res_model">restagrup.ai.log</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Panel -->
+    <record id="view_ai_dashboard_form" model="ir.ui.view">
+        <field name="name">restagrup.ai.dashboard.form</field>
+        <field name="model">restagrup.ai.dashboard</field>
+        <field name="arch" type="xml">
+            <form string="Actividad IA" create="0" edit="0" delete="0">
+                <sheet>
+                    <h1>Actividad IA · últimos 7 días</h1>
+                    <group>
+                        <group string="Esta semana">
+                            <field name="mails_processed"/>
+                            <field name="reviewed_count"/>
+                            <field name="confirmed_pct" widget="float"/>
+                            <field name="errors_week"/>
+                        </group>
+                        <group string="Ahora">
+                            <field name="pending_queue"/>
+                        </group>
+                    </group>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button name="action_view_all" type="object" string="Ver toda la actividad" class="btn-primary"/>
+                        <button name="action_view_reviewed" type="object" string="Ver propuestas revisadas"/>
+                        <button name="action_view_errors" type="object" string="Ver errores"/>
+                        <button name="action_view_pending_mails" type="object" string="Ver pendientes de aprobar"/>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_ai_dashboard" model="ir.actions.server">
+        <field name="name">Actividad IA</field>
+        <field name="model_id" ref="model_restagrup_ai_dashboard"/>
+        <field name="state">code</field>
+        <field name="code">action = model.open_dashboard()</field>
+    </record>
+
+    <menuitem id="menu_ai_activity" name="Actividad IA" parent="menu_restagrup_root" sequence="80"/>
+    <menuitem id="menu_ai_dashboard" name="Panel" parent="menu_ai_activity" action="action_ai_dashboard" sequence="10"/>
+    <menuitem id="menu_ai_log" name="Registro" parent="menu_ai_activity" action="action_ai_log" sequence="20"/>
+</odoo>

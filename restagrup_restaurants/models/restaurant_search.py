@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import json
 import logging
 import time
 from datetime import timedelta
@@ -157,6 +158,12 @@ class RestaurantSearch(models.Model):
         help='Se calcula solo a partir de las etiquetas de los resultados y del'
              ' restaurante elegido -- no es editable a mano.',
     )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        searches = super().create(vals_list)
+        searches.lead_id._restagrup_review_extraction()
+        return searches
 
     @api.depends('city', 'zip', 'min_capacity', 'event_id.event_type_id', 'event_id.event_date')
     def _compute_display_name(self):
@@ -934,7 +941,7 @@ class RestaurantSearchLine(models.Model):
             return
 
         connector = self.env['restagrup.llm.connector']
-        data, provider = connector.extract_json(EXTRACT_QUOTE_SYSTEM_PROMPT, text)
+        data, provider, _log = connector.run('quote_extraction', EXTRACT_QUOTE_SYSTEM_PROMPT, text, source=self, label=self.name)
         if not data:
             return
 
@@ -961,7 +968,7 @@ class RestaurantSearchLine(models.Model):
         if not text:
             raise UserError(_('Pega primero el texto de la respuesta del restaurante.'))
         connector = self.env['restagrup.llm.connector']
-        data, provider = connector.extract_json(EXTRACT_QUOTE_SYSTEM_PROMPT, text)
+        data, provider, _log = connector.run('quote_extraction', EXTRACT_QUOTE_SYSTEM_PROMPT, text, source=self, label=self.name)
         if data is None:
             raise UserError(_(
                 'No se pudo extraer el importe automáticamente (IA no configurada o'
@@ -1026,6 +1033,7 @@ class RestaurantSearchLine(models.Model):
         self.ensure_one()
         if not self.quote_amount:
             raise UserError(_('Indica el importe del presupuesto antes de registrarlo.'))
+        self._review_quote_extraction()
         self.write({
             'etiqueta': 'presupuesto_recibido',
             'quote_received_date': self.quote_received_date or fields.Datetime.now(),
@@ -1036,6 +1044,17 @@ class RestaurantSearchLine(models.Model):
         if self.env.context.get('choose_after_register'):
             self._choose_line()
         return {'type': 'ir.actions.act_window_close'}
+
+    def _review_quote_extraction(self):
+        """El importe registrado cierra la propuesta de la IA: confirmada si coincide, corregida si no."""
+        log = self.env['restagrup.ai.log']._pending('quote_extraction', self)
+        if not log:
+            return
+        try:
+            proposed = float(json.loads(log.output or '{}').get('importe') or 0)
+        except (TypeError, ValueError):
+            proposed = 0.0
+        log._close('confirmed' if abs(proposed - self.quote_amount) < 0.005 else 'corrected')
 
     def action_toggle_chosen(self):
         self.ensure_one()

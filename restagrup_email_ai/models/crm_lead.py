@@ -72,7 +72,7 @@ class CrmLead(models.Model):
 
         connector = self.env['restagrup.llm.connector']
         system_prompt = EXTRACTION_SYSTEM_PROMPT.replace('{hoy}', fields.Date.context_today(self).isoformat())
-        data, provider = connector.extract_json(system_prompt, text)
+        data, provider, _log = connector.run('lead_extraction', system_prompt, text, source=self, label=self.name)
 
         if data is None:
             self.write({'restagrup_extraction_state': 'error'})

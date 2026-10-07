@@ -10,7 +10,7 @@
         No aporta funcionalidad visible por sí solo.
     ''',
     'author': 'Cositt Technology',
-    'depends': ['base'],
+    'depends': ['base', 'mail'],
     'data': [
         'security/ir.model.access.csv',
         'data/event_type_data.xml',

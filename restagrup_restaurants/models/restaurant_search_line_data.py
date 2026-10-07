@@ -131,9 +131,12 @@ class RestaurantSearchLineData(models.Model):
         text = html2plaintext(raw_body).strip() if raw_body else ''
         if not text:
             return
-        data, provider = self.env['restagrup.llm.connector'].extract_json(EXTRACT_DATA_SYSTEM_PROMPT, text)
+        data, provider, log = self.env['restagrup.llm.connector'].run(
+            'data_extraction', EXTRACT_DATA_SYSTEM_PROMPT, text, source=self, label=self.name)
         proposal = self._clean_data_proposal(data)
         if not proposal:
+            if data is not None:
+                log.state = 'auto'  # nada que revisar: la respuesta no traía datos de ficha
             return
         self.data_proposal = json.dumps(proposal)
         self.search_id.message_post_if_exists(_(
@@ -162,10 +165,12 @@ class RestaurantSearchLineData(models.Model):
         vals = {name: value for name, value in proposal.items() if value and not partner[name]}
         if vals:
             partner.write(vals)
+        self.env['restagrup.ai.log']._resolve('data_extraction', self, 'confirmed')
         self.data_proposal = False
         self.search_id.message_post_if_exists(_(
             '%(name)s: datos de ficha aplicados por %(user)s (%(count)s campos).'
         ) % {'name': self.name, 'user': self.env.user.name, 'count': len(vals)})
 
     def action_discard_data_proposal(self):
+        self.env['restagrup.ai.log']._resolve('data_extraction', self, 'discarded')
         self.write({'data_proposal': False})

@@ -42,6 +42,14 @@ class RestagrupLlmConnector(models.AbstractModel):
                 return result, provider
         return None, None
 
+    def run(self, kind, system_prompt, user_content, source=None, label=False, review=True):
+        """extract_json + registro de la actividad (A4). Devuelve (datos, proveedor, registro). `review` dice si
+        luego una persona confirma o corrige el resultado; si no, el registro queda como automático."""
+        data, provider = self.extract_json(system_prompt, user_content)
+        log = self.env['restagrup.ai.log']._record(
+            kind, user_content, data, provider, source=source, label=label, review=review)
+        return data, provider, log
+
     def _call_groq(self, system_prompt, user_content):
         api_key = self._get_param('restagrup.groq_api_key')
         if not api_key:

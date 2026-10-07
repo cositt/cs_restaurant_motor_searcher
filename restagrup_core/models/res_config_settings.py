@@ -61,6 +61,11 @@ class ResConfigSettings(models.TransientModel):
              ' avisos): la cuenta dedicada. Vacío = el correo del usuario. Debe poder enviar con tu servidor'
              ' de correo saliente.',
     )
+    restagrup_alert_user_id = fields.Many2one(
+        'res.users', string='Usuario de alertas IA', config_parameter='restagrup.alert_user_id',
+        help='Quien recibe una actividad cuando la IA falla o detecta una incidencia y el grupo no tiene un'
+             ' responsable asignado.',
+    )
     restagrup_send_mode = fields.Selection(
         [('approval', 'Con aprobación'), ('automatic', 'Automático')],
         string='Modo de envíos automáticos', default='approval',

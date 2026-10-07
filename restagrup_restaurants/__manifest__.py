@@ -21,6 +21,7 @@
         'views/crm_lead_views.xml',
         'views/pending_mail_views.xml',
         'views/inbox_mail_views.xml',
+        'views/ai_log_views.xml',
         'data/restaurant_data.xml',
         'data/ir_cron_data.xml',
     ],

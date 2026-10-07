@@ -38,6 +38,10 @@
                             <field name="restagrup_classify_incoming"/>
                             <field name="restagrup_system_sender" placeholder="Vacío = correo del usuario"/>
                         </setting>
+                        <setting id="restagrup_alerts"
+                                 help="Quién recibe la actividad cuando la IA falla o detecta una incidencia y el grupo no tiene responsable.">
+                            <field name="restagrup_alert_user_id"/>
+                        </setting>
                         <setting id="restagrup_send_mode"
                                  help="Con aprobación: los correos que genera el sistema esperan en Restagrup > Pendientes de aprobar hasta que una persona los aprueba. Automático: salen solos.">
                             <field name="restagrup_send_mode"/>
