@@ -66,6 +66,14 @@ class TestAiActivityRestaurants(TransactionCase):
         self.assertEqual(log.state, 'error')
         self.assertEqual(log.activity_ids.user_id, self.owner)
 
+    def test_quote_proposal_asks_the_search_owner_to_confirm_and_clears_when_registered(self):
+        self._reply(self.line, {'importe': 1200})
+        log = self._logs('quote_extraction', self.line)
+        self.assertEqual(log.activity_ids.user_id, self.owner)
+        self.assertIn('1200', log.activity_ids.summary)
+        self.line.action_register_quote()
+        self.assertFalse(log.activity_ids)
+
     # --- datos de ficha ---
 
     def _ask_data(self):

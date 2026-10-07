@@ -126,3 +126,29 @@ class TestAiActivityEmail(TransactionCase):
         self._receive('invoice', subject='Otra factura A4')
         inbox = self.env['restagrup.inbox.mail'].search([('name', '=', 'Otra factura A4')])
         self.assertFalse(inbox.activity_ids)
+
+    # --- avisos en la UI (contador del reloj + aviso emergente) ---
+
+    def test_new_lead_extraction_asks_for_a_review(self):
+        logs = self._receive('new_request', subject='Petición con aviso')
+        extraction = logs.filtered(lambda l: l.kind == 'lead_extraction')
+        self.assertEqual(extraction.activity_ids.user_id, self.alert_user)
+        self.assertIn('Grupo nuevo por revisar', extraction.activity_ids.summary)
+
+    def test_mail_sent_to_review_has_an_activity_that_goes_away_when_reviewed(self):
+        self._receive('invoice', subject='Factura con aviso')
+        inbox = self.env['restagrup.inbox.mail'].search([('name', '=', 'Factura con aviso')])
+        self.assertEqual(inbox.ai_log_id.activity_ids.user_id, self.alert_user)
+        inbox.action_mark_done()
+        self.assertFalse(inbox.ai_log_id.activity_ids)
+
+    def test_incident_has_its_urgent_activity_and_no_extra_review_activity(self):
+        self._receive('incident', subject='Incidencia con aviso')
+        inbox = self.env['restagrup.inbox.mail'].search([('name', '=', 'Incidencia con aviso')])
+        self.assertIn('URGENTE', inbox.activity_ids.summary)
+        self.assertFalse(inbox.ai_log_id.activity_ids)
+
+    def test_automatic_classification_of_a_new_request_makes_no_noise(self):
+        logs = self._receive('new_request', subject='Sin ruido')
+        classification = logs.filtered(lambda l: l.kind == 'mail_classification')
+        self.assertFalse(classification.activity_ids)

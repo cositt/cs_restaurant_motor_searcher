@@ -58,6 +58,8 @@ class MailThread(models.AbstractModel):
                 new_routes.append((target[0], target[1], None, route[3], route[4]))
             else:
                 log.state = 'pending'  # lo revisa una persona desde la bandeja
+                if category != 'incident':  # una incidencia ya tiene su propia alerta urgente
+                    log._notify_safely(False, None)
                 new_routes.append((INBOX_MODEL, False, {
                     'category': category, 'summary': summary, 'ai_log_id': log.id}, route[3], route[4]))
         return new_routes
