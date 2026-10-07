@@ -14,3 +14,5 @@ from . import notice_wizard
 from . import change_wizard
 from . import crm_lead
 from . import lead_event
+from . import sale_order_agency
+from . import pending_mail

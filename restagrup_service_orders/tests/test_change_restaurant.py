@@ -78,8 +78,10 @@ class TestChangeRestaurant(TransactionCase):
         self.assertEqual(search.pipeline_stage, 'quotes_received')
 
     def test_reasons_are_loaded(self):
-        names = self.env['restagrup.cancel.reason'].search([]).mapped('name')
-        self.assertEqual(len(names), 4)
+        for xmlid in ('cannot', 'cheaper', 'better', 'other'):
+            self.assertTrue(self.env.ref('restagrup_core.cancel_reason_%s' % xmlid).active, xmlid)
+        # A2 añade «El grupo no sale» a la misma lista.
+        self.assertTrue(self.env.ref('restagrup_service_orders.cancel_reason_group_not_going').active)
 
     # --- cambiar por otro: el presupuesto se ajusta al nuevo ---
 
