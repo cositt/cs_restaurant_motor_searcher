@@ -5,3 +5,4 @@ from . import test_pending_mail
 from . import test_restaurant_data_sheet
 from . import test_ai_activity
 from . import test_ai_dashboard
+from . import test_lead_completion

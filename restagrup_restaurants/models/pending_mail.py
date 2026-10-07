@@ -20,7 +20,8 @@ class RestagrupPendingMail(models.Model):
     _rec_name = 'subject'
 
     kind = fields.Selection(
-        [('quote_reminder', 'Recordatorio a restaurante'), ('data_request', 'Petición de datos de ficha')], string='Tipo', required=True, readonly=True,
+        [('quote_reminder', 'Recordatorio a restaurante'), ('data_request', 'Petición de datos de ficha'),
+         ('lead_data_request', 'Petición de datos a la agencia')], string='Tipo', required=True, readonly=True,
     )
     state = fields.Selection(
         [('pending', 'Pendiente'), ('sent', 'Enviado'), ('discarded', 'Descartado'), ('error', 'Error')],
@@ -28,6 +29,10 @@ class RestagrupPendingMail(models.Model):
     )
     line_id = fields.Many2one(
         'restagrup.restaurant.search.line', string='Restaurante', ondelete='cascade', readonly=True, index=True,
+    )
+    request_lead_id = fields.Many2one(
+        'crm.lead', string='Petición de la agencia', ondelete='cascade', readonly=True, index=True,
+        help='Grupo al que se piden los datos que faltan (solo en las peticiones de datos a la agencia).',
     )
     search_id = fields.Many2one(related='line_id.search_id', string='Búsqueda', store=True)
     lead_id = fields.Many2one(related='line_id.search_id.lead_id', string='Grupo', store=True)
@@ -75,6 +80,27 @@ class RestagrupPendingMail(models.Model):
             'subject': subject, 'body': body,
             'reason': _('Faltan datos: %s') % line.missing_fields_text,
         })
+
+    @api.model
+    def _enqueue_lead_data_request(self, lead, email_to, subject, body, missing):
+        """Deja en la cola la petición de datos a la agencia. No duplica mientras haya una esperando."""
+        lead.ensure_one()
+        if self.search_count([('request_lead_id', '=', lead.id), ('kind', '=', 'lead_data_request'),
+                              ('state', '=', 'pending')]):
+            return self.browse()
+        return self.create({
+            'kind': 'lead_data_request', 'request_lead_id': lead.id, 'recipient_email': email_to,
+            'subject': subject, 'body': body, 'reason': _('Faltan datos: %s') % '; '.join(missing),
+        })
+
+    def _still_applies_lead_data_request(self):
+        lead = self.request_lead_id
+        return bool(lead.active and lead._restagrup_missing_request_data())
+
+    def _send_lead_data_request(self):
+        if not self.recipient_email:
+            raise UserError(_('Este correo no tiene destinatario.'))
+        self.request_lead_id._restagrup_send_data_request(self.subject, self.body, self.recipient_email)
 
     def action_approve(self):
         """Envía los correos pendientes. Un fallo en uno queda anotado y no para al resto."""

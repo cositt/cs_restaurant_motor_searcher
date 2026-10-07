@@ -38,7 +38,8 @@ class TestAiActivityEmail(TransactionCase):
                 return {'categoria': category, 'resumen': 'resumen'}, 'groq'
             if extraction is None:
                 return None, None
-            return {'eventos': [{'ciudad': 'Madrid', 'pax': 30}], 'ciudad': 'Madrid', 'num_pax': 30}, 'groq'
+            return {'eventos': [{'ciudad': 'Madrid', 'pax': 30, 'fecha': '2026-11-20'}],
+                    'ciudad': 'Madrid', 'num_pax': 30}, 'groq'
         return fake
 
     def _receive(self, category='new_request', extraction='ok', subject='Petición A4', sender='ana@agencia.example.com',
@@ -51,11 +52,11 @@ class TestAiActivityEmail(TransactionCase):
 
     # --- extracción del lead ---
 
-    def test_lead_extraction_is_logged_pending_with_the_lead_as_source(self):
+    def test_complete_lead_extraction_is_logged_as_automatic_with_the_lead_as_source(self):
         logs = self._receive('new_request')
         extraction = logs.filtered(lambda l: l.kind == 'lead_extraction')
         self.assertEqual(len(extraction), 1)
-        self.assertEqual(extraction.state, 'pending')
+        self.assertEqual(extraction.state, 'auto')  # petición completa: no la revisa nadie
         self.assertEqual(extraction.source_model, 'crm.lead')
         lead = self.env['crm.lead'].browse(extraction.source_res_id)
         self.assertEqual(lead.restagrup_city, 'Madrid')
@@ -129,11 +130,10 @@ class TestAiActivityEmail(TransactionCase):
 
     # --- avisos en la UI (contador del reloj + aviso emergente) ---
 
-    def test_new_lead_extraction_asks_for_a_review(self):
+    def test_complete_lead_extraction_asks_nobody_to_review_it(self):
         logs = self._receive('new_request', subject='Petición con aviso')
         extraction = logs.filtered(lambda l: l.kind == 'lead_extraction')
-        self.assertEqual(extraction.activity_ids.user_id, self.alert_user)
-        self.assertIn('Grupo nuevo por revisar', extraction.activity_ids.summary)
+        self.assertFalse(extraction.activity_ids)
 
     def test_mail_sent_to_review_has_an_activity_that_goes_away_when_reviewed(self):
         self._receive('invoice', subject='Factura con aviso')

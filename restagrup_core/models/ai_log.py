@@ -14,6 +14,8 @@ KINDS = [
     ('quote_extraction', 'Importe de un presupuesto'),
     ('data_extraction', 'Datos de la ficha de un restaurante'),
     ('mail_classification', 'Clasificación de un correo'),
+    ('lead_matching', 'Enlace de un correo a un grupo'),
+    ('lead_completion', 'Datos que aporta la agencia'),
     ('sheet_classification', 'Respuesta a una hoja de servicio'),
 ]
 STATES = [
