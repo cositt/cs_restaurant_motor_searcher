@@ -29,6 +29,17 @@ class ResConfigSettings(models.TransientModel):
         help='Mensaje que Odoo manda solo a un restaurante que no ha respondido a la'
              ' petición de presupuesto (una vez, a los 3 días). Vacío = texto por defecto.',
     )
+    restagrup_agency_reminder_days = fields.Integer(
+        string='Días antes del servicio para reclamar', config_parameter='restagrup.agency_reminder_days',
+        default=14,
+        help='Un presupuesto enviado a la agencia y sin respuesta genera un recordatorio cuando faltan estos'
+             ' días o menos para el servicio.',
+    )
+    restagrup_agency_reminder_text = fields.Char(
+        string='Texto del recordatorio a la agencia', config_parameter='restagrup.agency_reminder_text',
+        help='Mensaje del recordatorio a la agencia (el enlace al presupuesto y la firma se añaden solos).'
+             ' Vacío = texto por defecto.',
+    )
     restagrup_send_mode = fields.Selection(
         [('approval', 'Con aprobación'), ('automatic', 'Automático')],
         string='Modo de envíos automáticos', default='approval',

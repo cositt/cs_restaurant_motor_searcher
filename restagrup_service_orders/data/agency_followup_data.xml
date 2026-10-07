@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="lost_reason_group_not_going" model="crm.lost.reason">
+        <field name="name">Grupo no sale</field>
+    </record>
+    <record id="cancel_reason_group_not_going" model="restagrup.cancel.reason">
+        <field name="name">El grupo no sale</field>
+        <field name="sequence">50</field>
+    </record>
+    <record id="notice_template_group_not_going" model="restagrup.notice.template">
+        <field name="name">El grupo no sale</field>
+        <field name="sequence">50</field>
+        <field name="subject">Cancelación de la petición — {grupo}</field>
+        <field name="body"><![CDATA[<p>Hola {restaurante},</p>
+<p>Os informamos de que el grupo <strong>{grupo}</strong> ({evento}, {fecha}, {comensales} comensales) finalmente no sale, por lo que cancelamos la petición de presupuesto.</p>
+<p>Disculpad las molestias y gracias por vuestra atención.</p>]]></field>
+    </record>
+
+    <data noupdate="1">
+        <record id="ir_cron_agency_reminders" model="ir.cron">
+            <field name="name">Restagrup: recordatorio a agencias de presupuestos sin respuesta</field>
+            <field name="model_id" ref="sale.model_sale_order"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_agency_reminders()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
+</odoo>

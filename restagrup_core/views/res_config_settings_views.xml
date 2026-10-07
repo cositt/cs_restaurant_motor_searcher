@@ -23,6 +23,12 @@
                             <field name="restagrup_quote_reminder_text" widget="text"
                                    placeholder="Vacío = texto por defecto"/>
                         </setting>
+                        <setting id="restagrup_agency_reminder"
+                                 help="Recordatorio a agencias con presupuesto enviado y sin respuesta.">
+                            <field name="restagrup_agency_reminder_days"/>
+                            <field name="restagrup_agency_reminder_text" widget="text"
+                                   placeholder="Vacío = texto por defecto"/>
+                        </setting>
                         <setting id="restagrup_send_mode"
                                  help="Con aprobación: los correos que genera el sistema esperan en Restagrup > Pendientes de aprobar hasta que una persona los aprueba. Automático: salen solos.">
                             <field name="restagrup_send_mode"/>

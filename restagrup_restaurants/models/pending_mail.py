@@ -20,7 +20,7 @@ class RestagrupPendingMail(models.Model):
     _rec_name = 'subject'
 
     kind = fields.Selection(
-        [('quote_reminder', 'Recordatorio a restaurante')], string='Tipo', required=True, readonly=True,
+        [('quote_reminder', 'Recordatorio a restaurante'), ('data_request', 'Petición de datos de ficha')], string='Tipo', required=True, readonly=True,
     )
     state = fields.Selection(
         [('pending', 'Pendiente'), ('sent', 'Enviado'), ('discarded', 'Descartado'), ('error', 'Error')],
@@ -63,6 +63,19 @@ class RestagrupPendingMail(models.Model):
             'reason': _('Sin respuesta tras %s días') % line.quote_days_pending,
         })
 
+    @api.model
+    def _enqueue_data_request(self, line):
+        """Deja en la cola la petición de datos de la ficha. No duplica mientras haya una pendiente."""
+        line.ensure_one()
+        if self.search_count([('line_id', '=', line.id), ('kind', '=', 'data_request'), ('state', '=', 'pending')]):
+            return self.browse()
+        subject, body = line._data_request_content(self.env.user.name)
+        return self.create({
+            'kind': 'data_request', 'line_id': line.id, 'recipient_email': line._get_quote_email_to(),
+            'subject': subject, 'body': body,
+            'reason': _('Faltan datos: %s') % line.missing_fields_text,
+        })
+
     def action_approve(self):
         """Envía los correos pendientes. Un fallo en uno queda anotado y no para al resto."""
         for mail in self.filtered(lambda m: m.state == 'pending'):
@@ -94,6 +107,19 @@ class RestagrupPendingMail(models.Model):
     def _still_applies_quote_reminder(self):
         line = self.line_id
         return line.etiqueta == 'solicitado' and not line.quote_reminder_sent_date
+
+    def _still_applies_data_request(self):
+        return self.line_id.partner_id.restaurant_is_incomplete
+
+    def _send_data_request(self):
+        if not self.recipient_email:
+            raise UserError(_('Este correo no tiene destinatario.'))
+        line = self.line_id
+        line._post_email(self.subject, self.body, self.recipient_email)
+        line._mark_data_requested()
+        line.search_id.message_post_if_exists(_('Petición de datos a %(name)s aprobada por %(user)s.') % {
+            'name': line.name, 'user': self.env.user.name,
+        })
 
     def _send_quote_reminder(self):
         if not self.recipient_email:

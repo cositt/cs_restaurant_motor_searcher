@@ -28,6 +28,18 @@
                             <field name="restaurant_iban"/>
                         </group>
                     </group>
+                    <group string="Datos de grupo" invisible="not is_restaurant">
+                        <group>
+                            <field name="restaurant_gratuities"/>
+                            <field name="restaurant_group_manager"/>
+                            <field name="restaurant_group_mobile" widget="phone"/>
+                            <field name="restaurant_preferred_channel"/>
+                        </group>
+                        <group invisible="not restaurant_is_incomplete">
+                            <field name="restaurant_is_incomplete" invisible="1"/>
+                            <field name="restaurant_missing_fields" readonly="1" string="Ficha incompleta · faltan"/>
+                        </group>
+                    </group>
                     <group invisible="not is_restaurant">
                         <field name="restaurant_internal_notes" nolabel="1" placeholder="Notas internas del equipo..."/>
                     </group>
