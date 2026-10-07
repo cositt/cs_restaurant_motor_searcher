@@ -116,6 +116,7 @@ class RestagrupPendingMail(models.Model):
             raise UserError(_('Este correo no tiene destinatario.'))
         line = self.line_id
         line._post_email(self.subject, self.body, self.recipient_email)
+        line._mark_data_requested()
         line.search_id.message_post_if_exists(_('Petición de datos a %(name)s aprobada por %(user)s.') % {
             'name': line.name, 'user': self.env.user.name,
         })

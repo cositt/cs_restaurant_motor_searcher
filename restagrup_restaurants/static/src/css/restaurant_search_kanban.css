@@ -213,3 +213,12 @@
     gap: 6px;
     margin: 4px 0;
 }
+
+.o_restagrup_rest_proposal {
+    font-size: 12px;
+    color: #4a3b6b;
+    background: #f1edf8;
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin: 4px 0;
+}

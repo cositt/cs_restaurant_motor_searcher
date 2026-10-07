@@ -737,31 +737,6 @@ class RestaurantSearchLine(models.Model):
         ))
         self.write({'partner_id': partner.id, 'source': 'partner'})
 
-    def _data_request_content(self, signer_name):
-        """Asunto y texto del correo que pide al restaurante solo los datos que faltan en su ficha."""
-        self.ensure_one()
-        missing = self.partner_id._restaurant_missing_labels()
-        subject = _('Datos para trabajar con grupos — %s') % self.env.company.name
-        lines = [
-            _('Hola,'), '',
-            _('Para poder proponeros grupos nos faltan estos datos de %s:') % self.name, '',
-        ] + ['- %s' % label for label in missing] + ['', _('Gracias,'), signer_name]
-        return subject, '\n'.join(lines)
-
-    def action_request_missing_data(self):
-        """Pide al restaurante los datos vacíos de su ficha. Con el modo «con aprobación» el correo va a la
-        cola Pendientes de aprobar; en automático sale ya."""
-        self.ensure_one()
-        queue = self.env['restagrup.pending.mail']
-        if not self.partner_id.restaurant_is_incomplete:
-            raise UserError(_('La ficha de este restaurante ya está completa (o aún no es un contacto).'))
-        self._get_quote_email_to()  # sin email no hay a quién pedírselo
-        if queue._send_mode() == 'automatic':
-            subject, body = self._data_request_content(self.env.user.name)
-            self._post_email(subject, body, self._get_quote_email_to())
-            return
-        queue._enqueue_data_request(self)
-
     def action_mark_visto(self):
         self.write({'etiqueta': 'visto'})
 

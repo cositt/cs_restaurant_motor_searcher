@@ -76,6 +76,8 @@
                                     <field name="partner_incomplete"/>
                                     <field name="missing_fields_text"/>
                                     <field name="warnings_text"/>
+                                    <field name="data_proposal"/>
+                                    <field name="data_proposal_summary"/>
                                     <field name="quote_pending_confirmation"/>
                                     <field name="google_maps_url"/>
                                     <templates>
@@ -120,6 +122,13 @@
                                                     <span class="text-muted small">Faltan: <t t-esc="record.missing_fields_text.value"/></span>
                                                     <button name="action_request_missing_data" type="object"
                                                             class="btn btn-link btn-sm">Pedir datos que faltan</button>
+                                                </div>
+                                                <div class="o_restagrup_rest_proposal" t-if="record.data_proposal.raw_value">
+                                                    🤖 Datos propuestos por IA, sin confirmar: <t t-esc="record.data_proposal_summary.value"/>
+                                                    <button name="action_apply_data_proposal" type="object"
+                                                            class="btn btn-primary btn-sm">Aplicar</button>
+                                                    <button name="action_discard_data_proposal" type="object"
+                                                            class="btn btn-link btn-sm">Descartar</button>
                                                 </div>
                                                 <div class="o_restagrup_rest_notes" t-if="record.internal_notes.raw_value">
                                                     📝 <t t-esc="record.internal_notes.value"/>

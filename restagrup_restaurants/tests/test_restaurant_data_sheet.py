@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+import json
 from datetime import date
+from unittest.mock import patch
 
 from odoo.exceptions import UserError
 from odoo.tests.common import TransactionCase, tagged
@@ -199,3 +201,95 @@ class TestRestaurantDataSheet(TransactionCase):
         self.assertEqual(existing.restaurant_cuisine_type, 'Asturiana')
         self.assertEqual(existing.street, 'Calle Nueva 1')
         self.assertEqual(self.Partner.search_count([('restaurant_google_place_id', '=', 'PLACE1')]), 1)
+
+
+LLM_PATH = 'odoo.addons.restagrup_core.models.llm_connector.RestagrupLlmConnector.extract_json'
+
+
+@tagged('post_install', '-at_install')
+class TestDataSheetAiReply(TransactionCase):
+    """A3: la respuesta del restaurante a «Pedir datos que faltan» la lee la IA y propone los valores;
+    solo una persona los aplica, y nunca pisan lo que ya está escrito."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.env['ir.config_parameter'].sudo().set_param('restagrup.send_mode', 'automatic')
+        lead = cls.env['crm.lead'].create({'name': 'Grupo A3 IA'})
+        search = cls.env['restagrup.restaurant.search'].create({'lead_id': lead.id, 'city': 'Madrid', 'min_capacity': 20})
+        cls.partner = cls.env['res.partner'].create({
+            'name': 'Casa IA', 'is_restaurant': True, 'email': 'ia@example.com',
+            'restaurant_capacity': 50, 'restaurant_language': 'es',
+        })
+        cls.line = cls.env['restagrup.restaurant.search.line'].create({
+            'search_id': search.id, 'source': 'partner', 'name': 'Casa IA',
+            'partner_id': cls.partner.id, 'email': 'ia@example.com',
+        })
+
+    def _reply(self, data, body='<p>Cerramos los lunes. Pregunta por Marta, 600111222.</p>'):
+        with patch(LLM_PATH, return_value=(data, 'groq')):
+            self.line.message_update({'body': body})
+
+    def _ask(self):
+        self.line.action_request_missing_data()
+
+    def test_sending_the_request_stamps_the_date(self):
+        self.assertFalse(self.line.data_request_date)
+        self._ask()
+        self.assertTrue(self.line.data_request_date)
+
+    def test_approved_queued_request_also_stamps_the_date(self):
+        self.env['ir.config_parameter'].sudo().set_param('restagrup.send_mode', 'approval')
+        self._ask()
+        self.assertFalse(self.line.data_request_date)
+        self.env['restagrup.pending.mail'].search([('line_id', '=', self.line.id)]).action_approve()
+        self.assertTrue(self.line.data_request_date)
+
+    def test_reply_creates_proposal_without_touching_partner(self):
+        self._ask()
+        self._reply({'dia_cierre': 'mon', 'responsable': 'Marta', 'movil': '600111222'})
+        proposal = json.loads(self.line.data_proposal)
+        self.assertEqual(proposal['restaurant_closed_weekday'], 'mon')
+        self.assertEqual(proposal['restaurant_group_manager'], 'Marta')
+        self.assertIn('Marta', self.line.data_proposal_summary)
+        self.assertFalse(self.partner.restaurant_closed_weekday)
+        self.assertFalse(self.partner.restaurant_group_manager)
+
+    def test_reply_without_data_request_is_ignored(self):
+        self._reply({'dia_cierre': 'mon'})
+        self.assertFalse(self.line.data_proposal)
+
+    def test_invalid_values_are_dropped(self):
+        self._ask()
+        self._reply({'dia_cierre': 'funday', 'aforo': 'muchos', 'responsable': 'Marta'})
+        self.assertEqual(json.loads(self.line.data_proposal), {'restaurant_group_manager': 'Marta'})
+
+    def test_empty_extraction_leaves_no_proposal(self):
+        self._ask()
+        self._reply({'dia_cierre': None, 'responsable': None})
+        self.assertFalse(self.line.data_proposal)
+        self._reply(None)
+        self.assertFalse(self.line.data_proposal)
+
+    def test_apply_fills_blanks_only_and_clears_proposal(self):
+        self._ask()
+        self._reply({'dia_cierre': 'none', 'idioma': 'en', 'aforo': 99, 'responsable': 'Marta'})
+        self.line.action_apply_data_proposal()
+        self.assertEqual(self.partner.restaurant_closed_weekday, 'none')
+        self.assertEqual(self.partner.restaurant_group_manager, 'Marta')
+        self.assertEqual(self.partner.restaurant_language, 'es')  # ya estaba: no se pisa
+        self.assertEqual(self.partner.restaurant_capacity, 50)
+        self.assertFalse(self.line.data_proposal)
+
+    def test_discard_clears_proposal_and_writes_nothing(self):
+        self._ask()
+        self._reply({'dia_cierre': 'mon'})
+        self.line.action_discard_data_proposal()
+        self.assertFalse(self.line.data_proposal)
+        self.assertFalse(self.partner.restaurant_closed_weekday)
+
+    def test_later_reply_replaces_previous_proposal(self):
+        self._ask()
+        self._reply({'dia_cierre': 'mon'})
+        self._reply({'dia_cierre': 'tue'})
+        self.assertEqual(json.loads(self.line.data_proposal)['restaurant_closed_weekday'], 'tue')
