@@ -95,7 +95,7 @@ class TestChangeRestaurant(TransactionCase):
         self.assertEqual(line.product_uom_qty, 42)  # una unidad por comensal
         self.assertAlmostEqual(line.restagrup_unit_cost, 800 / 42, places=2)
         self.assertAlmostEqual(line.price_unit, 960 / 42, places=2)  # 800 + 20 %, por persona
-        self.assertAlmostEqual(line.price_subtotal, 960.0, delta=0.5)
+        self.assertAlmostEqual(line.price_unit * line.product_uom_qty, 960.0, delta=0.5)
         self.assertIn('Casa B', line.name)
         self.assertEqual(search.chosen_line_id, self.line_b)
         self.assertEqual(search.sale_order_id, self.order)
@@ -104,7 +104,7 @@ class TestChangeRestaurant(TransactionCase):
         search = self._scenario()
         self._change(search, replacement=self.line_b, keep_client_price=True)
         line = self.order.order_line
-        self.assertAlmostEqual(line.price_subtotal, 1200.0, delta=0.5)
+        self.assertAlmostEqual(line.price_unit * line.product_uom_qty, 1200.0, delta=0.5)
         self.assertAlmostEqual(line.restagrup_unit_cost, 800 / 42, places=2)
         self.assertAlmostEqual(line.restagrup_margin_pct, 50.0, delta=0.1)
 

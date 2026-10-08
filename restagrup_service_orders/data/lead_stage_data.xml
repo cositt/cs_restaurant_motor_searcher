@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Fases del flujo de RestaGrup: el mismo documento pasa por Petición → Presupuesto → Expediente → Cerrado -->
+        <record id="stage_peticion" model="crm.stage">
+            <field name="name">Petición</field>
+            <field name="sequence">1</field>
+            <field name="restagrup_stage_key">peticion</field>
+            <field name="restagrup_doc_prefix">PET</field>
+        </record>
+        <record id="stage_presupuesto" model="crm.stage">
+            <field name="name">Presupuesto</field>
+            <field name="sequence">2</field>
+            <field name="restagrup_stage_key">presupuesto</field>
+            <field name="restagrup_doc_prefix">PRE</field>
+        </record>
+        <record id="stage_expediente" model="crm.stage">
+            <field name="name">Expediente</field>
+            <field name="sequence">3</field>
+            <field name="restagrup_stage_key">expediente</field>
+            <field name="restagrup_doc_prefix">EXP</field>
+        </record>
+        <record id="stage_cerrado" model="crm.stage">
+            <field name="name">Cerrado</field>
+            <field name="sequence">4</field>
+            <field name="is_won" eval="True"/>
+            <field name="restagrup_stage_key">cerrado</field>
+            <field name="restagrup_doc_prefix">EXP</field>
+        </record>
+
+
+        <!-- Los números siguen a los del CRM actual (el último que vimos fue el 17710) -->
+        <record id="seq_lead_document" model="ir.sequence">
+            <field name="name">Documento del grupo (PET/PRE/EXP)</field>
+            <field name="code">restagrup.lead.document</field>
+            <field name="implementation">standard</field>
+            <field name="number_next">17711</field>
+            <field name="number_increment">1</field>
+            <field name="padding">0</field>
+            <field name="company_id" eval="False"/>
+        </record>
+    </data>
+
+    <function model="crm.lead" name="_restagrup_backfill_documents"/>
+</odoo>

@@ -96,10 +96,11 @@ class RestaurantChangeWizard(models.TransientModel):
         qty, unit_cost = search._quote_figures(new.quote_amount)
         total_cost = new.quote_amount
         if self.keep_client_price:
-            price = sum(old_lines.mapped('price_subtotal')) / qty
+            price = sum(l.price_unit * l.product_uom_qty * (1 - (l.discount or 0.0) / 100.0) for l in old_lines) / qty
             pct = round((price * qty / total_cost - 1) * 100, 2) if total_cost else 0.0
         else:
-            price, pct = pricing.apply_margin(unit_cost), pricing.margin_percent()
+            price = pricing.apply_margin(unit_cost, partner=new.partner_id)
+            pct = pricing.margin_percent(partner=new.partner_id)
         description = _('Servicio en %(restaurant)s — %(city)s, %(pax)s pax') % {
             'restaurant': new.name, 'city': search.city or '', 'pax': search.min_capacity or '?'}
         label = search._event_label()

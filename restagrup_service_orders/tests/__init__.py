@@ -13,3 +13,6 @@ from . import test_agency_followup
 from . import test_resend_changes
 from . import test_incoming_orders_and_sender
 from . import test_ai_activity_sheets
+from . import test_restaurant_margin
+from . import test_lead_stages
+from . import test_firewall

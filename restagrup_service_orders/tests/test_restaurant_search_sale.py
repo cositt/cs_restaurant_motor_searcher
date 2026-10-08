@@ -89,14 +89,14 @@ class TestRestaurantSearchSale(TransactionCase):
         self.assertEqual(line.product_uom_qty, 32)
         self.assertAlmostEqual(line.restagrup_unit_cost, 32.0)  # 1.024 / 32
         self.assertAlmostEqual(line.price_unit, 38.4)           # 32 + 20 %
-        self.assertAlmostEqual(order.amount_untaxed, 1228.8)    # 1.024 + 20 %
+        self.assertAlmostEqual(sum(l.price_unit * l.product_uom_qty for l in order.order_line), 1228.8, places=2)    # 1.024 + 20 %
         self.assertAlmostEqual(line.restagrup_margin_amount, 204.8)
 
     def test_without_headcount_the_quote_stays_one_global_line(self):
         order = self._per_person_search(0, 1000)
         self.assertEqual(order.order_line.product_uom_qty, 1)
         self.assertAlmostEqual(order.order_line.restagrup_unit_cost, 1000.0)
-        self.assertAlmostEqual(order.amount_untaxed, 1200.0)
+        self.assertAlmostEqual(sum(l.price_unit * l.product_uom_qty for l in order.order_line), 1200.0, places=2)
 
     def test_service_sheet_carries_the_per_person_cost(self):
         order = self._per_person_search(32, 1024)

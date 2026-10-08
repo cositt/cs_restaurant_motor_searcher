@@ -104,7 +104,14 @@ class SaleOrder(models.Model):
             order._restagrup_log_on_searches(_('Presupuesto de venta %(name)s confirmado%(signed)s.') % {
                 'name': order.name, 'signed': signed,
             })
+            order._restagrup_advance_group_to_file()
         return res
+
+    def _restagrup_advance_group_to_file(self):
+        """Confirmado el presupuesto de venta (firma de la agencia o a mano), el grupo pasa a Expediente."""
+        self.ensure_one()
+        searches = self.env['restagrup.restaurant.search'].search([('sale_order_id', '=', self.id)])
+        (self.opportunity_id | searches.lead_id)._restagrup_advance_to('expediente')
 
     def _restagrup_log_on_searches(self, body):
         """Refleja un suceso del presupuesto en el chatter de la búsqueda de origen."""

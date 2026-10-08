@@ -7,3 +7,6 @@ access_restagrup_restaurant_notice,restagrup.restaurant.notice,model_restagrup_r
 access_restagrup_restaurant_notice_wizard,restagrup.restaurant.notice.wizard,model_restagrup_restaurant_notice_wizard,base.group_user,1,1,1,1
 access_restagrup_restaurant_notice_wizard_line,restagrup.restaurant.notice.wizard.line,model_restagrup_restaurant_notice_wizard_line,base.group_user,1,1,1,1
 access_restagrup_restaurant_change_wizard,restagrup.restaurant.change.wizard,model_restagrup_restaurant_change_wizard,base.group_user,1,1,1,1
+access_restagrup_firewall_check_user,restagrup.firewall.check user,model_restagrup_firewall_check,base.group_user,1,0,0,0
+access_restagrup_firewall_check_manager,restagrup.firewall.check manager,model_restagrup_firewall_check,base.group_system,1,1,1,1
+access_restagrup_firewall_wizard,restagrup.firewall.wizard,model_restagrup_firewall_wizard,base.group_user,1,1,1,1

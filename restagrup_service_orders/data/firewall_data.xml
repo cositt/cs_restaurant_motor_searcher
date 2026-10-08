@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="firewall_agency_contact" model="restagrup.firewall.check">
+            <field name="code">agency_contact</field>
+            <field name="name">La agencia tiene contacto (cliente o email)</field>
+            <field name="trigger">pass_to_quote</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="firewall_services_complete" model="restagrup.firewall.check">
+            <field name="code">services_complete</field>
+            <field name="name">Cada servicio tiene ciudad, fecha y comensales</field>
+            <field name="trigger">pass_to_quote</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="firewall_has_option" model="restagrup.firewall.check">
+            <field name="code">has_option</field>
+            <field name="name">Hay al menos un restaurante con presupuesto o menú que ofrecer</field>
+            <field name="trigger">pass_to_quote</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="firewall_restaurant_chosen" model="restagrup.firewall.check">
+            <field name="code">restaurant_chosen</field>
+            <field name="name">Hay restaurante elegido</field>
+            <field name="trigger">pass_to_file</field>
+            <field name="sequence">40</field>
+        </record>
+        <record id="firewall_pax_defined" model="restagrup.firewall.check">
+            <field name="code">pax_defined</field>
+            <field name="name">Los servicios tienen comensales</field>
+            <field name="trigger">pass_to_file</field>
+            <field name="sequence">50</field>
+        </record>
+        <record id="firewall_paid" model="restagrup.firewall.check">
+            <field name="code">paid</field>
+            <field name="name">El pago está marcado como recibido</field>
+            <field name="trigger">close_file</field>
+            <field name="sequence">60</field>
+        </record>
+        <record id="firewall_service_done" model="restagrup.firewall.check">
+            <field name="code">service_done</field>
+            <field name="name">El último servicio ya ha terminado</field>
+            <field name="trigger">close_file</field>
+            <field name="sequence">70</field>
+        </record>
+        <record id="firewall_restaurant_confirmed" model="restagrup.firewall.check">
+            <field name="code">restaurant_confirmed</field>
+            <field name="name">El restaurante ha confirmado por escrito</field>
+            <field name="trigger">confirm_agency</field>
+            <field name="sequence">80</field>
+        </record>
+        <record id="firewall_restaurant_bank" model="restagrup.firewall.check">
+            <field name="code">restaurant_bank</field>
+            <field name="name">El restaurante tiene cuenta bancaria (prepago)</field>
+            <field name="trigger">confirm_agency</field>
+            <field name="sequence">90</field>
+        </record>
+        <record id="firewall_company_bank" model="restagrup.firewall.check">
+            <field name="code">company_bank</field>
+            <field name="name">La compañía tiene cuenta bancaria para el cobro</field>
+            <field name="trigger">confirm_agency</field>
+            <field name="sequence">100</field>
+        </record>
+        <record id="firewall_service_datetime" model="restagrup.firewall.check">
+            <field name="code">service_datetime</field>
+            <field name="name">El servicio tiene fecha y hora</field>
+            <field name="trigger">confirm_restaurant</field>
+            <field name="sequence">110</field>
+        </record>
+        <record id="firewall_restaurant_email" model="restagrup.firewall.check">
+            <field name="code">restaurant_email</field>
+            <field name="name">El restaurante tiene email</field>
+            <field name="trigger">confirm_restaurant</field>
+            <field name="sequence">120</field>
+        </record>
+    </data>
+</odoo>
