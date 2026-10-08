@@ -25,6 +25,7 @@
                             <field name="zip"/>
                             <field name="min_capacity"/>
                             <field name="require_bus_parking"/>
+                            <field name="restaurant_visible"/>
                         </group>
                         <group>
                             <field name="cuisine_type"/>
@@ -195,6 +196,8 @@
                                     <field name="etiqueta" string="Estado" widget="badge"/>
                                     <field name="quote_amount" string="Restaurante (€)"/>
                                     <field name="quote_client_price" string="Cliente (€)"/>
+                                    <field name="quote_client_price_per_person" string="Cliente (€/pers.)"/>
+                                    <field name="menu_id" string="Menú"/>
                                     <field name="quote_received_date" string="Recibido"/>
                                     <field name="quote_notes"/>
                                     <button name="action_register_quote" type="object" string="Confirmar"
@@ -230,6 +233,8 @@
                 </group>
                 <group>
                     <field name="quote_amount"/>
+                    <field name="partner_id" invisible="1"/>
+                    <field name="menu_id" invisible="not partner_id" options="{'no_create': True}"/>
                     <field name="quote_notes"/>
                 </group>
                 <footer>

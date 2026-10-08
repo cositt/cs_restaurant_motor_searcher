@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_restaurant_menu_form" model="ir.ui.view">
+        <field name="name">restagrup.restaurant.menu.form</field>
+        <field name="model">restagrup.restaurant.menu</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="partner_id"/>
+                            <field name="menu_type"/>
+                            <field name="season" options="{'format': false}"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="cost_price"/>
+                            <label for="sale_price"/>
+                            <div class="d-flex align-items-center gap-2">
+                                <field name="sale_price" class="oe_inline"/>
+                                <span class="text-muted">(<field name="profit_percent" class="oe_inline"/> % beneficio)</span>
+                            </div>
+                        </group>
+                        <group>
+                            <field name="min_pax"/>
+                            <field name="max_pax"/>
+                            <field name="drinks_included"/>
+                            <field name="drinks_description" invisible="not drinks_included"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="description" string="Descripción">
+                            <field name="description" placeholder="Pega aquí el menú tal cual lo envía el restaurante..."/>
+                        </page>
+                        <page name="dishes" string="Platos">
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="course"/>
+                                    <field name="name"/>
+                                    <field name="allergens"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page name="notes" string="Observaciones">
+                            <field name="notes"/>
+                        </page>
+                        <page name="text" string="Texto para propuesta">
+                            <field name="display_text"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_restaurant_menu_list" model="ir.ui.view">
+        <field name="name">restagrup.restaurant.menu.list</field>
+        <field name="model">restagrup.restaurant.menu</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="partner_id" optional="show"/>
+                <field name="name"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="season" options="{'format': false}"/>
+                <field name="menu_type" optional="show"/>
+                <field name="cost_price"/>
+                <field name="sale_price"/>
+                <field name="profit_percent" optional="show"/>
+                <field name="min_pax" optional="show"/>
+                <field name="max_pax" optional="show"/>
+                <field name="drinks_included" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_restaurant_menu_search" model="ir.ui.view">
+        <field name="name">restagrup.restaurant.menu.search</field>
+        <field name="model">restagrup.restaurant.menu</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="partner_id" string="Restaurante"/>
+                <field name="partner_city" string="Población"/>
+                <field name="season" string="Temporada"/>
+                <field name="sale_price" string="Precio máx." filter_domain="[('sale_price', '&lt;=', self)]"/>
+                <field name="max_pax" string="Capacidad mín." filter_domain="[('max_pax', '&gt;=', self)]"/>
+                <filter name="current_season" string="Temporada actual"
+                        domain="[('season', '=', context_today().year)]"/>
+                <filter name="archived" string="Archivados" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_restaurant" string="Restaurante" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_season" string="Temporada" context="{'group_by': 'season'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_restaurant_menu" model="ir.actions.act_window">
+        <field name="name">Menús</field>
+        <field name="res_model">restagrup.restaurant.menu</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_restaurant_menu" name="Menús" parent="menu_restagrup_root"
+              action="action_restaurant_menu" sequence="15"/>
+
+    <record id="view_partner_form_restaurant_menus" model="ir.ui.view">
+        <field name="name">res.partner.form.restaurant.menus</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="view_partner_form_restaurant"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='restaurant']" position="inside">
+                <group string="Margen de beneficio" invisible="not is_restaurant">
+                    <field name="restaurant_margin_custom"/>
+                    <field name="restaurant_margin_percent" invisible="not restaurant_margin_custom"/>
+                </group>
+                <group string="Menús" invisible="not is_restaurant">
+                    <field name="restaurant_menu_ids" nolabel="1"
+                           context="{'default_partner_id': id}">
+                        <list>
+                            <field name="sequence" widget="handle"/>
+                            <field name="name"/>
+                            <field name="currency_id" column_invisible="1"/>
+                            <field name="menu_type"/>
+                            <field name="cost_price"/>
+                            <field name="sale_price"/>
+                            <field name="max_pax"/>
+                        </list>
+                    </field>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

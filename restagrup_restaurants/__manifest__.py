@@ -17,6 +17,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/res_partner_views.xml',
+        'views/restaurant_menu_views.xml',
         'views/restaurant_search_views.xml',
         'views/crm_lead_views.xml',
         'views/pending_mail_views.xml',

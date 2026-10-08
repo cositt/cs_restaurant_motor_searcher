@@ -70,6 +70,26 @@ class ResPartner(models.Model):
         string='Ficha incompleta', compute='_compute_restaurant_missing_fields',
     )
 
+    restaurant_margin_custom = fields.Boolean(
+        string='Margen propio',
+        help='Si está marcado, a este restaurante se le aplica su propio margen de beneficio en lugar del general.',
+    )
+    restaurant_margin_percent = fields.Float(
+        string='Margen de beneficio (%)', digits=(16, 2),
+        help='Se suma al precio del restaurante para sacar el precio al cliente. Solo se usa con «Margen propio».',
+    )
+    restaurant_menu_ids = fields.One2many(
+        'restagrup.restaurant.menu', 'partner_id', string='Menús',
+    )
+    restaurant_menu_count = fields.Integer(
+        string='Nº de menús', compute='_compute_restaurant_menu_count',
+    )
+
+    @api.depends('restaurant_menu_ids')
+    def _compute_restaurant_menu_count(self):
+        for partner in self:
+            partner.restaurant_menu_count = len(partner.restaurant_menu_ids)
+
     @api.depends('is_restaurant', *RESTAURANT_REQUIRED_FIELDS)
     def _compute_restaurant_missing_fields(self):
         for partner in self:
