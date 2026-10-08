@@ -67,6 +67,12 @@ class TestRestaurantMenu(TransactionCase):
         self.assertIn('CARNE AL TORO', text)
         self.assertNotIn('Croquetas caseras', text)
 
+    def test_description_that_already_covers_the_drinks_is_not_repeated(self):
+        menu = self._menu(description='MENÚ\nBEBIDAS INCLUIDAS (vino y agua)', drinks_included=True)
+        self.assertNotIn('Bebidas: incluidas', menu.display_text)
+        menu.drinks_description = 'Vino de la casa'
+        self.assertIn('Bebidas: Vino de la casa', menu.display_text)
+
     def test_description_is_used_without_price_too(self):
         menu = self._menu(description='MENÚ NAVIDAD')
         text = menu._render_text(with_price=False)

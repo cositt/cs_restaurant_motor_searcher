@@ -139,7 +139,8 @@ class RestaurantMenu(models.Model):
             if line.allergens:
                 dish += _(' (alérgenos: %s)', line.allergens)
             parts.append(dish)
-        if self.drinks_included or self.drinks_description:
+        # Con descripción en texto, las bebidas ya suelen venir en ella: solo se añaden si se detallaron aparte.
+        if self.drinks_description or (self.drinks_included and not description):
             parts.append(_('Bebidas: %s', self.drinks_description or _('incluidas')))
         if self.notes:
             parts.append(self.notes)
