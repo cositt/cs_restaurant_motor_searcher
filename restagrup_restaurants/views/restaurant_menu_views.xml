@@ -115,7 +115,9 @@
                     <field name="restaurant_margin_custom"/>
                     <field name="restaurant_margin_percent" invisible="not restaurant_margin_custom"/>
                 </group>
-                <group string="Menús" invisible="not is_restaurant">
+            </xpath>
+            <xpath expr="//page[@name='restaurant']" position="after">
+                <page name="restaurant_menu_catalog" string="Menús" invisible="not is_restaurant">
                     <field name="restaurant_menu_ids" nolabel="1"
                            context="{'default_partner_id': id}">
                         <list>
@@ -128,7 +130,7 @@
                             <field name="max_pax"/>
                         </list>
                     </field>
-                </group>
+                </page>
             </xpath>
         </field>
     </record>

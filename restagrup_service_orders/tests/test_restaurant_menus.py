@@ -238,3 +238,25 @@ class TestRestaurantMenus(TransactionCase):
                     self.env[model].with_user(salesman).has_access(operation),
                     '%s: falta acceso de %s para un comercial' % (model, operation),
                 )
+
+
+@tagged('post_install', '-at_install')
+class TestPartnerMenuTabs(TransactionCase):
+    """En la ficha del restaurante hay una sola pestaña «Menús» para el personal: la del catálogo de menús."""
+
+    def _form_arch(self, user):
+        return self.env['res.partner'].with_user(user).get_view(view_type='form')['arch']
+
+    def test_regular_user_sees_a_single_menus_tab_with_the_catalog(self):
+        user = self.env['res.users'].create({
+            'name': 'Comercial pestañas', 'login': 'tabs_user',
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id])]})
+        arch = self._form_arch(user)
+        self.assertEqual(arch.count('string="Menús"'), 1)
+        self.assertIn('restaurant_menu_ids', arch)
+        self.assertNotIn('menu_ids"', arch.replace('restaurant_menu_ids', ''))
+
+    def test_admin_still_reaches_the_product_menus_under_another_name(self):
+        arch = self._form_arch(self.env.ref('base.user_admin'))
+        self.assertIn('Menús de producto', arch)
+        self.assertEqual(arch.count('string="Menús"'), 1)
