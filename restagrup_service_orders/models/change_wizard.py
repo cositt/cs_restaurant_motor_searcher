@@ -103,6 +103,7 @@ class RestaurantChangeWizard(models.TransientModel):
             pct = pricing.margin_percent(partner=new.partner_id)
         description = _('Servicio en %(restaurant)s — %(city)s, %(pax)s pax') % {
             'restaurant': new.name, 'city': search.city or '', 'pax': search.min_capacity or '?'}
+        description += search._menu_description(new)
         label = search._event_label()
         old_lines[:1].write({
             'product_id': self.env.ref('restagrup_service_orders.product_restaurant_service').id,
