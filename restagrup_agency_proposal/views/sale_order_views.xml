@@ -8,6 +8,27 @@
             <xpath expr="//header" position="inside">
                 <button name="%(action_report_restaurant_proposal)d" type="action"
                         string="Imprimir propuesta" class="btn-secondary"/>
+                <button name="action_confirmation_agency" type="object"
+                        string="Confirmación agencia" class="btn-secondary"
+                        invisible="state not in ('sale', 'done')"/>
+                <button name="action_mark_paid" type="object" string="Marcar como pagado" class="btn-secondary"
+                        invisible="state not in ('sale', 'done') or restagrup_paid"/>
+                <button name="action_unmark_paid" type="object" string="Desmarcar pago" class="btn-secondary"
+                        invisible="not restagrup_paid" confirm="¿Seguro que el pago no está recibido?"/>
+                <button name="action_print_voucher" type="object" string="Bono de agencia" class="btn-primary"
+                        invisible="not restagrup_paid"/>
+            </xpath>
+            <xpath expr="//field[@name='order_line']/list/field[@name='product_uom_qty']" position="after">
+                <field name="restagrup_gratuities" optional="show"/>
+            </xpath>
+            <xpath expr="//field[@name='payment_term_id']" position="after">
+                <field name="restagrup_paid" readonly="1"/>
+                <field name="restagrup_paid_date" readonly="1" invisible="not restagrup_paid"/>
+            </xpath>
+            <xpath expr="//field[@name='order_line']" position="after">
+                <group string="Observaciones (salen en los documentos de la agencia y del restaurante)">
+                    <field name="restagrup_observations" nolabel="1" colspan="2"/>
+                </group>
             </xpath>
         </field>
     </record>

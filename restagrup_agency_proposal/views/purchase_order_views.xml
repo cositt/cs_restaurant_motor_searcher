@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_purchase_order_form_confirmation" model="ir.ui.view">
+        <field name="name">purchase.order.form.restaurant.confirmation</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_confirmation_restaurant" type="object"
+                        string="Confirmación restaurante" class="btn-secondary"
+                        invisible="not restagrup_sale_order_id"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

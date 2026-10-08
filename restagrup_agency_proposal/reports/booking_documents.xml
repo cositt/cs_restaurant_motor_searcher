@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Cabecera común de los documentos a la agencia (confirmación y bono) -->
+    <template id="booking_header">
+        <h2 style="text-align: center; border-bottom: 1px solid #888; padding-bottom: 6px;" t-out="title"/>
+        <table style="width: 70%; margin-bottom: 12px;">
+            <tr><td style="color: #555; padding: 2px 0;">DOCUMENTO Nº</td><td t-out="doc.name"/></tr>
+            <tr><td style="color: #555; padding: 2px 0;">GRUP. REF</td>
+                <td t-out="doc.client_order_ref or doc.opportunity_id.name or ''"/></tr>
+            <tr><td style="color: #555; padding: 2px 0;">AGENCIA</td><td t-out="doc.partner_id.commercial_partner_id.name"/></tr>
+            <tr><td style="color: #555; padding: 2px 0;">TELÉFONO</td>
+                <td t-out="doc.partner_id.phone or ''"/></tr>
+            <tr><td style="color: #555; padding: 2px 0;">NOMBRE</td><td t-out="doc.partner_id.name"/></tr>
+            <tr><td style="color: #555; padding: 2px 0;">AGENTE RESTAGRUP</td><td t-out="doc.user_id.name or ''"/></tr>
+        </table>
+    </template>
+
+    <template id="booking_menu_block">
+        <div t-if="svc['menu_name']" style="font-weight: bold; margin-top: 8px;" t-out="svc['menu_name']"/>
+        <div t-if="svc['menu_text']" style="white-space: pre-line;" t-out="svc['menu_text']"/>
+    </template>
+
+    <!-- ===== Confirmación de reserva (agencia) ===== -->
+    <template id="report_booking_confirmation_document">
+        <t t-call="web.external_layout">
+            <div class="page">
+                <t t-set="currency" t-value="doc.currency_id"/>
+                <t t-set="title">CONFIRMACIÓN DE RESERVA</t>
+                <t t-call="restagrup_agency_proposal.booking_header"/>
+                <t t-foreach="doc.restagrup_document_services()" t-as="svc">
+                    <div style="margin-top: 14px; page-break-inside: avoid; border-top: 1px solid #ccc; padding-top: 8px;">
+                        <h4 style="text-decoration: underline; text-align: center;">
+                            <t t-out="svc['index']"/>º Servicio - <t t-out="svc['city']"/> - <t t-out="svc['date']"/>
+                            <t t-if="svc['hour']"> - <t t-out="svc['hour']"/></t> - PAX: <t t-out="svc['pax_total']"/>
+                        </h4>
+                        <div style="font-weight: bold;" t-out="svc['restaurant_name']"/>
+                        <div t-if="svc['address']" t-out="svc['address']"/>
+                        <t t-call="restagrup_agency_proposal.booking_menu_block"/>
+                        <div style="margin-top: 8px;">
+                            <strong>PVD: <span t-out="svc['pvd']" t-options='{"widget": "monetary", "display_currency": currency}'/> IVA INCLUIDO</strong>
+                            | Total comensales: <t t-out="svc['paying']"/><t t-if="svc['gratuities']"> + <t t-out="svc['gratuities']"/> gratuidades</t>.
+                        </div>
+                    </div>
+                </t>
+                <div t-if="doc.restagrup_observations" style="margin-top: 12px;">
+                    <strong>Observaciones:</strong>
+                    <div style="white-space: pre-line;" t-out="doc.restagrup_observations"/>
+                </div>
+                <p style="text-align: center; font-weight: bold; margin-top: 16px;">
+                    Total importe de reserva:
+                    <span t-out="doc.amount_total" t-options='{"widget": "monetary", "display_currency": currency}'/> IVA INCLUIDO
+                </p>
+                <p>Quedamos a la espera de transferencia de pago, para emitir bono de servicio.<br/>
+                    Puede enviarnos el justificante de pago a <t t-out="doc.company_id.email or ''"/><br/>
+                    <t t-out="doc.restagrup_bank_text()"/><br/>Gracias.</p>
+                <p>NOTA: El número final de comensales habrá de ser facilitado en el plazo máximo límite de
+                    <t t-out="doc.restagrup_final_pax_hours()"/> horas laborables antes del servicio. Esa cifra será la que se tenga en cuenta a efectos de facturación,
+                    salvo en el caso de que hayan asistido un número mayor de comensales.</p>
+            </div>
+        </t>
+    </template>
+    <template id="report_booking_confirmation">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="restagrup_agency_proposal.report_booking_confirmation_document" t-lang="doc.partner_id.lang"/>
+            </t>
+        </t>
+    </template>
+    <record id="action_report_booking_confirmation" model="ir.actions.report">
+        <field name="name">Confirmación de reserva (agencia)</field>
+        <field name="model">sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">restagrup_agency_proposal.report_booking_confirmation</field>
+        <field name="report_file">restagrup_agency_proposal.report_booking_confirmation</field>
+        <field name="print_report_name">'Confirmacion-Agencia-%s' % (object.name)</field>
+    </record>
+
+    <!-- ===== Confirmación de reserva (restaurante): lo que cobra el restaurante, sin precio al cliente ===== -->
+    <template id="report_restaurant_confirmation_document">
+        <t t-call="web.external_layout">
+            <div class="page">
+                <t t-set="currency" t-value="doc.currency_id"/>
+                <t t-set="sale" t-value="doc.restagrup_sale_order_id"/>
+                <t t-set="services" t-value="doc.restagrup_document_services()"/>
+                <h2 style="text-align: center; border-bottom: 1px solid #888; padding-bottom: 6px;">CONFIRMACIÓN DE RESERVA RESTAURANTE</h2>
+                <table style="width: 70%; margin-bottom: 12px;">
+                    <tr><td style="color: #555; padding: 2px 0;">DOCUMENTO Nº</td><td t-out="sale.name"/></tr>
+                    <tr t-if="services"><td style="color: #555; padding: 2px 0;">FECHA SERVICIO</td><td t-out="services[0]['date']"/></tr>
+                    <tr t-if="services and services[0]['hour']"><td style="color: #555; padding: 2px 0;">HORA</td><td t-out="services[0]['hour']"/></tr>
+                    <tr><td style="color: #555; padding: 2px 0;">GRUP. REF</td>
+                        <td t-out="sale.client_order_ref or sale.opportunity_id.name or ''"/></tr>
+                    <tr><td style="color: #555; padding: 2px 0;">AGENCIA</td><td t-out="sale.partner_id.commercial_partner_id.name"/></tr>
+                    <tr><td style="color: #555; padding: 2px 0;">RESTAURANTE TLN</td>
+                        <td t-out="doc.partner_id.phone or ''"/></tr>
+                    <tr><td style="color: #555; padding: 2px 0;">AGENTE RESTAGRUP</td><td t-out="sale.user_id.name or ''"/></tr>
+                </table>
+                <t t-set="grand_total" t-value="0.0"/>
+                <t t-foreach="services" t-as="svc">
+                    <t t-set="grand_total" t-value="grand_total + svc['cost_total']"/>
+                    <div style="margin-top: 14px; page-break-inside: avoid; border-top: 1px solid #ccc; padding-top: 8px;">
+                        <div style="font-weight: bold;" t-out="svc['restaurant_name']"/>
+                        <div t-if="svc['address']" t-out="svc['address']"/>
+                        <div style="font-weight: bold; margin-top: 6px;">Total comensales: <t t-out="svc['pax_total']"/></div>
+                        <t t-call="restagrup_agency_proposal.booking_menu_block"/>
+                        <div style="margin-top: 8px;">
+                            <strong>Precio: <span t-out="svc['cost_unit']" t-options='{"widget": "monetary", "display_currency": currency}'/> IVA INCLUIDO</strong><br/>
+                            Total comensales: <t t-out="svc['paying']"/><t t-if="svc['gratuities']"> + <t t-out="svc['gratuities']"/> gratuidades</t>.<br/>
+                            <t t-out="svc['menu_name'] or 'Menú'"/>
+                            <span t-out="svc['cost_unit']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                            x <t t-out="svc['paying']"/> PAX =
+                            <span t-out="svc['cost_total']" t-options='{"widget": "monetary", "display_currency": currency}'/> IVA INCLUIDO
+                        </div>
+                    </div>
+                </t>
+                <div t-if="sale.restagrup_observations" style="margin-top: 12px;">
+                    <strong>Observaciones:</strong>
+                    <div style="white-space: pre-line;" t-out="sale.restagrup_observations"/>
+                </div>
+                <p style="text-align: center; font-weight: bold; margin-top: 16px;">
+                    Total importe de reserva:
+                    <span t-out="grand_total" t-options='{"widget": "monetary", "display_currency": currency}'/> IVA INCLUIDO
+                </p>
+                <p>Por normativa vigente desde 2017, y según el nuevo sistema de Facturación SII por la Agencia Tributaria,
+                    las facturas emitidas deben ser originales. Hacienda cruzará información de las facturas emitidas y
+                    recibidas entre ambas partes por lo que es importante que se cumpla dicha normativa.</p>
+                <p>Esta factura no tiene validez sin el justificante de abono.<br/>Gracias.</p>
+            </div>
+        </t>
+    </template>
+    <template id="report_restaurant_confirmation">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="restagrup_agency_proposal.report_restaurant_confirmation_document"/>
+            </t>
+        </t>
+    </template>
+    <record id="action_report_restaurant_confirmation" model="ir.actions.report">
+        <field name="name">Confirmación de reserva (restaurante)</field>
+        <field name="model">purchase.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">restagrup_agency_proposal.report_restaurant_confirmation</field>
+        <field name="report_file">restagrup_agency_proposal.report_restaurant_confirmation</field>
+        <field name="print_report_name">'Confirmacion-Restaurante-%s' % (object.restagrup_sale_order_id.name or object.name)</field>
+    </record>
+
+    <!-- ===== Bono de servicio: sin precios, con sello PAGADO ===== -->
+    <template id="report_booking_voucher_document">
+        <t t-call="web.external_layout">
+            <div class="page" style="position: relative;">
+                <t t-set="title">BONO DE SERVICIO</t>
+                <t t-call="restagrup_agency_proposal.booking_header"/>
+                <t t-foreach="doc.restagrup_document_services()" t-as="svc">
+                    <div style="margin-top: 14px; page-break-inside: avoid; border-top: 1px solid #ccc; padding-top: 8px;">
+                        <h4 style="text-decoration: underline; text-align: center;">
+                            Servicio en <t t-out="svc['city']"/> - <t t-out="svc['date']"/>
+                            <t t-if="svc['hour']"> <t t-out="svc['hour']"/></t> - PAX: <t t-out="svc['pax_total']"/>
+                        </h4>
+                        <div style="font-weight: bold;" t-out="svc['restaurant_name']"/>
+                        <div t-if="svc['address']" t-out="svc['address']"/>
+                        <t t-call="restagrup_agency_proposal.booking_menu_block"/>
+                        <div style="font-weight: bold; margin-top: 8px;">Total comensales: <t t-out="svc['pax_total']"/></div>
+                    </div>
+                </t>
+                <div t-if="doc.restagrup_observations" style="margin-top: 12px;">
+                    <strong>Observaciones:</strong>
+                    <div style="white-space: pre-line;" t-out="doc.restagrup_observations"/>
+                </div>
+                <div t-if="doc.restagrup_paid"
+                     style="position: absolute; top: 320px; left: 190px; font-size: 64px; font-weight: bold; color: #d9534f; border: 6px solid #d9534f; padding: 4px 24px; opacity: 0.55; -webkit-transform: rotate(-30deg); transform: rotate(-30deg);">
+                    PAGADO
+                </div>
+            </div>
+        </t>
+    </template>
+    <template id="report_booking_voucher">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="restagrup_agency_proposal.report_booking_voucher_document" t-lang="doc.partner_id.lang"/>
+            </t>
+        </t>
+    </template>
+    <record id="action_report_booking_voucher" model="ir.actions.report">
+        <field name="name">Bono de servicio</field>
+        <field name="model">sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">restagrup_agency_proposal.report_booking_voucher</field>
+        <field name="report_file">restagrup_agency_proposal.report_booking_voucher</field>
+        <field name="print_report_name">'Bono-Agencia-%s' % (object.name)</field>
+    </record>
+</odoo>

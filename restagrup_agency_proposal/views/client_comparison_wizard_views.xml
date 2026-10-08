@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_client_comparison_wizard_form" model="ir.ui.view">
+        <field name="name">restagrup.client.comparison.wizard.form</field>
+        <field name="model">restagrup.client.comparison.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Enviar comparativa al cliente">
+                <group>
+                    <field name="search_id" invisible="1"/>
+                    <field name="email_to"/>
+                    <field name="subject"/>
+                    <field name="body"/>
+                    <field name="include_portal_link"/>
+                </group>
+                <div class="text-muted" invisible="include_portal_link">
+                    Se enviará solo el PDF de la comparativa.
+                </div>
+                <div class="text-muted" invisible="not include_portal_link">
+                    Se enviará el PDF y un enlace donde el cliente podrá ver la comparativa y elegir restaurante.
+                </div>
+                <footer>
+                    <button name="action_send" type="object" string="Enviar" class="btn-primary"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_client_comparison_wizard" model="ir.actions.act_window">
+        <field name="name">Enviar comparativa al cliente</field>
+        <field name="res_model">restagrup.client.comparison.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

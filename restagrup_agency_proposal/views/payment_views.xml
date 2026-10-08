@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Ajustes → Restagrup: plazos y textos de pago (los fija y los lleva RestaGrup) -->
+    <record id="res_config_settings_view_form_payments" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.restagrup.payments</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="restagrup_core.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//setting[@id='restagrup_margin']" position="after">
+                <setting id="restagrup_payment_deadlines"
+                         help="Plazos de pago de las reservas. Los avisos los lleva el equipo de RestaGrup: aquí solo se fijan las fechas.">
+                    <div class="content-group">
+                        <div class="row"><label class="col-6" for="restagrup_payment_request_days"/><field name="restagrup_payment_request_days" class="col-2"/></div>
+                        <div class="row"><label class="col-6" for="restagrup_payment_alert_hours"/><field name="restagrup_payment_alert_hours" class="col-2"/></div>
+                        <div class="row"><label class="col-6" for="restagrup_restaurant_payment_hours"/><field name="restagrup_restaurant_payment_hours" class="col-2"/></div>
+                        <div class="row"><label class="col-6" for="restagrup_final_pax_hours"/><field name="restagrup_final_pax_hours" class="col-2"/></div>
+                        <div class="row"><label class="col-6" for="restagrup_invoice_days"/><field name="restagrup_invoice_days" class="col-2"/></div>
+                    </div>
+                </setting>
+                <setting id="restagrup_payment_texts"
+                         help="Textos para copiar en los correos de pago. {agencia} se sustituye por el nombre de la agencia.">
+                    <div class="content-group">
+                        <label for="restagrup_payment_request_text"/>
+                        <field name="restagrup_payment_request_text"/>
+                        <label for="restagrup_payment_urgent_text"/>
+                        <field name="restagrup_payment_urgent_text"/>
+                    </div>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Plazos y textos en el propio pedido -->
+    <record id="view_order_form_payment_deadlines" model="ir.ui.view">
+        <field name="name">sale.order.form.restagrup.payment.deadlines</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='order_line']" position="after">
+                <group string="Plazos de pago" invisible="not restagrup_first_service_date">
+                    <group>
+                        <field name="restagrup_payment_request_date"/>
+                        <field name="restagrup_payment_alert_date"/>
+                        <field name="restagrup_restaurant_payment_date"/>
+                        <field name="restagrup_invoice_deadline"/>
+                    </group>
+                    <group>
+                        <field name="restagrup_payment_request_text" readonly="1"/>
+                        <field name="restagrup_payment_urgent_text" readonly="1"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Pagos pendientes: pedidos confirmados sin cobrar, por fecha del primer servicio -->
+    <record id="view_order_pending_payments_list" model="ir.ui.view">
+        <field name="name">sale.order.list.restagrup.pending.payments</field>
+        <field name="model">sale.order</field>
+        <field name="arch" type="xml">
+            <list string="Pagos pendientes" default_order="restagrup_first_service_date asc">
+                <field name="name"/>
+                <field name="partner_id" string="Agencia"/>
+                <field name="restagrup_first_service_date"/>
+                <field name="restagrup_payment_request_date"/>
+                <field name="restagrup_payment_alert_date"/>
+                <field name="restagrup_restaurant_payment_date"/>
+                <field name="restagrup_invoice_deadline" optional="hide"/>
+                <field name="amount_total" sum="Total"/>
+                <field name="restagrup_paid" widget="boolean_toggle" readonly="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_pending_payments" model="ir.actions.act_window">
+        <field name="name">Pagos pendientes</field>
+        <field name="res_model">sale.order</field>
+        <field name="domain">[('state', 'in', ('sale', 'done')), ('restagrup_paid', '=', False)]</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_order_pending_payments_list')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('sale.view_order_form')})]"/>
+    </record>
+
+    <menuitem id="menu_pending_payments" name="Pagos pendientes" parent="restagrup_restaurants.menu_restagrup_root"
+              action="action_pending_payments" sequence="5"/>
+</odoo>
