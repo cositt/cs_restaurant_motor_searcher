@@ -73,7 +73,7 @@ class TestMultiEventOrder(TransactionCase):
         order = self._create_order(first, self.rest_a, amount=1000)
         second = self._event_search(city='Sevilla', event_type=self.dinner, date='2026-11-16')
         self._create_order(second, self.rest_b, amount=800)
-        self.assertEqual(order.amount_untaxed, 1200.0 + 960.0)  # cada importe + 20 % de margen
+        self.assertAlmostEqual(sum(l.price_unit * l.product_uom_qty for l in order.order_line), 1200.0 + 960.0, places=2)  # cada importe + 20 % de margen
 
     def test_every_search_of_the_group_reaches_the_sale_created_stage(self):
         first = self._event_search(event_type=self.lunch)

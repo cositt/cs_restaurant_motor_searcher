@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_restagrup_price_baseline_list" model="ir.ui.view">
+        <field name="name">restagrup.price.baseline.list</field>
+        <field name="model">restagrup.price.baseline</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="name"/>
+                <field name="event_type_id" options="{'no_create': True}"/>
+                <field name="audience"/>
+                <field name="day_type"/>
+                <field name="city" optional="show"/>
+                <field name="price_pp"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_restagrup_price_baseline" model="ir.actions.act_window">
+        <field name="name">Baremos de precio estimado</field>
+        <field name="res_model">restagrup.price.baseline</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Añade un baremo</p>
+            <p>Precio orientativo por persona para cuando la agencia no indica presupuesto. Es solo una
+               estimación de partida: se puede cambiar en cada evento. Una ciudad concreta tiene
+               preferencia sobre el baremo general.</p>
+        </field>
+    </record>
+</odoo>

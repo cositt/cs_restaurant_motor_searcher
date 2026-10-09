@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="portal_client_comparison" name="Comparativa de restaurantes (portal)">
+        <t t-translation="off">
+<![CDATA[<!DOCTYPE html>]]>
+            <html lang="es">
+                <head>
+                    <meta charset="utf-8"/>
+                    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                    <meta name="robots" content="noindex, nofollow"/>
+                    <title>Comparativa de restaurantes</title>
+                    <style>
+                        body { font-family: Arial, Helvetica, sans-serif; margin: 0; background: #f5f5f5; color: #222; }
+                        main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+                        h1 { font-size: 24px; margin-bottom: 4px; }
+                        .sub { color: #666; margin-bottom: 20px; }
+                        .card { background: #fff; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+                        .card.chosen { border-color: #2e7d32; box-shadow: 0 0 0 2px #2e7d32; }
+                        .head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 14px 16px; }
+                        .price { text-align: right; }
+                        .price strong { font-size: 24px; display: block; }
+                        .muted { color: #666; font-size: 14px; }
+                        .menu { border-top: 1px solid #eee; padding: 12px 16px; white-space: pre-line; }
+                        .notes { padding: 0 16px 12px; color: #666; font-size: 14px; }
+                        .choose { border-top: 1px solid #eee; padding: 12px 16px; text-align: right; }
+                        button { background: #2e7d32; color: #fff; border: 0; border-radius: 6px; padding: 10px 18px; font-size: 15px; cursor: pointer; }
+                        .banner { background: #e8f5e9; border: 1px solid #2e7d32; border-radius: 8px; padding: 14px 16px; margin-bottom: 20px; }
+                    </style>
+                </head>
+                <body>
+                    <main>
+                        <h1>Comparativa de restaurantes</h1>
+                        <div class="sub">
+                            <span t-if="search.city" t-out="search.city"/>
+                            <t t-if="search.min_capacity"> · <span t-out="search.min_capacity"/> personas</t>
+                        </div>
+                        <div t-if="chosen" class="banner">
+                            Has elegido <strong t-out="chosen_label"/>. Nos pondremos en contacto contigo para los siguientes pasos.
+                        </div>
+                        <p t-if="not rows">Todavía no hay presupuestos para comparar.</p>
+                        <div t-foreach="rows" t-as="row"
+                             t-attf-class="card #{'chosen' if chosen and chosen.id == row['line'].id else ''}">
+                            <div class="head">
+                                <div>
+                                    <strong t-out="row['name']"/>
+                                    <div class="muted">
+                                        <span t-if="row['partner'].city" t-out="row['partner'].city"/>
+                                        <t t-if="row['partner'].restaurant_cuisine_type">
+                                            · <span t-out="row['partner'].restaurant_cuisine_type"/>
+                                        </t>
+                                        <t t-if="row['partner'].restaurant_bus_parking"> · Parking de autobús</t>
+                                    </div>
+                                </div>
+                                <div class="price">
+                                    <strong t-out="row['price_per_person']"
+                                            t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                    <span class="muted">por persona</span>
+                                </div>
+                            </div>
+                            <div t-if="row['menu_text']" class="menu" t-out="row['menu_text']"/>
+                            <div t-if="row['notes']" class="notes" t-out="row['notes']"/>
+                            <form t-if="not chosen" class="choose" method="post"
+                                  t-attf-action="/comparativa/#{search.id}/#{token}/elegir">
+                                <input type="hidden" name="line_id" t-att-value="row['line'].id"/>
+                                <button type="submit">Elijo este</button>
+                            </form>
+                        </div>
+                    </main>
+                </body>
+            </html>
+        </t>
+    </template>
+</odoo>

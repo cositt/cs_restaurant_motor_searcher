@@ -40,6 +40,12 @@ class ResConfigSettings(models.TransientModel):
         help='Mensaje del recordatorio a la agencia (el enlace al presupuesto y la firma se añaden solos).'
              ' Vacío = texto por defecto.',
     )
+    restagrup_final_data_days = fields.Integer(
+        string='Días antes del servicio para avisar de datos pendientes', config_parameter='restagrup.final_data_days',
+        default=7,
+        help='Cuando faltan estos días o menos para un evento de un expediente y aún faltan datos por cerrar'
+             ' (menú, intolerancias, contacto del guía, comensales definitivos), se avisa al responsable.',
+    )
     restagrup_change_confirm_pct = fields.Float(
         string='Cambio de comensales que pide confirmación (%)', config_parameter='restagrup.change_confirm_pct',
         default=20.0,
@@ -60,6 +66,11 @@ class ResConfigSettings(models.TransientModel):
         help='Dirección desde la que salen los correos que genera el sistema (recordatorios, peticiones de datos,'
              ' avisos): la cuenta dedicada. Vacío = el correo del usuario. Debe poder enviar con tu servidor'
              ' de correo saliente.',
+    )
+    restagrup_alert_user_id = fields.Many2one(
+        'res.users', string='Usuario de alertas IA', config_parameter='restagrup.alert_user_id',
+        help='Quien recibe una actividad cuando la IA falla o detecta una incidencia y el grupo no tiene un'
+             ' responsable asignado.',
     )
     restagrup_send_mode = fields.Selection(
         [('approval', 'Con aprobación'), ('automatic', 'Automático')],

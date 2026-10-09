@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_restaurant_search_form_comparison" model="ir.ui.view">
+        <field name="name">restagrup.restaurant.search.form.comparison</field>
+        <field name="model">restagrup.restaurant.search</field>
+        <field name="inherit_id" ref="restagrup_restaurants.view_restaurant_search_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header/button[@name='action_view_on_map']" position="after">
+                <button name="%(action_report_client_comparison)d" type="action"
+                        string="Comparativa para el cliente" class="btn-secondary"
+                        invisible="not line_ids"/>
+                <button name="%(action_client_comparison_wizard)d" type="action"
+                        string="Enviar comparativa al cliente" class="btn-primary"
+                        context="{'default_search_id': id}" invisible="not line_ids"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

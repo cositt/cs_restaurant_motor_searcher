@@ -6,6 +6,7 @@ from odoo.tools import html2plaintext
 
 class RestaurantChangeWizard(models.TransientModel):
     _name = 'restagrup.restaurant.change.wizard'
+    _inherit = ['restagrup.firewall.mixin']
     _description = 'Cancelar o cambiar el restaurante elegido de un evento'
 
     search_id = fields.Many2one('restagrup.restaurant.search', string='Búsqueda', required=True, readonly=True)
@@ -49,7 +50,26 @@ class RestaurantChangeWizard(models.TransientModel):
             if not self.env.user.email:
                 raise UserError(_('Tu usuario no tiene email: añádelo antes de enviar avisos.'))
 
+    def _restagrup_firewall_log_target(self):
+        return self.search_id.lead_id
+
+    def _fw_review_restaurant_notice(self):
+        if not self.notify_restaurant:
+            return False
+        old, new = self.chosen_line_id, self.replacement_line_id
+        return _(
+            'Se cancelará %(old)s y se le escribirá a %(email)s.\nSustituto: %(new)s.\n\nAsunto: %(subject)s\n\n'
+            '%(body)s') % {
+            'old': old.name, 'email': (old.partner_id.email or '').strip() or '—',
+            'new': new.name if new else _('ninguno (solo se cancela)'), 'subject': self.subject or '',
+            'body': html2plaintext(self.body or '').strip()}
+
     def action_confirm(self):
+        self.ensure_one()
+        self._check()
+        return self._restagrup_gated('notify_restaurant', '_restagrup_do_confirm')
+
+    def _restagrup_do_confirm(self):
         self.ensure_one()
         self._check()
         search, old, new = self.search_id, self.search_id.chosen_line_id, self.replacement_line_id
@@ -96,12 +116,14 @@ class RestaurantChangeWizard(models.TransientModel):
         qty, unit_cost = search._quote_figures(new.quote_amount)
         total_cost = new.quote_amount
         if self.keep_client_price:
-            price = sum(old_lines.mapped('price_subtotal')) / qty
+            price = sum(l.price_unit * l.product_uom_qty * (1 - (l.discount or 0.0) / 100.0) for l in old_lines) / qty
             pct = round((price * qty / total_cost - 1) * 100, 2) if total_cost else 0.0
         else:
-            price, pct = pricing.apply_margin(unit_cost), pricing.margin_percent()
+            price = pricing.apply_margin(unit_cost, partner=new.partner_id)
+            pct = pricing.margin_percent(partner=new.partner_id)
         description = _('Servicio en %(restaurant)s — %(city)s, %(pax)s pax') % {
             'restaurant': new.name, 'city': search.city or '', 'pax': search.min_capacity or '?'}
+        description += search._menu_description(new)
         label = search._event_label()
         old_lines[:1].write({
             'product_id': self.env.ref('restagrup_service_orders.product_restaurant_service').id,

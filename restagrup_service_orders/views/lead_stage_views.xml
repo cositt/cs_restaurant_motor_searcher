@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Número de documento y botones de fase en la ficha del grupo -->
+    <record id="crm_lead_view_form_restagrup_stages" model="ir.ui.view">
+        <field name="name">crm.lead.form.restagrup.stages</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <field name="restagrup_stage_key" invisible="1"/>
+                <button name="action_pass_to_quote" type="object" string="Pasar a presupuesto" class="btn-primary"
+                        invisible="restagrup_stage_key != 'peticion'"/>
+                <button name="action_pass_to_file" type="object" string="Pasar a expediente" class="btn-primary"
+                        invisible="restagrup_stage_key not in ('peticion', 'presupuesto')"/>
+                <button name="action_close_file" type="object" string="Cerrar expediente" class="btn-primary"
+                        invisible="restagrup_stage_key != 'expediente'"
+                        confirm="¿Cerrar el expediente? Hazlo cuando el servicio se haya prestado."/>
+            </xpath>
+            <!-- Su flujo no es un embudo de ventas: fuera «Ganado», ingresos/probabilidad, prioridad y cierre previsto -->
+            <xpath expr="//header/button[@name='action_set_won_rainbowman']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//header/button[@data-hotkey='l']" position="attributes">
+                <attribute name="string">Rechazar presupuesto</attribute>
+            </xpath>
+            <xpath expr="//h2[.//field[@name='expected_revenue']]" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//field[@name='priority']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//field[@name='date_deadline']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//div[hasclass('oe_title')]" position="before">
+                <div class="text-muted mb-1" invisible="not restagrup_doc_number">
+                    Documento <field name="restagrup_doc_number" class="oe_inline fw-bold"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_crm_lead_restagrup_list" model="ir.ui.view">
+        <field name="name">crm.lead.list.restagrup</field>
+        <field name="model">crm.lead</field>
+        <field name="arch" type="xml">
+            <list string="Grupos" default_order="id desc">
+                <field name="restagrup_doc_number"/>
+                <field name="restagrup_agency_name"/>
+                <field name="name" string="Ref. grupo"/>
+                <field name="restagrup_event_count" string="Nº servicios"/>
+                <field name="restagrup_first_service_date"/>
+                <field name="restagrup_first_service_city"/>
+                <field name="restagrup_chosen_summary" string="Restaurante"/>
+                <field name="restagrup_total_pax"/>
+                <field name="user_id" string="Asignado a" widget="many2one_avatar_user"/>
+                <field name="stage_id" string="Estado" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_crm_lead_restagrup_search" model="ir.ui.view">
+        <field name="name">crm.lead.search.restagrup</field>
+        <field name="model">crm.lead</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="restagrup_doc_number" string="Nº documento"/>
+                <field name="partner_id" string="Agencia"/>
+                <field name="name" string="Ref. grupo"/>
+                <field name="restagrup_first_service_city" string="Población"/>
+                <field name="user_id" string="Asignado a"/>
+                <filter name="mine" string="Mis grupos" domain="[('user_id', '=', uid)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_peticiones" model="ir.actions.act_window">
+        <field name="name">Peticiones</field>
+        <field name="res_model">crm.lead</field>
+        <field name="domain" eval="[('stage_id', '=', ref('restagrup_service_orders.stage_peticion'))]"/>
+        <field name="context" eval="{'default_stage_id': ref('restagrup_service_orders.stage_peticion')}"/>
+        <field name="search_view_id" ref="view_crm_lead_restagrup_search"/>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_crm_lead_restagrup_list')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('crm.crm_lead_view_form')})]"/>
+    </record>
+    <record id="action_presupuestos" model="ir.actions.act_window">
+        <field name="name">Presupuestos</field>
+        <field name="res_model">crm.lead</field>
+        <field name="domain" eval="[('stage_id', '=', ref('restagrup_service_orders.stage_presupuesto'))]"/>
+        <field name="search_view_id" ref="view_crm_lead_restagrup_search"/>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_crm_lead_restagrup_list')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('crm.crm_lead_view_form')})]"/>
+    </record>
+    <record id="action_expedientes" model="ir.actions.act_window">
+        <field name="name">Expedientes</field>
+        <field name="res_model">crm.lead</field>
+        <field name="domain" eval="[('stage_id', '=', ref('restagrup_service_orders.stage_expediente'))]"/>
+        <field name="search_view_id" ref="view_crm_lead_restagrup_search"/>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_crm_lead_restagrup_list')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('crm.crm_lead_view_form')})]"/>
+    </record>
+    <record id="action_terminados" model="ir.actions.act_window">
+        <field name="name">Terminados</field>
+        <field name="res_model">crm.lead</field>
+        <field name="domain" eval="[('stage_id', '=', ref('restagrup_service_orders.stage_cerrado'))]"/>
+        <field name="search_view_id" ref="view_crm_lead_restagrup_search"/>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_crm_lead_restagrup_list')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('crm.crm_lead_view_form')})]"/>
+    </record>
+
+    <menuitem id="menu_peticiones" name="Peticiones" parent="restagrup_restaurants.menu_restagrup_root"
+              action="action_peticiones" sequence="1"/>
+    <menuitem id="menu_presupuestos" name="Presupuestos" parent="restagrup_restaurants.menu_restagrup_root"
+              action="action_presupuestos" sequence="2"/>
+    <menuitem id="menu_expedientes" name="Expedientes" parent="restagrup_restaurants.menu_restagrup_root"
+              action="action_expedientes" sequence="3"/>
+    <menuitem id="menu_terminados" name="Terminados" parent="restagrup_restaurants.menu_restagrup_root"
+              action="action_terminados" sequence="4"/>
+</odoo>

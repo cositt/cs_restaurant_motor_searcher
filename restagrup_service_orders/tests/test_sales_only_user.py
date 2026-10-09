@@ -11,6 +11,7 @@ class TestSalesOnlyUser(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.env = cls.env(context=dict(cls.env.context, restagrup_skip_firewall=True))  # sin puntos de revisión
         cls.salesman = cls.env['res.users'].create({
             'name': 'Comercial sin compras', 'login': 'comercial_sin_compras',
             'email': 'comercial@example.test',

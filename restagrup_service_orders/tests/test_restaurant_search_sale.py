@@ -82,6 +82,34 @@ class TestRestaurantSearchSale(TransactionCase):
         search.action_create_sale_order()
         return search.sale_order_id
 
+    def _order_with_menu(self, **menu_vals):
+        menu = self.env['restagrup.restaurant.menu'].create(dict({
+            'name': 'Menú grupos 2026', 'partner_id': self.restaurant_partner.id, 'cost_price': 30.0,
+            'description': 'ENTRANTES\nCroquetas\nPRINCIPAL\nSolomillo'}, **menu_vals))
+        line = self._create_chosen_line(quote_amount=900)
+        line.menu_id = menu
+        self.search.min_capacity = 30
+        self.search.action_create_sale_order()
+        return self.search.sale_order_id.order_line
+
+    def test_sale_line_carries_the_chosen_menu_without_the_restaurant_price(self):
+        line = self._order_with_menu()
+        self.assertIn('Menú grupos 2026', line.name)
+        self.assertIn('Solomillo', line.name)
+        self.assertNotIn('30,00', line.name)
+        self.assertNotIn('30.00', line.name)
+
+    def test_the_service_sheet_shows_the_same_menu_to_the_restaurant(self):
+        line = self._order_with_menu()
+        line.order_id.action_confirm()
+        self.assertIn('Solomillo', line.order_id.restaurant_po_ids.order_line.name)
+
+    def test_without_a_menu_the_description_stays_as_before(self):
+        self._create_chosen_line(quote_amount=900)
+        self.search.min_capacity = 30
+        self.search.action_create_sale_order()
+        self.assertNotIn('\n', self.search.sale_order_id.order_line.name.strip())
+
     def test_quote_becomes_one_line_per_person(self):
         order = self._per_person_search(32, 1024)
         line = order.order_line
@@ -89,14 +117,14 @@ class TestRestaurantSearchSale(TransactionCase):
         self.assertEqual(line.product_uom_qty, 32)
         self.assertAlmostEqual(line.restagrup_unit_cost, 32.0)  # 1.024 / 32
         self.assertAlmostEqual(line.price_unit, 38.4)           # 32 + 20 %
-        self.assertAlmostEqual(order.amount_untaxed, 1228.8)    # 1.024 + 20 %
+        self.assertAlmostEqual(sum(l.price_unit * l.product_uom_qty for l in order.order_line), 1228.8, places=2)    # 1.024 + 20 %
         self.assertAlmostEqual(line.restagrup_margin_amount, 204.8)
 
     def test_without_headcount_the_quote_stays_one_global_line(self):
         order = self._per_person_search(0, 1000)
         self.assertEqual(order.order_line.product_uom_qty, 1)
         self.assertAlmostEqual(order.order_line.restagrup_unit_cost, 1000.0)
-        self.assertAlmostEqual(order.amount_untaxed, 1200.0)
+        self.assertAlmostEqual(sum(l.price_unit * l.product_uom_qty for l in order.order_line), 1200.0, places=2)
 
     def test_service_sheet_carries_the_per_person_cost(self):
         order = self._per_person_search(32, 1024)

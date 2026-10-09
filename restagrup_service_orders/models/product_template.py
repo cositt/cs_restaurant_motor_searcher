@@ -29,10 +29,12 @@ class ProductTemplate(models.Model):
              ' el presupuesto (solo para menús de restaurante).',
     )
 
-    @api.depends('restaurant_id', 'standard_price')
+    @api.depends('restaurant_id', 'standard_price', 'restaurant_id.restaurant_margin_custom',
+                 'restaurant_id.restaurant_margin_percent')
     def _compute_restagrup_client_price(self):
         pricing = self.env['restagrup.pricing']
         for product in self:
             product.restagrup_client_price = (
-                pricing.apply_margin(product.standard_price) if product.restaurant_id else 0.0
+                pricing.apply_margin(product.standard_price, partner=product.restaurant_id)
+                if product.restaurant_id else 0.0
             )

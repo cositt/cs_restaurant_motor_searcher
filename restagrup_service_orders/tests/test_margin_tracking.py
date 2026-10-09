@@ -60,6 +60,18 @@ class TestMarginTracking(TransactionCase):
         self.assertAlmostEqual(line.restagrup_margin_amount, 200.0, delta=0.5)
         self.assertEqual(line.restagrup_margin_pct, 20.0)
 
+    def test_quote_line_keeps_its_price_when_the_headcount_changes(self):
+        order = self._quote_order(amount=1000)
+        line = order.order_line
+        price = line.price_unit
+        self.assertGreater(price, 0)
+        line.product_uom_qty = 28  # p.ej. gratuidades o cambio de comensales
+        self.assertAlmostEqual(line.price_unit, price, places=2)
+        self.assertEqual(line.restagrup_margin_pct, 20.0)
+        order.action_confirm()
+        line.product_uom_qty = 25
+        self.assertAlmostEqual(line.price_unit, price, places=2)
+
     def test_line_without_restaurant_has_no_margin(self):
         product = self.env['product.product'].create({'name': 'Extra', 'type': 'service', 'list_price': 50.0})
         line = self._order(qty=2, product=product).order_line

@@ -99,6 +99,10 @@ class RestaurantSearch(models.Model):
         qty = pax if pax > 0 and quote_amount else 1
         return qty, quote_amount / qty
 
+    def _menu_description(self, line):
+        """Menú elegido para la línea de venta: nombre y platos, nunca el precio del restaurante."""
+        return ('\n' + line.menu_id._render_text(with_price=False)) if line.menu_id else ''
+
     def _create_sale_order_from_quote(self, line):
         self.ensure_one()
         product = self.env.ref('restagrup_service_orders.product_restaurant_service')
@@ -112,10 +116,11 @@ class RestaurantSearch(models.Model):
         order, created = self._add_lines_to_group_order([(0, 0, dict(
             self._event_line_vals(),
             product_id=product.id,
-            name='%s — %s' % (event_label, description) if event_label else description,
+            name='%s — %s%s' % (event_label, description, self._menu_description(line)) if event_label
+            else description + self._menu_description(line),
             product_uom_qty=qty,
             restagrup_unit_cost=unit_cost,
-            price_unit=self._apply_default_margin(unit_cost),
+            price_unit=self._apply_default_margin(unit_cost, partner=line.partner_id),
             restaurant_id=line.partner_id.id,
             restagrup_search_line_id=line.id,
         ))])
@@ -191,10 +196,11 @@ class RestaurantSearch(models.Model):
                 '%(restaurant)s añadido al presupuesto de venta %(name)s del grupo.'
             ) % {'name': order.name, 'restaurant': line.name})
 
-    def _apply_default_margin(self, cost_amount):
-        """Precio al cliente = precio del restaurante + margen (20 % por defecto, ajustable en
-        Ajustes → Restagrup). El margen nunca se muestra desglosado en la línea del cliente."""
-        return self.env['restagrup.pricing'].apply_margin(cost_amount)
+    def _apply_default_margin(self, cost_amount, partner=None):
+        """Precio al cliente = precio del restaurante + su margen (el propio del restaurante o, si no lo tiene,
+        el general: 20 % por defecto, ajustable en Ajustes → Restagrup). El margen nunca se muestra desglosado
+        en la línea del cliente."""
+        return self.env['restagrup.pricing'].apply_margin(cost_amount, partner=partner)
 
     def _action_view_sale_order(self):
         self.ensure_one()

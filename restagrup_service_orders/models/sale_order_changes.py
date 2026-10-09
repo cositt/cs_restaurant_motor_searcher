@@ -69,7 +69,22 @@ class SaleOrder(models.Model):
                  for restaurant, texts in agency_changes]
         return self._restagrup_summary_html(_('Hemos actualizado el presupuesto. Cambios por restaurante:'), items)
 
+    def _fw_review_restaurant_notice(self):
+        sheets = self.sudo().restaurant_po_ids.filtered('restagrup_needs_resend')
+        if not sheets:
+            return False
+        recipients = '\n'.join('• %s <%s>' % (po.partner_id.name, (po.partner_id.email or '').strip() or '—')
+                               for po in sheets)
+        return _('Se reenviarán los cambios (y la hoja de servicio actualizada) a:\n%s\n\n'
+                 'Después se avisará también a la agencia con la proforma.') % recipients
+
     def action_resend_restaurant_orders(self):
+        """Botón «Reenviar cambios»: antes de escribir a los restaurantes, una persona revisa a quién y qué."""
+        if len(self) == 1:
+            return self._restagrup_gated('notify_restaurant', '_restagrup_do_resend_restaurant_orders')
+        return self._restagrup_do_resend_restaurant_orders()
+
+    def _restagrup_do_resend_restaurant_orders(self):
         """Botón «Reenviar cambios»: solo toca las hojas de servicio con cambios pendientes, las actualiza,
         deja constancia en el chatter y reenvía el correo -- con el resumen de qué cambió -- únicamente a los
         restaurantes afectados. Si el cambio es significativo, la hoja vuelve a «pendiente de confirmar» y el

@@ -2,3 +2,6 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_restagrup_restaurant_search,restagrup.restaurant.search,model_restagrup_restaurant_search,base.group_user,1,1,1,1
 access_restagrup_restaurant_search_line,restagrup.restaurant.search.line,model_restagrup_restaurant_search_line,base.group_user,1,1,1,1
 access_restagrup_pending_mail,restagrup.pending.mail,model_restagrup_pending_mail,base.group_user,1,1,1,0
+access_restagrup_ai_dashboard,restagrup.ai.dashboard,model_restagrup_ai_dashboard,base.group_user,1,1,1,1
+access_restagrup_restaurant_menu,restagrup.restaurant.menu,model_restagrup_restaurant_menu,base.group_user,1,1,1,1
+access_restagrup_restaurant_menu_line,restagrup.restaurant.menu.line,model_restagrup_restaurant_menu_line,base.group_user,1,1,1,1

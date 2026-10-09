@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """A3: datos de grupo de la ficha del restaurante -- petición de los que faltan y lectura con IA de la respuesta."""
 import json
+import re
 
 from odoo import _, fields, models
 from odoo.exceptions import UserError
@@ -14,7 +15,8 @@ exactas: "aforo" (número entero de comensales para grupos, o null), "dia_cierre
 días, o null si no lo dicen), "idioma" (código ISO de dos letras del idioma de contacto, o
 null), "responsable" (nombre de la persona que lleva los grupos, o null), "movil" (su móvil,
 o null), "gratuidades" (texto corto con las condiciones de gratuidad, o null), "parking_bus"
-(true si confirman que tienen parking de autobús, si no null).
+(true si confirman que tienen parking de autobús, si no null), "cuenta_bancaria" (IBAN para
+cobrar los prepagos, o null).
 Si un dato no aparece claramente en el texto, pon null -- nunca lo inventes."""
 
 WEEKDAY_CODES = ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun', 'none')
@@ -37,6 +39,12 @@ def _clean_weekday(value):
     return value if value in WEEKDAY_CODES else None
 
 
+def _clean_iban(value):
+    """IBAN sin espacios y en mayúsculas; algo que no lo parece (p. ej. «te lo mando luego») se descarta."""
+    text = ''.join(str(value).split()).upper() if value not in (None, False) else ''
+    return text if re.fullmatch(r'[A-Z]{2}\d{2}[A-Z0-9]{11,30}', text) else None
+
+
 def _clean_true(value):
     return True if value is True else None
 
@@ -50,6 +58,7 @@ PROPOSAL_FIELDS = {
     'movil': ('restaurant_group_mobile', _clean_text),
     'gratuidades': ('restaurant_gratuities', _clean_text),
     'parking_bus': ('restaurant_bus_parking', _clean_true),
+    'cuenta_bancaria': ('restaurant_iban', _clean_iban),
 }
 
 
@@ -131,9 +140,12 @@ class RestaurantSearchLineData(models.Model):
         text = html2plaintext(raw_body).strip() if raw_body else ''
         if not text:
             return
-        data, provider = self.env['restagrup.llm.connector'].extract_json(EXTRACT_DATA_SYSTEM_PROMPT, text)
+        data, provider, log = self.env['restagrup.llm.connector'].run(
+            'data_extraction', EXTRACT_DATA_SYSTEM_PROMPT, text, source=self, label=self.name)
         proposal = self._clean_data_proposal(data)
         if not proposal:
+            if data is not None:
+                log.state = 'auto'  # nada que revisar: la respuesta no traía datos de ficha
             return
         self.data_proposal = json.dumps(proposal)
         self.search_id.message_post_if_exists(_(
@@ -162,10 +174,12 @@ class RestaurantSearchLineData(models.Model):
         vals = {name: value for name, value in proposal.items() if value and not partner[name]}
         if vals:
             partner.write(vals)
+        self.env['restagrup.ai.log']._resolve('data_extraction', self, 'confirmed')
         self.data_proposal = False
         self.search_id.message_post_if_exists(_(
             '%(name)s: datos de ficha aplicados por %(user)s (%(count)s campos).'
         ) % {'name': self.name, 'user': self.env.user.name, 'count': len(vals)})
 
     def action_discard_data_proposal(self):
+        self.env['restagrup.ai.log']._resolve('data_extraction', self, 'discarded')
         self.write({'data_proposal': False})

@@ -9,6 +9,7 @@ class TestSaleOrderFollowup(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.env = cls.env(context=dict(cls.env.context, restagrup_skip_firewall=True))  # sin puntos de revisión
         cls.agency = cls.env['res.partner'].create({
             'name': 'Agencia Test', 'email': 'agencia@example.com',
         })

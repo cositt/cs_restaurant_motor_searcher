@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_client_comparison_document">
+        <t t-call="web.external_layout">
+            <div class="page">
+                <t t-set="currency" t-value="doc.env.company.currency_id"/>
+                <h2>Comparativa de restaurantes</h2>
+                <p class="text-muted">
+                    <span t-if="doc.city" t-out="doc.city"/>
+                    <t t-if="doc.min_capacity"> · <span t-out="doc.min_capacity"/> personas</t>
+                </p>
+                <t t-set="rows" t-value="doc.restagrup_comparison_rows()"/>
+                <p t-if="not rows">Todavía no hay presupuestos confirmados para comparar.</p>
+                <t t-foreach="rows" t-as="row">
+                    <table style="width: 100%; border: 1px solid #bbb; border-collapse: separate; margin-bottom: 18px; page-break-inside: avoid;">
+                        <tr>
+                            <td style="padding: 10px 14px; vertical-align: top;">
+                                <div style="font-size: 17px; font-weight: bold;" t-out="row['name']"/>
+                                <div style="color: #666;">
+                                    <span t-if="row['partner'].city" t-out="row['partner'].city"/>
+                                    <t t-if="row['partner'].restaurant_cuisine_type">
+                                        · <span t-out="row['partner'].restaurant_cuisine_type"/>
+                                    </t>
+                                    <t t-if="row['partner'].restaurant_bus_parking"> · Parking de autobús</t>
+                                </div>
+                            </td>
+                            <td style="padding: 10px 14px; vertical-align: top; text-align: right; width: 32%; background: #f3f3f3;">
+                                <div style="font-size: 22px; font-weight: bold;"
+                                     t-out="row['price_per_person']"
+                                     t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                <div style="color: #666;">por persona</div>
+                            </td>
+                        </tr>
+                        <tr t-if="row['menu_text'] or row['notes']">
+                            <td colspan="2" style="padding: 8px 14px 12px; border-top: 1px solid #ddd;">
+                                <div t-if="row['menu_text']">
+                                    <div style="font-weight: bold; margin-bottom: 2px;">Menú</div>
+                                    <div style="white-space: pre-line;" t-out="row['menu_text']"/>
+                                </div>
+                                <div t-if="row['notes']" style="margin-top: 8px; color: #666;" t-out="row['notes']"/>
+                            </td>
+                        </tr>
+                    </table>
+                </t>
+            </div>
+        </t>
+    </template>
+
+    <template id="report_client_comparison">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="restagrup_agency_proposal.report_client_comparison_document"/>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_client_comparison" model="ir.actions.report">
+        <field name="name">Comparativa para el cliente</field>
+        <field name="model">restagrup.restaurant.search</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">restagrup_agency_proposal.report_client_comparison</field>
+        <field name="report_file">restagrup_agency_proposal.report_client_comparison</field>
+        <field name="print_report_name">'Comparativa restaurantes - %s' % (object.display_name)</field>
+    </record>
+</odoo>

@@ -60,14 +60,18 @@ class SaleOrderLine(models.Model):
             else:
                 cost = line.restagrup_search_line_id.quote_amount
             line.restagrup_unit_cost = cost or 0.0
-            line.restagrup_margin_pct = pricing.margin_percent() if cost else 0.0
+            partner = product.restaurant_id or line.restagrup_search_line_id.partner_id
+            line.restagrup_margin_pct = pricing.margin_percent(partner=partner) if cost else 0.0
 
-    @api.depends('price_subtotal', 'product_uom_qty', 'restagrup_unit_cost')
+    @api.depends('price_unit', 'discount', 'product_uom_qty', 'restagrup_unit_cost')
     def _compute_restagrup_margin_amount(self):
+        """Comisión de Restagrup = lo que se cobra menos lo que cobra el restaurante, los dos con el IVA incluido
+        (así trabajan: 1.745 € de venta - 1.500 € del restaurante = 245 €). Se calcula sobre precio × cantidad, no
+        sobre el subtotal sin impuestos, para que no cambie según el impuesto esté incluido o se sume por encima."""
         for line in self:
+            charged = line.price_unit * line.product_uom_qty * (1 - (line.discount or 0.0) / 100.0)
             line.restagrup_margin_amount = (
-                line.price_subtotal - line.restagrup_unit_cost * line.product_uom_qty
-                if line.restagrup_unit_cost else 0.0
+                charged - line.restagrup_unit_cost * line.product_uom_qty if line.restagrup_unit_cost else 0.0
             )
 
     @api.depends('product_id')
@@ -89,7 +93,13 @@ class SaleOrderLine(models.Model):
         product = self.product_id
         if product.restaurant_id and product.standard_price:
             frozen = self.restagrup_margin_pct if self.restagrup_unit_cost else None
-            return self.env['restagrup.pricing'].apply_margin(product.standard_price, percent=frozen)
+            return self.env['restagrup.pricing'].apply_margin(
+                product.standard_price, percent=frozen, partner=product.restaurant_id)
+        if self.restagrup_search_line_id and self.restagrup_unit_cost:
+            # Línea nacida de un presupuesto de restaurante: el producto «servicio» no tiene precio de tarifa. Al
+            # cambiar los comensales Odoo recalcula el precio; sin esto se quedaba en 0. Se mantiene coste + margen.
+            return self.env['restagrup.pricing'].apply_margin(
+                self.restagrup_unit_cost, percent=self.restagrup_margin_pct, partner=self.restaurant_id)
         return super()._get_display_price()
 
     @api.model

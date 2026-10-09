@@ -13,6 +13,7 @@ class TestSearchChatter(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.env = cls.env(context=dict(cls.env.context, restagrup_skip_firewall=True))  # sin puntos de revisión
         cls.agency = cls.env['res.partner'].create({'name': 'Agencia Chatter', 'email': 'agencia@example.com'})
         cls.restaurant = cls.env['res.partner'].create({
             'name': 'Restaurante Chatter', 'is_restaurant': True, 'email': 'rest@example.com',

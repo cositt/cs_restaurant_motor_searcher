@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from . import firewall
 from . import sale_order
 from . import sale_order_line
 from . import purchase_order
@@ -13,7 +14,11 @@ from . import restaurant_notice
 from . import notice_wizard
 from . import change_wizard
 from . import crm_lead
+from . import crm_stage
+from . import crm_lead_stages
+from . import firewall_checks
 from . import lead_event
+from . import final_data
 from . import sale_order_agency
 from . import pending_mail
 from . import sale_order_changes

@@ -72,7 +72,8 @@ class CrmLead(models.Model):
 
         connector = self.env['restagrup.llm.connector']
         system_prompt = EXTRACTION_SYSTEM_PROMPT.replace('{hoy}', fields.Date.context_today(self).isoformat())
-        data, provider = connector.extract_json(system_prompt, text)
+        data, provider, log = connector.run(
+            'lead_extraction', system_prompt, text, source=self, label=self.name, review=False)
 
         if data is None:
             self.write({'restagrup_extraction_state': 'error'})
@@ -100,6 +101,69 @@ class CrmLead(models.Model):
             'Datos extraídos automáticamente por IA (%(provider)s) -- revisar antes de'
             ' convertir en presupuesto.'
         ) % {'provider': provider})
+        self._restagrup_after_extraction(log)
+
+    # --- ¿está completa la petición? ---
+
+    def _restagrup_missing_request_data(self):
+        """Lo que falta para poder buscar restaurante, como lista de frases que lee la agencia. Cada servicio necesita
+        ciudad, fecha y comensales; sin servicios, valen los datos sueltos del lead; sin nada, se piden los tres."""
+        self.ensure_one()
+        events = self.restagrup_event_ids
+        if not events:
+            missing = []
+            if not self.restagrup_city:
+                missing.append(_('Ciudad del servicio'))
+            if not self.restagrup_service_date:
+                missing.append(_('Fecha del servicio'))
+            if not self.restagrup_pax:
+                missing.append(_('Número de comensales'))
+            return missing
+        missing = []
+        for event in events:
+            label = self._restagrup_event_label(event)
+            if not event.city:
+                missing.append(_('Ciudad: %s') % label)
+            if not event.event_date:
+                missing.append(_('Fecha: %s') % label)
+            if not event.pax:
+                missing.append(_('Número de comensales: %s') % label)
+        return missing
+
+    @staticmethod
+    def _restagrup_event_label(event):
+        """«cena en Sevilla del 12/12/2026»: cómo se nombra a un servicio sin tener que acertar el género."""
+        parts = [event.event_type_id.name.lower() if event.event_type_id else _('servicio')]
+        if event.city:
+            parts.append(_('en %s') % event.city)
+        if event.event_date:
+            parts.append(_('del %s') % event.event_date.strftime('%d/%m/%Y'))
+        return ' '.join(parts)
+
+    def _restagrup_after_extraction(self, log):
+        """Qué pasa cuando la IA termina de leer una petición: si está completa, nadie interviene; si no, esta base
+        la pasa a una persona (otros módulos pueden preferir pedir los datos que faltan a la agencia)."""
+        self.ensure_one()
+        missing = self._restagrup_missing_request_data()
+        if not missing:
+            self._restagrup_announce(_('Grupo nuevo, con todos los datos: %s') % self.name)
+        else:
+            self._restagrup_hand_over(missing, log)
+
+    def _restagrup_announce(self, summary, note=False, sticky=False):
+        """Aviso informativo de que entró algo, sin actividad que cerrar."""
+        ai_log = self.env['restagrup.ai.log']
+        user = ai_log._responsible_for(self)
+        if user:
+            ai_log._toast(user, summary, note, sticky=sticky)
+
+    def _restagrup_hand_over(self, missing, log=None):
+        """Lo que la IA no puede resolver sola pasa a una persona: actividad en el lead y aviso visible."""
+        self.ensure_one()
+        if log:
+            log.state = 'pending'  # lo cerrará la revisión (p. ej. al empezar a buscar restaurantes)
+        self.env['restagrup.ai.log']._notify(
+            self, _('Faltan datos: %s') % self.name, '\n'.join(missing), source=self)
 
     def _restagrup_event_vals_list(self, data):
         """Eventos que propone la IA, como borradores. Si la IA contesta al estilo antiguo (sin lista

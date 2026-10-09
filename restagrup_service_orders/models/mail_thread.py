@@ -11,7 +11,7 @@ class MailThread(models.AbstractModel):
     _inherit = 'mail.thread'
 
     @api.model
-    def _restagrup_match_existing(self, category, message_dict):
+    def _restagrup_match_existing(self, category, message_dict, hints=None):
         """A5: si el correo cita un presupuesto (p. ej. S00012) que existe, va a su hilo."""
         text = '%s %s' % (message_dict.get('subject') or '', html2plaintext(message_dict.get('body') or ''))
         names = {ref.upper() for ref in ORDER_REFERENCE.findall(text)}
@@ -19,4 +19,4 @@ class MailThread(models.AbstractModel):
             orders = self.env['sale.order'].sudo().search([('name', 'in', list(names))])
             if len(orders) == 1:
                 return 'sale.order', orders.id
-        return super()._restagrup_match_existing(category, message_dict)
+        return super()._restagrup_match_existing(category, message_dict, hints)

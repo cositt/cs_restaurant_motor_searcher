@@ -48,7 +48,8 @@ class PurchaseOrder(models.Model):
             return
 
         connector = self.env['restagrup.llm.connector']
-        data, provider = connector.extract_json(RESPONSE_CLASSIFICATION_PROMPT, text)
+        data, provider, _log = connector.run(
+            'sheet_classification', RESPONSE_CLASSIFICATION_PROMPT, text, source=self, label=self.name, review=False)
         if not data:
             return
 

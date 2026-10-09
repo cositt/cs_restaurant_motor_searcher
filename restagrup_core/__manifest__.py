@@ -10,14 +10,16 @@
         No aporta funcionalidad visible por sí solo.
     ''',
     'author': 'Cositt Technology',
-    'depends': ['base'],
+    'depends': ['base', 'mail'],
     'data': [
         'security/ir.model.access.csv',
         'data/event_type_data.xml',
         'data/cancel_reason_data.xml',
+        'data/price_baseline_data.xml',
         'views/res_config_settings_views.xml',
         'views/event_type_views.xml',
         'views/cancel_reason_views.xml',
+        'views/price_baseline_views.xml',
     ],
     'installable': True,
     'application': False,
