@@ -5,3 +5,5 @@ access_restagrup_cancel_reason_user,restagrup.cancel.reason user,model_restagrup
 access_restagrup_cancel_reason_manager,restagrup.cancel.reason manager,model_restagrup_cancel_reason,base.group_system,1,1,1,1
 access_restagrup_ai_log_user,restagrup.ai.log user,model_restagrup_ai_log,base.group_user,1,0,0,0
 access_restagrup_ai_log_manager,restagrup.ai.log manager,model_restagrup_ai_log,base.group_system,1,1,1,1
+access_restagrup_price_baseline_user,restagrup.price.baseline user,model_restagrup_price_baseline,base.group_user,1,1,1,0
+access_restagrup_price_baseline_manager,restagrup.price.baseline manager,model_restagrup_price_baseline,base.group_system,1,1,1,1

@@ -279,4 +279,6 @@
               action="restagrup_core.action_restagrup_cancel_reason" sequence="91"/>
     <menuitem id="menu_restagrup_event_types" name="Tipos de evento" parent="menu_restagrup_root"
               action="restagrup_core.action_restagrup_event_type" sequence="90"/>
+    <menuitem id="menu_restagrup_price_baselines" name="Baremos de precio estimado" parent="menu_restagrup_root"
+              action="restagrup_core.action_restagrup_price_baseline" sequence="92"/>
 </odoo>

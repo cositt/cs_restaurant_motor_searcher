@@ -6,3 +6,4 @@ from . import event_type
 from . import cancel_reason
 from . import system_mail
 from . import ai_log
+from . import price_baseline

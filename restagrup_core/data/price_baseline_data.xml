@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Referencias del cliente (2026-10-09). Son orientativas y varían por ciudad. -->
+    <record id="baseline_lunch_weekday" model="restagrup.price.baseline">
+        <field name="name">Comida adultos entre semana (~16 €)</field>
+        <field name="event_type_id" ref="event_type_lunch"/>
+        <field name="day_type">weekday</field>
+        <field name="price_pp">16.0</field>
+    </record>
+    <record id="baseline_lunch_weekend" model="restagrup.price.baseline">
+        <field name="name">Comida adultos fin de semana (18-19 €)</field>
+        <field name="event_type_id" ref="event_type_lunch"/>
+        <field name="day_type">weekend</field>
+        <field name="price_pp">18.5</field>
+    </record>
+    <record id="baseline_dinner" model="restagrup.price.baseline">
+        <field name="name">Cena (18-22 €)</field>
+        <field name="event_type_id" ref="event_type_dinner"/>
+        <field name="price_pp">20.0</field>
+    </record>
+    <record id="baseline_breakfast" model="restagrup.price.baseline">
+        <field name="name">Desayuno básico (~5 €)</field>
+        <field name="event_type_id" ref="event_type_breakfast"/>
+        <field name="price_pp">5.0</field>
+    </record>
+    <record id="baseline_lunch_students" model="restagrup.price.baseline">
+        <field name="name">Comida estudiantes (14-15 €)</field>
+        <field name="event_type_id" ref="event_type_lunch"/>
+        <field name="audience">students</field>
+        <field name="price_pp">14.5</field>
+    </record>
+    <record id="baseline_lunch_athletes" model="restagrup.price.baseline">
+        <field name="name">Comida deportistas entre semana (~16 €)</field>
+        <field name="event_type_id" ref="event_type_lunch"/>
+        <field name="audience">athletes</field>
+        <field name="day_type">weekday</field>
+        <field name="price_pp">16.0</field>
+    </record>
+</odoo>
