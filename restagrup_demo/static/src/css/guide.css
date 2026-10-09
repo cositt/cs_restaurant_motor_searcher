@@ -1,0 +1,28 @@
+.o_rg_guide { max-width: 920px; margin: 0 auto; padding: 28px 24px 40px; font-size: 15px; color: #1f2430; }
+.o_rg_guide_head { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; }
+.o_rg_guide_logo { width: 64px; height: 64px; border-radius: 14px; object-fit: contain; background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,.12); }
+.o_rg_guide_titles { flex: 1; }
+.o_rg_guide_titles h1 { font-size: 26px; font-weight: 700; margin: 0 0 2px; }
+.o_rg_guide_titles p { margin: 0; color: #6b7280; }
+.o_rg_steps { display: flex; flex-direction: column; gap: 10px; }
+.o_rg_step { display: flex; align-items: center; gap: 16px; padding: 14px 18px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; }
+.o_rg_step.is-current { border-color: #714b67; box-shadow: 0 0 0 3px rgba(113,75,103,.14); }
+.o_rg_step.is-pending { opacity: .62; }
+.o_rg_step.is-done { background: #f6faf6; border-color: #cfe5d2; }
+.o_rg_step_num { flex: 0 0 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; background: #eceef2; color: #4b5563; }
+.o_rg_step.is-current .o_rg_step_num { background: #714b67; color: #fff; }
+.o_rg_step.is-done .o_rg_step_num { background: #2e9e4f; color: #fff; }
+.o_rg_step_body { flex: 1; min-width: 0; }
+.o_rg_step_title { font-weight: 600; font-size: 16px; }
+.o_rg_step_todo { color: #5b6272; margin-top: 2px; }
+.o_rg_step_say { margin-top: 8px; padding: 8px 12px; background: #fff7e0; border-left: 3px solid #f0b429; border-radius: 6px; color: #5c4a12; font-style: italic; }
+.o_rg_btn { flex: 0 0 auto; border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.o_rg_btn_primary { background: #714b67; color: #fff; }
+.o_rg_btn_primary:hover:not([disabled]) { background: #5d3d54; }
+.o_rg_btn_secondary { background: #eef0f4; color: #1f2430; }
+.o_rg_btn_secondary:hover:not([disabled]) { background: #e1e4ea; }
+.o_rg_btn[disabled] { opacity: .45; cursor: default; }
+.o_rg_btn_ghost { background: transparent; border: 1px solid #d5d8de; border-radius: 8px; padding: 7px 14px; color: #5b6272; cursor: pointer; }
+.o_rg_btn_ghost:hover { background: #f1f2f5; }
+.o_rg_guide_foot { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; }
+.o_rg_done_msg { color: #2e9e4f; font-weight: 600; }
