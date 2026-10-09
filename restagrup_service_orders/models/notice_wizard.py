@@ -8,6 +8,7 @@ from odoo.tools import html2plaintext
 
 class RestaurantNoticeWizard(models.TransientModel):
     _name = 'restagrup.restaurant.notice.wizard'
+    _inherit = ['restagrup.firewall.mixin']
     _description = 'Avisar a los restaurantes de un grupo'
 
     lead_id = fields.Many2one('crm.lead', string='Grupo / Cliente', required=True, readonly=True)
@@ -22,7 +23,26 @@ class RestaurantNoticeWizard(models.TransientModel):
             self.subject = self.template_id.subject
             self.body = self.template_id.body
 
+    def _restagrup_firewall_log_target(self):
+        return self.lead_id
+
+    def _fw_review_restaurant_notice(self):
+        lines = self.line_ids.filtered('selected')
+        if not lines:
+            return False
+        recipients = '\n'.join('• %s <%s> (%s)' % (
+            line.restaurant_id.name, (line.restaurant_id.email or '').strip() or '—', line.event_label or '—')
+            for line in lines)
+        return _('Se enviará este aviso a:\n%(recipients)s\n\nAsunto: %(subject)s\n\n%(body)s') % {
+            'recipients': recipients, 'subject': self.subject or '',
+            'body': html2plaintext(self.body or '').strip()}
+
     def action_send(self):
+        self.ensure_one()
+        self._validate()
+        return self._restagrup_gated('notify_restaurant', '_restagrup_do_send')
+
+    def _validate(self):
         self.ensure_one()
         lines = self.line_ids.filtered('selected')
         if not lines:
@@ -35,7 +55,10 @@ class RestaurantNoticeWizard(models.TransientModel):
                 missing.mapped('restaurant_id.name')))
         if not self.env.user.email:
             raise UserError(_('Tu usuario no tiene email: añádelo antes de enviar avisos.'))
-        for line in lines:
+
+    def _restagrup_do_send(self):
+        self.ensure_one()
+        for line in self.line_ids.filtered('selected'):
             line._send_notice(self.subject, self.body)
         return {'type': 'ir.actions.act_window_close'}
 

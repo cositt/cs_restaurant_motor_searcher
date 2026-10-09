@@ -28,6 +28,7 @@ class RestaurantSearchPortal(models.Model):
 
 class ClientComparisonWizard(models.TransientModel):
     _name = 'restagrup.client.comparison.wizard'
+    _inherit = ['restagrup.firewall.mixin']
     _description = 'Enviar la comparativa de restaurantes al cliente'
 
     search_id = fields.Many2one('restagrup.restaurant.search', string='Búsqueda', required=True, readonly=True)
@@ -59,14 +60,39 @@ class ClientComparisonWizard(models.TransientModel):
                 vals['email_to'] = search.lead_id._restagrup_sender_email()
         return super().create(vals_list)
 
+    def _restagrup_firewall_log_target(self):
+        return self.search_id.lead_id
+
+    def _validate(self):
+        self.ensure_one()
+        if not (self.email_to or '').strip():
+            raise UserError(_('Indica el email del cliente al que se envía la comparativa.'))
+        if not self.search_id.restagrup_comparison_rows():
+            raise UserError(_('Aún no hay presupuestos confirmados que comparar.'))
+
+    def _fw_review_proposal(self):
+        search = self.search_id
+        options = '\n'.join('• %s — %.2f € por persona%s' % (
+            row['name'], row['price_per_person'], (' · %s' % row['menu'].name) if row['menu'] else '')
+            for row in search.restagrup_comparison_rows())
+        return _(
+            'Se enviará a %(email)s la propuesta de %(search)s con estas opciones:\n%(options)s\n\n'
+            'Nombres de restaurante visibles: %(visible)s · Enlace de portal: %(portal)s\n'
+            'Sin totales: el total llega con la confirmación de reserva.') % {
+            'email': (self.email_to or '').strip(), 'search': search.city or search.display_name,
+            'options': options, 'visible': _('sí') if search.restaurant_visible else _('no, solo «Opción N»'),
+            'portal': _('sí') if self.include_portal_link else _('no')}
+
     def action_send(self):
         self.ensure_one()
+        self._validate()
+        return self._restagrup_gated('send_proposal', '_restagrup_do_send')
+
+    def _restagrup_do_send(self):
+        self.ensure_one()
+        self._validate()
         search = self.search_id
         email_to = (self.email_to or '').strip()
-        if not email_to:
-            raise UserError(_('Indica el email del cliente al que se envía la comparativa.'))
-        if not search.restagrup_comparison_rows():
-            raise UserError(_('Aún no hay presupuestos confirmados que comparar.'))
         lead = search.lead_id
         pdf, _kind = self.env['ir.actions.report']._render_qweb_pdf(REPORT, search.ids)
         attachment = self.env['ir.attachment'].create({

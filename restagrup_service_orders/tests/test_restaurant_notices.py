@@ -16,6 +16,7 @@ class TestRestaurantNotices(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.env = cls.env(context=dict(cls.env.context, restagrup_skip_firewall=True))  # sin puntos de revisión
         cls.client = cls.env['res.partner'].create({'name': 'Agencia avisos', 'email': 'ag@example.com'})
         cls.lead = cls.env['crm.lead'].create({'name': 'Grupo avisos', 'partner_id': cls.client.id})
         cls.rest_a = cls.env['res.partner'].create({

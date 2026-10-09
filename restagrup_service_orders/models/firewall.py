@@ -10,6 +10,8 @@ TRIGGERS = [
     ('close_file', 'Cerrar expediente'),
     ('confirm_agency', 'Confirmación a la agencia'),
     ('confirm_restaurant', 'Confirmación al restaurante'),
+    ('send_proposal', 'Enviar la propuesta a la agencia'),
+    ('notify_restaurant', 'Escribir al restaurante'),
 ]
 
 
@@ -31,6 +33,11 @@ class FirewallCheck(models.Model):
     )
     active = fields.Boolean(default=True)
     sequence = fields.Integer(default=10)
+    is_review = fields.Boolean(
+        string='Punto de revisión', readonly=True,
+        help='No comprueba datos: enseña lo que se va a enviar y una persona lo revisa antes de seguir. Se puede'
+             ' desactivar cuando haya confianza; nunca impide continuar.',
+    )
 
     _code_unique = models.Constraint('unique(code)', 'Ya existe una comprobación con ese código.')
 
@@ -52,6 +59,10 @@ class FirewallMixin(models.AbstractModel):
                 issues.append({'check': check, 'message': message})
         return issues
 
+    def _restagrup_firewall_log_target(self):
+        """Dónde se anota quién decidió continuar (el chatter del propio registro; un asistente lo redirige.)"""
+        return self
+
     def _restagrup_gated(self, trigger, method):
         """Ejecuta `method` si todo está en orden. Si no: avisa y consulta, o impide continuar si alguna
         comprobación fallida está en modo «impedir»."""
@@ -62,10 +73,11 @@ class FirewallMixin(models.AbstractModel):
         if not issues:
             return getattr(self, method)()
         text = '\n'.join('• %s' % issue['message'] for issue in issues)
-        if any(issue['check'].mode == 'block' for issue in issues):
+        if any(issue['check'].mode == 'block' and not issue['check'].is_review for issue in issues):
             raise UserError(_('No se puede continuar todavía:\n%s', text))
         wizard = self.env['restagrup.firewall.wizard'].create({
             'res_model': self._name, 'res_id': self.id, 'method': method, 'message': text,
+            'is_review': all(issue['check'].is_review for issue in issues),
         })
         return {
             'type': 'ir.actions.act_window', 'name': _('Antes de continuar'), 'res_model': wizard._name,
@@ -81,14 +93,16 @@ class FirewallWizard(models.TransientModel):
     res_id = fields.Integer(required=True)
     method = fields.Char(required=True)
     message = fields.Text(string='Falta o no cuadra', readonly=True)
+    is_review = fields.Boolean(readonly=True)
 
     def action_continue(self):
         """Sigue pese a los avisos. Queda anotado quién lo decidió y qué se saltó."""
         self.ensure_one()
         record = self.env[self.res_model].browse(self.res_id)
-        record.message_post(body=Markup('%s<br/>%s') % (
-            _('%s continúa pese a los avisos:', self.env.user.name),
-            Markup('<br/>').join(Markup.escape(line) for line in self.message.splitlines())))
+        intro = (_('%s ha revisado y continúa:', self.env.user.name) if self.is_review
+                 else _('%s continúa pese a los avisos:', self.env.user.name))
+        record._restagrup_firewall_log_target().message_post(body=Markup('%s<br/>%s') % (
+            intro, Markup('<br/>').join(Markup.escape(line) for line in self.message.splitlines())))
         result = getattr(record.with_context(restagrup_skip_firewall=True), self.method)()
         return result or {'type': 'ir.actions.act_window_close'}
 

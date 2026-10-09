@@ -6,6 +6,7 @@ from odoo.tools import html2plaintext
 
 class RestaurantChangeWizard(models.TransientModel):
     _name = 'restagrup.restaurant.change.wizard'
+    _inherit = ['restagrup.firewall.mixin']
     _description = 'Cancelar o cambiar el restaurante elegido de un evento'
 
     search_id = fields.Many2one('restagrup.restaurant.search', string='Búsqueda', required=True, readonly=True)
@@ -49,7 +50,26 @@ class RestaurantChangeWizard(models.TransientModel):
             if not self.env.user.email:
                 raise UserError(_('Tu usuario no tiene email: añádelo antes de enviar avisos.'))
 
+    def _restagrup_firewall_log_target(self):
+        return self.search_id.lead_id
+
+    def _fw_review_restaurant_notice(self):
+        if not self.notify_restaurant:
+            return False
+        old, new = self.chosen_line_id, self.replacement_line_id
+        return _(
+            'Se cancelará %(old)s y se le escribirá a %(email)s.\nSustituto: %(new)s.\n\nAsunto: %(subject)s\n\n'
+            '%(body)s') % {
+            'old': old.name, 'email': (old.partner_id.email or '').strip() or '—',
+            'new': new.name if new else _('ninguno (solo se cancela)'), 'subject': self.subject or '',
+            'body': html2plaintext(self.body or '').strip()}
+
     def action_confirm(self):
+        self.ensure_one()
+        self._check()
+        return self._restagrup_gated('notify_restaurant', '_restagrup_do_confirm')
+
+    def _restagrup_do_confirm(self):
         self.ensure_one()
         self._check()
         search, old, new = self.search_id, self.search_id.chosen_line_id, self.replacement_line_id

@@ -10,6 +10,7 @@ class TestSendComparison(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.env = cls.env(context=dict(cls.env.context, restagrup_skip_firewall=True))  # sin puntos de revisión
         cls.env['ir.config_parameter'].sudo().set_param('web.base.url', 'https://demo.example.com')
         cls.lead = cls.env['crm.lead'].create({
             'name': 'Grupo Whitfield', 'email_from': 'Eleanor <eleanor@cliente.example>',

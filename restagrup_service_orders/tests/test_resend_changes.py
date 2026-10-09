@@ -14,6 +14,7 @@ class TestResendChanges(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.env = cls.env(context=dict(cls.env.context, restagrup_skip_firewall=True))  # sin puntos de revisión
         cls.env['ir.config_parameter'].sudo().search([('key', '=', 'restagrup.change_confirm_pct')]).unlink()
         cls.agency = cls.env['res.partner'].create({'name': 'Agencia A7', 'email': 'agencia-a7@example.com'})
         cls.restaurant = cls.env['res.partner'].create({

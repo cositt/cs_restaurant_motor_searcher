@@ -5,3 +5,4 @@ from . import test_portal
 from . import test_booking_documents
 from . import test_firewall_documents
 from . import test_payment_settings
+from . import test_review_proposal

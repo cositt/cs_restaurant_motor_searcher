@@ -73,5 +73,19 @@
             <field name="trigger">confirm_restaurant</field>
             <field name="sequence">120</field>
         </record>
+        <record id="firewall_review_proposal" model="restagrup.firewall.check">
+            <field name="code">review_proposal</field>
+            <field name="name">Revisar restaurantes, precios y condiciones antes de enviar la propuesta a la agencia</field>
+            <field name="trigger">send_proposal</field>
+            <field name="is_review" eval="True"/>
+            <field name="sequence">130</field>
+        </record>
+        <record id="firewall_review_restaurant_notice" model="restagrup.firewall.check">
+            <field name="code">review_restaurant_notice</field>
+            <field name="name">Revisar a qué restaurante y con qué texto se escribe (avisos, cambios y reenvíos)</field>
+            <field name="trigger">notify_restaurant</field>
+            <field name="is_review" eval="True"/>
+            <field name="sequence">140</field>
+        </record>
     </data>
 </odoo>
