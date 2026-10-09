@@ -26,5 +26,14 @@
             <field name="interval_type">days</field>
             <field name="active" eval="True"/>
         </record>
+        <record id="ir_cron_final_data_reminders" model="ir.cron">
+            <field name="name">Restagrup: aviso de datos pendientes antes del servicio</field>
+            <field name="model_id" ref="restagrup_email_ai.model_restagrup_lead_event"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_final_data_reminders()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+        </record>
     </data>
 </odoo>

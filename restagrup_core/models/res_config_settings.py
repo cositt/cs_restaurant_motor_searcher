@@ -40,6 +40,12 @@ class ResConfigSettings(models.TransientModel):
         help='Mensaje del recordatorio a la agencia (el enlace al presupuesto y la firma se añaden solos).'
              ' Vacío = texto por defecto.',
     )
+    restagrup_final_data_days = fields.Integer(
+        string='Días antes del servicio para avisar de datos pendientes', config_parameter='restagrup.final_data_days',
+        default=7,
+        help='Cuando faltan estos días o menos para un evento de un expediente y aún faltan datos por cerrar'
+             ' (menú, intolerancias, contacto del guía, comensales definitivos), se avisa al responsable.',
+    )
     restagrup_change_confirm_pct = fields.Float(
         string='Cambio de comensales que pide confirmación (%)', config_parameter='restagrup.change_confirm_pct',
         default=20.0,

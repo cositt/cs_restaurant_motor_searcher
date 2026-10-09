@@ -23,6 +23,9 @@
                             <field name="restagrup_quote_reminder_text" widget="text"
                                    placeholder="Vacío = texto por defecto"/>
                         </setting>
+                        <setting id="restagrup_final_data" help="Aviso interno de los datos que faltan por cerrar.">
+                            <field name="restagrup_final_data_days"/>
+                        </setting>
                         <setting id="restagrup_agency_reminder"
                                  help="Recordatorio a agencias con presupuesto enviado y sin respuesta.">
                             <field name="restagrup_agency_reminder_days"/>

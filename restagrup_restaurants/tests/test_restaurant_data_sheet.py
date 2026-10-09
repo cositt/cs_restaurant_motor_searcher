@@ -30,7 +30,7 @@ class TestRestaurantDataSheet(TransactionCase):
             'name': 'Casa Completa', 'is_restaurant': True, 'email': 'casa@example.com',
             'restaurant_capacity': 80, 'restaurant_closed_weekday': 'none',
             'restaurant_language': 'es', 'restaurant_group_manager': 'Marta',
-            'restaurant_group_mobile': '600000000',
+            'restaurant_group_mobile': '600000000', 'restaurant_iban': 'ES6000494434232610005925',
         }
         vals.update(extra)
         return vals
@@ -60,7 +60,8 @@ class TestRestaurantDataSheet(TransactionCase):
     def test_empty_restaurant_is_incomplete_and_lists_missing_fields(self):
         partner = self.Partner.create({'name': 'Casa Vacía', 'is_restaurant': True})
         self.assertTrue(partner.restaurant_is_incomplete)
-        for label in ('Aforo (grupos)', 'Día de cierre', 'Idioma', 'Responsable de grupos', 'Móvil del responsable'):
+        for label in ('Aforo (grupos)', 'Día de cierre', 'Idioma', 'Responsable de grupos', 'Móvil del responsable',
+                      'Cuenta bancaria'):
             self.assertIn(label, partner.restaurant_missing_fields)
 
     def test_complete_restaurant_has_nothing_missing(self):
@@ -171,7 +172,7 @@ class TestRestaurantDataSheet(TransactionCase):
         mail = self.Pending.search([('line_id', '=', line.id), ('kind', '=', 'data_request')])
         line.partner_id.write({
             'restaurant_closed_weekday': 'mon', 'restaurant_group_manager': 'Ana',
-            'restaurant_group_mobile': '611111111',
+            'restaurant_group_mobile': '611111111', 'restaurant_iban': 'ES6000494434232610005925',
         })
         mail.action_approve()
         self.assertEqual(mail.state, 'discarded')
@@ -293,3 +294,17 @@ class TestDataSheetAiReply(TransactionCase):
         self._reply({'dia_cierre': 'mon'})
         self._reply({'dia_cierre': 'tue'})
         self.assertEqual(json.loads(self.line.data_proposal)['restaurant_closed_weekday'], 'tue')
+
+    def test_reply_with_bank_account_is_proposed_cleaned_up(self):
+        self._ask()
+        self._reply({'cuenta_bancaria': 'es60 0049 4434 2326 1000 5925'})
+        proposal = json.loads(self.line.data_proposal)
+        self.assertEqual(proposal['restaurant_iban'], 'ES6000494434232610005925')
+        self.assertFalse(self.partner.restaurant_iban)
+
+    def test_reply_with_nonsense_bank_account_is_discarded(self):
+        self._ask()
+        self._reply({'cuenta_bancaria': 'te lo mando luego', 'responsable': 'Marta'})
+        proposal = json.loads(self.line.data_proposal)
+        self.assertNotIn('restaurant_iban', proposal)
+        self.assertEqual(proposal['restaurant_group_manager'], 'Marta')

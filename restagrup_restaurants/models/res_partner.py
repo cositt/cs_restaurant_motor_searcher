@@ -10,7 +10,7 @@ RESTAURANT_RATING_SELECTION = [
 # Datos sin los que no se puede valorar un restaurante para un grupo (A3).
 RESTAURANT_REQUIRED_FIELDS = (
     'restaurant_capacity', 'restaurant_closed_weekday', 'restaurant_language',
-    'restaurant_group_manager', 'restaurant_group_mobile',
+    'restaurant_group_manager', 'restaurant_group_mobile', 'restaurant_iban',
 )
 
 
@@ -64,7 +64,7 @@ class ResPartner(models.Model):
 
     restaurant_missing_fields = fields.Char(
         string='Datos que faltan', compute='_compute_restaurant_missing_fields',
-        help='Datos de la ficha de grupo aún sin rellenar (aforo, día de cierre, idioma, responsable y móvil).',
+        help='Datos de la ficha de grupo aún sin rellenar (aforo, día de cierre, idioma, responsable, móvil y cuenta bancaria).',
     )
     restaurant_is_incomplete = fields.Boolean(
         string='Ficha incompleta', compute='_compute_restaurant_missing_fields',

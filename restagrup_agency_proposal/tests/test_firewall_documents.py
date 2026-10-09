@@ -56,6 +56,12 @@ class TestFirewallDocuments(TransactionCase):
         inner = result.get('context', {}).get('report_action', result)
         self.assertEqual(inner.get('report_name'), 'restagrup_agency_proposal.report_booking_confirmation')
 
+    def test_restaurant_iban_on_its_sheet_counts_as_bank_account(self):
+        self.restaurant.restaurant_iban = 'ES6000494434232610005925'
+        self.assertNotIn('restaurant_bank', self._codes(self.order, 'confirm_agency'))
+        self.restaurant.restaurant_iban = False
+        self.assertIn('restaurant_bank', self._codes(self.order, 'confirm_agency'))
+
     def test_restaurant_not_accepted_when_it_answered_something_else(self):
         self.po.restagrup_response_state = 'needs_info'
         self.assertIn('restaurant_confirmed', self._codes(self.order, 'confirm_agency'))

@@ -69,7 +69,8 @@ class SaleOrderFirewall(models.Model):
         return False
 
     def _fw_restaurant_bank(self):
-        restaurants = self.order_line.mapped('restaurant_id').filtered(lambda r: not r.bank_ids)
+        restaurants = self.order_line.mapped('restaurant_id').filtered(
+            lambda r: not r.bank_ids and not r.restaurant_iban)
         if restaurants:
             return _('Falta la cuenta bancaria de: %s (hace falta para el prepago).') % ', '.join(restaurants.mapped('name'))
         return False

@@ -204,6 +204,11 @@
                 <field name="chosen_amount" optional="show" readonly="1"/>
                 <field name="sale_order_id" optional="show" readonly="1"/>
                 <field name="sheet_state" optional="show" readonly="1"/>
+                <field name="guide_contact" optional="hide"/>
+                <field name="intolerances" optional="hide"/>
+                <field name="no_intolerances" optional="hide"/>
+                <field name="pax_final" optional="hide"/>
+                <field name="final_missing" optional="show" readonly="1"/>
             </xpath>
         </field>
     </record>
