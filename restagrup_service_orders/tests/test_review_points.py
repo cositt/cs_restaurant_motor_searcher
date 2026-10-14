@@ -73,6 +73,14 @@ class TestReviewPoints(TransactionCase):
         self.assertIn('uno@example.com', wizard.message)
         self.assertIn('Cambio de comensales', wizard.message)
 
+    def test_review_shows_the_text_each_restaurant_will_really_receive(self):
+        wizard = self._notice_wizard()
+        wizard.write({'subject': 'Aviso {restaurante}', 'body': '<p>Hola {restaurante}, grupo {grupo}</p>'})
+        review = self.env[WIZARD].browse(wizard.action_send()['res_id'])
+        self.assertIn('Aviso Casa Uno', review.message)
+        self.assertIn('Hola Casa Uno, grupo Grupo revisión', review.message)
+        self.assertNotIn('{restaurante}', review.message)
+
     def test_continuing_after_the_review_sends_and_leaves_a_note(self):
         action = self._notice_wizard().action_send()
         self.env[WIZARD].browse(action['res_id']).action_continue()

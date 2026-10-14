@@ -3,6 +3,8 @@
 import logging
 from datetime import timedelta
 
+from markupsafe import Markup
+
 from odoo import _, api, fields, models
 
 _logger = logging.getLogger(__name__)
@@ -51,6 +53,10 @@ class RestagrupLeadEventFinalData(models.Model):
             return DEFAULT_FINAL_DATA_DAYS
 
     @api.model
+    def _reminder_note_posted(self, lead):
+        return bool(lead.message_ids.filtered(lambda m: REMINDER_SUMMARY in (m.body or '')))
+
+    @api.model
     def _cron_final_data_reminders(self):
         """Cron diario: avisa internamente (actividad + aviso) de los eventos de un expediente que se acercan y aún
         tienen datos por cerrar. No escribe a nadie de fuera: solo avisa al responsable. Una vez por grupo mientras
@@ -63,12 +69,16 @@ class RestagrupLeadEventFinalData(models.Model):
         for lead in events.lead_id:
             already = self.env['mail.activity'].sudo().search_count([
                 ('res_model', '=', 'crm.lead'), ('res_id', '=', lead.id), ('summary', '=', REMINDER_SUMMARY)])
-            if already:
+            if already or self._reminder_note_posted(lead):
                 continue
             lines = ['%s: %s' % (event.display_name, event.final_missing)
                      for event in events.filtered(lambda e: e.lead_id == lead)]
             try:
                 with self.env.cr.savepoint():
-                    self.env['restagrup.ai.log']._notify(lead, REMINDER_SUMMARY, '<br/>'.join(lines), source=lead)
+                    notified = self.env['restagrup.ai.log']._notify(
+                        lead, REMINDER_SUMMARY, '<br/>'.join(lines), source=lead)
+                    if not notified:  # nadie a quien avisar (ni comercial ni usuario de alertas): que quede a la vista
+                        lead.message_post(body=Markup('<b>%s</b><br/>%s') % (REMINDER_SUMMARY, Markup('<br/>').join(
+                            Markup.escape(line) for line in lines)))
             except Exception:  # noqa: BLE001 -- un grupo roto no debe parar al resto
                 _logger.exception('Aviso de datos pendientes fallido para %s', lead.name)

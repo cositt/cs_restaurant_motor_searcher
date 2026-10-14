@@ -11,7 +11,7 @@
                             <field name="name"/>
                             <field name="partner_id"/>
                             <field name="menu_type"/>
-                            <field name="season" options="{'format': false}"/>
+                            <field name="season" options="{'enable_formatting': false}"/>
                             <field name="currency_id" invisible="1"/>
                             <field name="cost_price"/>
                             <label for="sale_price"/>
@@ -62,7 +62,7 @@
                 <field name="partner_id" optional="show"/>
                 <field name="name"/>
                 <field name="currency_id" column_invisible="1"/>
-                <field name="season" options="{'format': false}"/>
+                <field name="season" options="{'enable_formatting': false}"/>
                 <field name="menu_type" optional="show"/>
                 <field name="cost_price"/>
                 <field name="sale_price"/>

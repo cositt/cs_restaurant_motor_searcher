@@ -80,9 +80,10 @@ class TestClientComparison(TransactionCase):
         menu = self._menu(restaurant, price=27.35)
         self._line(restaurant, menu_id=menu.id)
         row = self.search.restagrup_comparison_rows()[0]
-        self.assertNotIn('27.35', row['menu_text'])
-        self.assertNotIn('27.35', menu.display_text)  # ni el texto del menú lleva el coste del restaurante
-        self.assertIn('32.82', menu.display_text)  # sí el precio de venta (27,35 + 20 %)
+        for cost in ('27.35', '27,35'):
+            self.assertNotIn(cost, row['menu_text'])
+            self.assertNotIn(cost, menu.display_text)  # ni el texto del menú lleva el coste del restaurante
+        self.assertIn('32,82', menu.display_text)  # sí el precio de venta (27,35 + 20 %)
         self.assertIn('Arroz del señorito', row['menu_text'])
 
     def test_row_without_menu_has_empty_menu_text(self):
