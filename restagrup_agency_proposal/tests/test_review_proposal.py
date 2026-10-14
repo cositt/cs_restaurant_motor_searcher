@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import re
+
 from odoo.tests.common import TransactionCase, tagged
 
 WIZARD = 'restagrup.firewall.wizard'
@@ -42,6 +44,13 @@ class TestReviewProposal(TransactionCase):
         self.assertTrue(review.is_review)
         for text in ('ag-prop@example.com', 'Casa Barata', 'Casa Cara', 'por persona'):
             self.assertIn(text, review.message)
+
+    def test_review_prices_use_the_user_decimal_separator(self):
+        self.env['res.lang']._activate_lang('es_ES')
+        wizard = self._wizard().with_context(lang='es_ES')
+        review = self.env[WIZARD].browse(wizard.action_send()['res_id'])
+        self.assertTrue(re.search(r'\d,\d{2} € por persona', review.message), review.message)
+        self.assertFalse(re.search(r'\d\.\d{2} € por persona', review.message), review.message)
 
     def test_review_states_whether_restaurant_names_are_shown(self):
         self.search.restaurant_visible = False

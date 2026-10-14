@@ -57,12 +57,17 @@ class RestaurantChangeWizard(models.TransientModel):
         if not self.notify_restaurant:
             return False
         old, new = self.chosen_line_id, self.replacement_line_id
+        notice_line = self.env['restagrup.restaurant.notice.wizard.line'].new({
+            'restaurant_id': old.partner_id.id, 'search_line_id': old.id,
+            'event_label': self.search_id._event_label() or self.search_id.display_name})
+        notice_line.wizard_id = self.env['restagrup.restaurant.notice.wizard'].new({'lead_id': self.search_id.lead_id.id})
+        subject, body = notice_line._render_notice(self.subject, self.body)
         return _(
             'Se cancelará %(old)s y se le escribirá a %(email)s.\nSustituto: %(new)s.\n\nAsunto: %(subject)s\n\n'
             '%(body)s') % {
             'old': old.name, 'email': (old.partner_id.email or '').strip() or '—',
-            'new': new.name if new else _('ninguno (solo se cancela)'), 'subject': self.subject or '',
-            'body': html2plaintext(self.body or '').strip()}
+            'new': new.name if new else _('ninguno (solo se cancela)'), 'subject': subject,
+            'body': html2plaintext(body).strip()}
 
     def action_confirm(self):
         self.ensure_one()

@@ -123,3 +123,14 @@ class TestFinalData(TransactionCase):
         self.env['ir.config_parameter'].sudo().set_param('restagrup.final_data_days', '14')
         self.env['restagrup.lead.event']._cron_final_data_reminders()
         self.assertTrue(self._activities(event.lead_id))
+
+    def test_without_anyone_to_warn_a_note_is_left_in_the_chatter_once(self):
+        self.env['ir.config_parameter'].sudo().set_param('restagrup.alert_user_id', '')
+        event = self._event(days_ahead=3)
+        event.lead_id.user_id = False
+        self.env['restagrup.lead.event']._cron_final_data_reminders()
+        self.env['restagrup.lead.event']._cron_final_data_reminders()
+        notes = event.lead_id.message_ids.filtered(lambda m: 'Datos pendientes antes del servicio' in (m.body or ''))
+        self.assertEqual(len(notes), 1)
+        self.assertIn('Contacto del guía', notes.body)
+        self.assertFalse(self._activities(event.lead_id))

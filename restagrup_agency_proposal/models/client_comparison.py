@@ -5,6 +5,7 @@ from markupsafe import Markup
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
+from odoo.tools.misc import formatLang
 
 REPORT = 'restagrup_agency_proposal.report_client_comparison'
 
@@ -72,8 +73,9 @@ class ClientComparisonWizard(models.TransientModel):
 
     def _fw_review_proposal(self):
         search = self.search_id
-        options = '\n'.join('• %s — %.2f € por persona%s' % (
-            row['name'], row['price_per_person'], (' · %s' % row['menu'].name) if row['menu'] else '')
+        options = '\n'.join('• %s — %s € por persona%s' % (
+            row['name'], formatLang(self.env, row['price_per_person'], digits=2),
+            (' · %s' % row['menu'].name) if row['menu'] else '')
             for row in search.restagrup_comparison_rows())
         return _(
             'Se enviará a %(email)s la propuesta de %(search)s con estas opciones:\n%(options)s\n\n'

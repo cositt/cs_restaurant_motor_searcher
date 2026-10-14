@@ -30,12 +30,13 @@ class RestaurantNoticeWizard(models.TransientModel):
         lines = self.line_ids.filtered('selected')
         if not lines:
             return False
-        recipients = '\n'.join('• %s <%s> (%s)' % (
-            line.restaurant_id.name, (line.restaurant_id.email or '').strip() or '—', line.event_label or '—')
-            for line in lines)
-        return _('Se enviará este aviso a:\n%(recipients)s\n\nAsunto: %(subject)s\n\n%(body)s') % {
-            'recipients': recipients, 'subject': self.subject or '',
-            'body': html2plaintext(self.body or '').strip()}
+        blocks = []
+        for line in lines:
+            subject, body = line._render_notice(self.subject, self.body)
+            blocks.append(_('Para: %(name)s <%(email)s> (%(event)s)\nAsunto: %(subject)s\n\n%(body)s') % {
+                'name': line.restaurant_id.name, 'email': (line.restaurant_id.email or '').strip() or '—',
+                'event': line.event_label or '—', 'subject': subject, 'body': html2plaintext(body).strip()})
+        return '\n\n— — —\n\n'.join(blocks)
 
     def action_send(self):
         self.ensure_one()
@@ -98,15 +99,20 @@ class RestaurantNoticeWizardLine(models.TransientModel):
             '{comensales}': str((event.pax or search.min_capacity) or ''),
         }
 
+    def _render_notice(self, subject, body):
+        """Asunto y cuerpo (HTML) con los marcadores {restaurante}, {grupo}… ya sustituidos para este restaurante."""
+        self.ensure_one()
+        rendered_subject, rendered_body = subject or '', body or ''
+        for key, value in self._placeholder_values().items():
+            rendered_subject = rendered_subject.replace(key, value)
+            rendered_body = rendered_body.replace(key, str(escape(value)))
+        return rendered_subject, rendered_body
+
     def _send_notice(self, subject, body):
         """Envía el aviso por el hilo de la hoja de servicio (o, si aún no hay, por el de la petición de
         presupuesto) para que las respuestas vuelvan enlazadas, y lo deja registrado para el seguimiento."""
         self.ensure_one()
-        values = self._placeholder_values()
-        rendered_subject, rendered_body = subject, body
-        for key, value in values.items():
-            rendered_subject = rendered_subject.replace(key, value)
-            rendered_body = rendered_body.replace(key, str(escape(value)))
+        rendered_subject, rendered_body = self._render_notice(subject, body)
         thread = self.po_id.sudo() if self.po_id else self.search_line_id
         user = self.env.user
         message = thread.message_post(
