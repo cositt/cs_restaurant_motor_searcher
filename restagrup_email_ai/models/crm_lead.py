@@ -123,11 +123,11 @@ class CrmLead(models.Model):
         for event in events:
             label = self._restagrup_event_label(event)
             if not event.city:
-                missing.append(_('Ciudad: %s') % label)
+                missing.append(_('Ciudad del servicio (%s)') % label)
             if not event.event_date:
-                missing.append(_('Fecha: %s') % label)
+                missing.append(_('Fecha del servicio (%s)') % label)
             if not event.pax:
-                missing.append(_('Número de comensales: %s') % label)
+                missing.append(_('Número de comensales del servicio (%s)') % label)
         return missing
 
     @staticmethod

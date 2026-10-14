@@ -68,6 +68,7 @@ class TestLeadCompletion(TransactionCase):
         text = lead._restagrup_missing_request_data()
         self.assertEqual(len(text), 2)
         self.assertTrue(any('Fecha' in item and 'Sevilla' in item for item in text))
+        self.assertTrue(all('del servicio (' in item for item in text), text)
         self.assertTrue(any('comensales' in item.lower() for item in text))
 
     def test_incomplete_request_queues_an_email_to_the_sender_asking_only_for_what_is_missing(self):

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
+from odoo.tools.misc import formatLang
 
 COURSES = [
     ('entrante', 'Entrante'),
@@ -123,8 +124,8 @@ class RestaurantMenu(models.Model):
         self.ensure_one()
         header = menu_name = self.name or ''
         if with_price and self.sale_price:
-            header = _('%(name)s — %(price).2f %(symbol)s por persona', name=menu_name,
-                       price=self.sale_price, symbol=self.currency_id.symbol or '')
+            header = _('%(name)s — %(price)s %(symbol)s por persona', name=menu_name,
+                       price=formatLang(self.env, self.sale_price, digits=2), symbol=self.currency_id.symbol or '')
         parts = [header]
         description = (self.description or '').strip()
         if description:

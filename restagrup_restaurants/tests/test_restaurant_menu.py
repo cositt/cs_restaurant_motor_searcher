@@ -54,8 +54,8 @@ class TestRestaurantMenu(TransactionCase):
         menu = self._menu(drinks_included=True, drinks_description='Vino, agua y café')
         text = menu.display_text
         self.assertIn('Menú grupo clásico', text)
-        self.assertIn('38.40', text)  # precio de venta: 32 de coste + 20 % de margen
-        self.assertNotIn('32.00', text)  # el coste del restaurante no sale
+        self.assertIn('38,40', text)  # precio de venta: 32 de coste + 20 % de margen
+        self.assertNotIn('32,00', text)  # el coste del restaurante no sale
         self.assertLess(text.index('Croquetas caseras'), text.index('Solomillo ibérico'))
         self.assertLess(text.index('Solomillo ibérico'), text.index('Tarta de queso'))
         self.assertIn('gluten, lácteos', text)
@@ -86,6 +86,11 @@ class TestRestaurantMenu(TransactionCase):
     def test_menu_can_have_only_a_description(self):
         menu = self.Menu.create({'name': 'Solo texto', 'partner_id': self.restaurant.id, 'description': 'Paella'})
         self.assertIn('Paella', menu.display_text)
+
+    def test_season_is_shown_as_a_year_without_thousands_separator(self):
+        for view_type in ('list', 'form'):
+            arch = self.env['restagrup.restaurant.menu'].get_view(view_type=view_type)['arch']
+            self.assertIn('enable_formatting', arch, view_type)
 
     def test_season_defaults_to_the_current_year(self):
         from odoo import fields
