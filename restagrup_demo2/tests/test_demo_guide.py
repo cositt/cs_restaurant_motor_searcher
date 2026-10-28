@@ -78,6 +78,19 @@ class TestDemo2Guide(TransactionCase):
         self.assertIn('Fecha', pending.body)
         self.assertNotIn('Ciudad', pending.body)  # solo lo que falta
 
+    def test_the_approver_sees_the_agency_email_and_why_the_date_is_asked(self):
+        lead = self.env['crm.lead'].browse(self._arrive())
+        note = ' '.join(self._pending(lead).message_ids.mapped('body'))
+        self.assertIn('lucia@costaviajes.demo', note)
+        self.assertIn('el hotel aún no nos ha confirmado', note)  # el motivo, en palabras de la agencia
+        self.assertIn('Fecha del servicio', note)
+
+    def test_the_agency_email_looks_like_a_real_one(self):
+        lead = self.env['crm.lead'].browse(self._arrive())
+        original = lead.message_ids.filtered(lambda m: m.message_type == 'email').sorted('id')[:1]
+        self.assertIn('Departamento de Grupos', original.body)  # firma de agencia
+        self.assertIn('<li>', original.body)  # correo con formato, no texto plano
+
     def test_agency_email_is_idempotent(self):
         first = self._arrive()
         self.assertEqual(self._arrive(), first)
@@ -104,6 +117,21 @@ class TestDemo2Guide(TransactionCase):
         self.assertTrue(self.guide.get_state()['done']['approve'])
 
     # --- varias opciones ---
+
+    def test_opening_restaurants_or_menus_completes_step_5(self):
+        """El paso 5 solo es mirar fichas y menús: abrirlos lo da por hecho y la guía pasa al 6."""
+        self._completed_lead()
+        self.assertFalse(self.guide.get_state()['done']['menus'])
+        self.guide.mark_menus_seen()
+        self.assertTrue(self.guide.get_state()['done']['menus'])
+        self.assertFalse(self.guide.get_state()['done']['search'])
+
+    def test_menus_seen_belongs_to_the_current_walkthrough(self):
+        self._completed_lead()
+        self.guide.mark_menus_seen()
+        self.guide.reset_demo()
+        self._completed_lead()
+        self.assertFalse(self.guide.get_state()['done']['menus'])
 
     def test_request_quotes_needs_a_search_first(self):
         self._completed_lead()
@@ -163,7 +191,18 @@ class TestDemo2Guide(TransactionCase):
     def test_reset_removes_the_walkthrough_but_keeps_the_sample_documents(self):
         other = self.env['crm.lead'].create({'name': 'Documento de ejemplo'})
         self._quoted_search()
+        self.env['res.partner'].create({'name': 'Costa Viajes Ibéricos', 'is_company': True})  # nace al crear el pedido
         self.guide.reset_demo()
         self.assertFalse(self.guide._lead())
+        self.assertFalse(self.env['res.partner'].search([('name', '=', 'Costa Viajes Ibéricos')]))
         self.assertTrue(other.exists())
         self.assertFalse(self.guide.get_state()['done']['email'])
+
+    def test_every_method_the_browser_calls_works_without_records(self):
+        """El JS llama orm.call(GUIDE, method, []) sin ids: si un método pierde @api.model, call_kw falla."""
+        methods = ['get_state', 'reset_demo', 'mark_menus_seen', 'simulate_agency_email', 'simulate_agency_reply',
+                   'request_quotes', 'simulate_restaurant_replies', 'confirm_quotes', 'toggle_visible',
+                   'apply_gratuities']
+        model = type(self.env['restagrup.demo2.guide'])
+        for name in methods:
+            self.assertTrue(getattr(getattr(model, name), '_api_model', False), name)

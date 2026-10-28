@@ -27,6 +27,12 @@
                             <div t-if="state.notes" class="o_rg_step_say">
                                 <i class="fa fa-comment-o"/> <t t-esc="step.say"/>
                             </div>
+                            <ol t-if="state.notes" class="o_rg_step_how">
+                                <li t-foreach="step.how" t-as="row" t-key="row_index">
+                                    <span class="o_rg_how_click" t-esc="row[0]"/>
+                                    <span class="o_rg_how_why" t-esc="row[1]"/>
+                                </li>
+                            </ol>
                         </div>
                         <div class="o_rg_step_actions">
                             <t t-foreach="buttonsFor(step)" t-as="btn" t-key="btn_index">
