@@ -5,6 +5,10 @@ from odoo import models
 class PurchaseOrder(models.Model):
     _inherit = 'purchase.order'
 
+    def _get_edi_builders(self):
+        """Sin «Conecte con su software» en el portal: la facturación electrónica no aplica a los restaurantes."""
+        return []
+
     def restagrup_document_services(self):
         """Servicios de la hoja de servicio con lo que cobra el restaurante (nunca el precio al cliente)."""
         self.ensure_one()

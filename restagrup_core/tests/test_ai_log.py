@@ -149,7 +149,7 @@ class TestAiNotifications(TransactionCase):
             log = self._run('quote_extraction', {'importe': 1200})
         self.assertEqual(log.activity_ids.user_id, self.owner)
         self.assertIn('Casa Prueba', log.activity_ids.summary)
-        self.assertIn('1200', log.activity_ids.summary)
+        self.assertIn('1.200,00 €', log.activity_ids.summary)
         toasts = self._toasts(sendone)
         self.assertEqual(len(toasts), 1)
         target, _type, payload = toasts[0]

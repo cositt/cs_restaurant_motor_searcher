@@ -14,7 +14,7 @@ Hoy es {hoy}. Recibirás los datos que se pidieron, los servicios del grupo con 
 Devuelve SOLO un objeto JSON, sin texto adicional, con la clave "eventos": una lista con un objeto por cada
 servicio sobre el que la respuesta aporte datos, con las claves "id" (el de la lista, nunca otro),
 "ciudad" (string o null), "fecha" (YYYY-MM-DD o null; si no indica el año, la próxima vez que ocurra
-a partir de hoy) y "pax" (entero o null). Si el grupo no tiene servicios en la lista, devuelve también las
+a partir de hoy), "hora" (HH:MM en 24 h o null; aunque no se haya pedido) y "pax" (entero o null). Si el grupo no tiene servicios en la lista, devuelve también las
 claves sueltas "ciudad", "fecha" y "pax". Si un dato no aparece claramente, pon null: nunca lo inventes."""
 
 
@@ -146,6 +146,8 @@ class CrmLead(models.Model):
                 vals['event_date'] = self._restagrup_safe_date(item['fecha'])
             if not event.pax and self._restagrup_safe_int(item.get('pax')) > 0:
                 vals['pax'] = self._restagrup_safe_int(item['pax'])
+            if not event.event_time and self._restagrup_safe_hour(item.get('hora')):
+                vals['event_time'] = self._restagrup_safe_hour(item['hora'])
             if vals:
                 event.write(vals)
         if not own:  # sin servicios: valen los datos sueltos

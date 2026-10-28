@@ -142,6 +142,13 @@ class RestagrupAiLog(models.Model):
         except Exception:  # noqa: BLE001
             _logger.exception('No se pudo enviar el aviso emergente a %s', user.display_name)
 
+    def _format_ai_amount(self, amount):
+        """La IA devuelve el importe como número o texto: se da formato si es número, si no se deja tal cual."""
+        try:
+            return self.env['restagrup.pricing'].format_amount(float(amount))
+        except (TypeError, ValueError):
+            return amount
+
     def _review_text(self):
         """(resumen, nota) del aviso de este registro, en el idioma del equipo."""
         self.ensure_one()
@@ -149,7 +156,8 @@ class RestagrupAiLog(models.Model):
         label = self.source_label or ''
         if self.kind == 'quote_extraction':
             amount = data.get('importe')
-            return (_('Presupuesto de %(name)s: %(amount)s € (por confirmar)') % {'name': label, 'amount': amount}
+            return (_('Presupuesto de %(name)s: %(amount)s € (por confirmar)') % {
+                'name': label, 'amount': self._format_ai_amount(amount)}
                     if amount else _('Respuesta de %s: revisa el presupuesto') % label), data.get('notas')
         if self.kind == 'data_extraction':
             return _('Datos de ficha propuestos para %s') % label, False

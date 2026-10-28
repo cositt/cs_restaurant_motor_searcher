@@ -15,7 +15,7 @@
                         invisible="state not in ('sale', 'done') or restagrup_paid"/>
                 <button name="action_unmark_paid" type="object" string="Desmarcar pago" class="btn-secondary"
                         invisible="not restagrup_paid" confirm="¿Seguro que el pago no está recibido?"/>
-                <button name="action_print_voucher" type="object" string="Bono de agencia" class="btn-primary"
+                <button name="action_send_voucher" type="object" string="Enviar bono de agencia" class="btn-primary"
                         invisible="not restagrup_paid"/>
             </xpath>
             <xpath expr="//field[@name='order_line']/list/field[@name='product_uom_qty']" position="after">

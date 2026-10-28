@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 from odoo import api, models
+from odoo.tools.misc import formatLang
 
 MARGIN_PARAM = 'restagrup.default_margin_percent'
 DEFAULT_MARGIN_PERCENT = 20.0
+TEAM_LANG = 'es_ES'  # idioma de los textos internos (chatter, avisos), corra quien corra el proceso
 
 
 class RestagrupPricing(models.AbstractModel):
@@ -27,3 +29,8 @@ class RestagrupPricing(models.AbstractModel):
         if percent is None:
             percent = self.margin_percent()
         return restaurant_price * (1 + percent / 100)
+
+    @api.model
+    def format_amount(self, amount):
+        """«1.102,50»: importe para los textos del equipo, también desde el correo entrante (sin idioma de usuario)."""
+        return formatLang(self.with_context(lang=TEAM_LANG).env, amount or 0.0, digits=2)

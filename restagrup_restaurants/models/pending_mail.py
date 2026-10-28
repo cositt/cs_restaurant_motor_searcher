@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 import logging
 
+from markupsafe import Markup
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
+from odoo.tools import html_sanitize
 
 _logger = logging.getLogger(__name__)
 
@@ -15,6 +18,7 @@ class RestagrupPendingMail(models.Model):
 
     Los envíos que dispara una persona con un botón no pasan por aquí: el clic ya es la aprobación."""
     _name = 'restagrup.pending.mail'
+    _inherit = ['mail.thread']
     _description = 'Correo pendiente de aprobar'
     _order = 'id desc'
     _rec_name = 'subject'
@@ -36,6 +40,10 @@ class RestagrupPendingMail(models.Model):
     )
     search_id = fields.Many2one(related='line_id.search_id', string='Búsqueda', store=True)
     lead_id = fields.Many2one(related='line_id.search_id.lead_id', string='Grupo', store=True)
+    group_id = fields.Many2one(
+        'crm.lead', string='Grupo', compute='_compute_group_id',
+        help='La petición de la agencia de la que trata este correo.',
+    )
     recipient_email = fields.Char(string='Destinatario')
     subject = fields.Char(string='Asunto', required=True)
     body = fields.Text(string='Mensaje', required=True)
@@ -43,6 +51,11 @@ class RestagrupPendingMail(models.Model):
     approved_by = fields.Many2one('res.users', string='Aprobado por', readonly=True)
     approved_date = fields.Datetime(string='Fecha de aprobación', readonly=True)
     error_message = fields.Char(string='Error', readonly=True)
+
+    @api.depends('lead_id', 'request_lead_id')
+    def _compute_group_id(self):
+        for mail in self:
+            mail.group_id = mail.request_lead_id or mail.lead_id
 
     @api.model
     def _send_mode(self):
@@ -88,10 +101,52 @@ class RestagrupPendingMail(models.Model):
         if self.search_count([('request_lead_id', '=', lead.id), ('kind', '=', 'lead_data_request'),
                               ('state', '=', 'pending')]):
             return self.browse()
-        return self.create({
+        mail = self.create({
             'kind': 'lead_data_request', 'request_lead_id': lead.id, 'recipient_email': email_to,
             'subject': subject, 'body': body, 'reason': _('Faltan datos: %s') % '; '.join(missing),
         })
+        mail._post_original_request(missing)
+        return mail
+
+    def _original_request_email(self):
+        """(remitente, fecha, cuerpo saneado) del correo con el que llegó la petición. Recién llegado aún no está en
+        el lead y viene en el contexto; si no, el primer correo guardado del lead. None si se creó a mano."""
+        incoming = self.env.context.get('restagrup_incoming_mail')
+        if incoming and incoming.get('body'):
+            try:
+                date = fields.Datetime.to_datetime(incoming.get('date'))
+            except (TypeError, ValueError):
+                date = False
+            return incoming.get('email_from') or '', date, Markup(html_sanitize(incoming['body']))
+        first = self.request_lead_id.message_ids.filtered(lambda m: m.message_type == 'email').sorted('id')[:1]
+        if not first:
+            return None
+        return first.email_from or first.author_id.display_name or '', first.date, first.body  # ya saneado
+
+    def _post_original_request(self, missing):
+        """Deja en el chatter el correo con el que llegó la petición y lo que la IA echa en falta, para que quien
+        aprueba vea por qué se piden datos sin tener que abrir el grupo."""
+        self.ensure_one()
+        original = self._original_request_email()
+        missing_html = Markup('').join(Markup('<li>%s</li>') % item for item in missing)
+        if original:
+            sender, date, body = original
+            when = fields.Datetime.context_timestamp(self, date).strftime('%d/%m/%Y %H:%M') if date else ''
+            header = Markup('<p><b>%s</b><br/>%s</p>') % (
+                _('Correo original de la petición'), ' · '.join(part for part in (sender, when) if part))
+            # Un <div> y no un <blockquote>: el chatter pliega las citas («•••») y el correo tiene que verse entero.
+            quoted = Markup('<div style="border-left: 3px solid #ccc; padding-left: 10px; margin: 6px 0;">%s</div>') % body
+        else:
+            header = Markup('<p><b>%s</b></p>') % _('La petición no tiene correo original (se creó a mano).')
+            quoted = Markup('')
+        self.message_post(
+            body=header + quoted + Markup('<p><b>%s</b> %s</p><ul>%s</ul>') % (
+                _('Por qué se piden datos:'),
+                _('para buscar restaurante cada servicio necesita ciudad, fecha y número de comensales'
+                  ' (el aforo y la disponibilidad dependen del día), y en el correo falta:'),
+                missing_html),
+            subtype_xmlid='mail.mt_note',
+        )
 
     def _still_applies_lead_data_request(self):
         lead = self.request_lead_id

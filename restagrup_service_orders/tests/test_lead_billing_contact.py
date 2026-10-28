@@ -30,6 +30,16 @@ class TestLeadBillingContact(TransactionCase):
     def _email_lead(self, email_from='"Eleanor Whitfield" <eleanor@sunrise.test>', **vals):
         return self.env['crm.lead'].create(dict({'name': 'Solicitud por correo', 'email_from': email_from}, **vals))
 
+    def test_contact_created_from_sender_hangs_from_the_agency(self):
+        """La agencia que leyó la IA es la empresa del pedido; quien escribió, su contacto."""
+        lead = self._email_lead(email_from='"Lucía Prieto" <lucia@costaviajes.test>',
+                                partner_name='Costa Viajes Ibéricos')
+        self._chosen_search(lead).action_create_sale_order()
+        client = lead.partner_id
+        self.assertEqual(client.name, 'Lucía Prieto')
+        self.assertTrue(client.parent_id.is_company)
+        self.assertEqual(client.commercial_partner_id.name, 'Costa Viajes Ibéricos')
+
     def test_creates_contact_from_sender(self):
         lead = self._email_lead(phone='+44 161 555 0142')
         self.assertFalse(lead.partner_id)

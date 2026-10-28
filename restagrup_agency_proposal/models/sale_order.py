@@ -3,12 +3,21 @@ from collections import defaultdict
 
 from datetime import timedelta
 
+from markupsafe import Markup
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 
+VOUCHER_REPORT = 'restagrup_agency_proposal.report_booking_voucher'
+
+
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
+
+    def _get_edi_builders(self):
+        """Sin «Conecte con su software» en el portal: la facturación electrónica no aplica a las agencias."""
+        return []
 
     def restagrup_proposal_groups(self):
         """Líneas incluidas en la propuesta, agrupadas por restaurante y
@@ -62,12 +71,43 @@ class SaleOrder(models.Model):
             order.write({'restagrup_paid': False, 'restagrup_paid_date': False})
             order.message_post(body=_('Pago desmarcado.'))
 
+    def _restagrup_check_paid(self):
+        if not self.restagrup_paid:
+            raise UserError(_('El bono de agencia se emite cuando el pago está recibido: marca antes el pedido como pagado.'))
+
     def action_print_voucher(self):
         """Bono de servicio: solo existe cuando el pago está recibido y marcado."""
         self.ensure_one()
-        if not self.restagrup_paid:
-            raise UserError(_('El bono de agencia se emite cuando el pago está recibido: marca antes el pedido como pagado.'))
+        self._restagrup_check_paid()
         return self.env.ref('restagrup_agency_proposal.action_report_booking_voucher').report_action(self)
+
+    def action_send_voucher(self):
+        """Envía el bono a la agencia: abre el correo con el PDF adjunto para revisarlo y, al enviar, queda en el
+        historial del pedido. No hace falta descargarlo."""
+        self.ensure_one()
+        self._restagrup_check_paid()
+        pdf, _kind = self.env['ir.actions.report']._render_qweb_pdf(VOUCHER_REPORT, self.ids)
+        attachment = self.env['ir.attachment'].create({
+            'name': 'Bono-Agencia-%s.pdf' % self.name, 'raw': pdf, 'mimetype': 'application/pdf',
+            'res_model': 'mail.compose.message', 'res_id': 0,
+        })
+        body = Markup('<p>%s</p><p>%s</p><p>%s</p>') % (
+            _('Hola:'),
+            _('Recibido vuestro pago, os enviamos el bono de servicio del pedido %s. Es el documento que acompaña al'
+              ' grupo el día del servicio: presentadlo en el restaurante.') % self.name,
+            _('Un saludo.'),
+        )
+        return {
+            'type': 'ir.actions.act_window', 'name': _('Enviar bono de agencia'), 'res_model': 'mail.compose.message', 'view_mode': 'form',
+            'views': [(False, 'form')], 'target': 'new',
+            'context': {
+                'default_model': self._name, 'default_res_ids': self.ids, 'default_composition_mode': 'comment',
+                'default_partner_ids': self.partner_id.ids, 'default_attachment_ids': attachment.ids,
+                'default_subject': _('Bono de servicio - %s') % self.name, 'default_body': body,
+                'default_email_from': self.env['restagrup.system.mail'].email_from(
+                    self.user_id.email_formatted or self.env.user.email_formatted),
+            },
+        }
 
     restagrup_first_service_date = fields.Date(
         string='Primer servicio', compute='_compute_restagrup_service_dates', store=True)

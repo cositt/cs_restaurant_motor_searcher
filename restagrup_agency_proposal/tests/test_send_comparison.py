@@ -36,10 +36,18 @@ class TestSendComparison(TransactionCase):
         wizard = self._wizard()
         self.assertEqual(wizard.email_to, 'eleanor@cliente.example')
         self.assertIn('Málaga', wizard.subject)
-        self.assertFalse(wizard.include_portal_link)
+        self.assertTrue(wizard.include_portal_link, 'Por defecto la agencia recibe también el enlace para elegir.')
 
-    def test_sends_only_the_pdf_by_default(self):
-        self._wizard().action_send()
+    def test_the_form_opens_with_subject_and_message_filled(self):
+        """Lo que ve quien envía al abrir la ventana, antes de guardar nada."""
+        defaults = self.env['restagrup.client.comparison.wizard'].with_context(
+            default_search_id=self.search.id).default_get(['subject', 'body', 'include_portal_link'])
+        self.assertIn('Málaga', defaults['subject'])
+        self.assertIn('comparativa', defaults['body'])
+        self.assertTrue(defaults['include_portal_link'])
+
+    def test_sends_only_the_pdf_when_the_link_is_unticked(self):
+        self._wizard(include_portal_link=False).action_send()
         message = self._last_message()
         self.assertTrue(message)
         self.assertEqual(message.outgoing_email_to, 'eleanor@cliente.example')
@@ -79,3 +87,12 @@ class TestSendComparison(TransactionCase):
         self.lead.with_context(restagrup_skip_firewall=True).action_pass_to_file()
         self._wizard().action_send()
         self.assertEqual(self.lead.stage_id, self.env.ref('restagrup_service_orders.stage_expediente'))
+
+    def test_show_restaurants_switch_sits_next_to_the_send_button(self):
+        """El interruptor «Mostrar restaurantes» va en la cabecera, junto a «Enviar comparativa al cliente»."""
+        from lxml import etree
+        arch = etree.fromstring(self.env['restagrup.restaurant.search'].get_view(view_type='form')['arch'])
+        switches = arch.xpath("//header//field[@name='restaurant_visible']")
+        self.assertEqual(len(switches), 1)
+        self.assertEqual(switches[0].get('widget'), 'boolean_toggle')
+        self.assertEqual(len(arch.xpath("//field[@name='restaurant_visible']")), 1, 'Solo un sitio para cambiarlo.')

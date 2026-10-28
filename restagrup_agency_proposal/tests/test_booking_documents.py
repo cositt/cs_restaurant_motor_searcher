@@ -53,6 +53,13 @@ class TestBookingDocuments(TransactionCase):
         self.order.action_confirm()
         return self.order.restaurant_po_ids[:1]
 
+    # --- portal de la agencia y del restaurante ---
+
+    def test_portal_offers_no_software_connection(self):
+        """«Conecte con su software» (facturación electrónica) no aplica a agencias ni a restaurantes."""
+        self.assertFalse(self.order._get_edi_builders())
+        self.assertFalse(self._purchase()._get_edi_builders())
+
     # --- datos del servicio ---
 
     def test_service_info_counts_total_diners_with_gratuities(self):
@@ -126,6 +133,33 @@ class TestBookingDocuments(TransactionCase):
         self.assertFalse(self.order.restagrup_paid)
         with self.assertRaises(UserError):
             self.order.action_print_voucher()
+
+    def test_send_voucher_is_blocked_until_the_order_is_paid(self):
+        with self.assertRaises(UserError):
+            self.order.action_send_voucher()
+
+    def test_send_voucher_opens_the_email_to_the_agency_with_the_pdf(self):
+        self.order.action_mark_paid()
+        action = self.order.action_send_voucher()
+        self.assertEqual(action['res_model'], 'mail.compose.message')
+        self.assertEqual(action['name'], 'Enviar bono de agencia')
+        ctx = action['context']
+        self.assertEqual(ctx['default_model'], 'sale.order')
+        self.assertEqual(ctx['default_res_ids'], self.order.ids)
+        self.assertEqual(ctx['default_partner_ids'], self.order.partner_id.ids)
+        self.assertIn(self.order.name, ctx['default_subject'])
+        attachment = self.env['ir.attachment'].browse(ctx['default_attachment_ids'])
+        self.assertEqual(attachment.name, 'Bono-Agencia-%s.pdf' % self.order.name)
+        self.assertEqual(attachment.mimetype, 'application/pdf')
+
+    def test_sent_voucher_stays_in_the_chatter_with_its_pdf(self):
+        self.order.action_mark_paid()
+        ctx = self.order.action_send_voucher()['context']
+        self.env['mail.compose.message'].with_context(ctx).create({}).action_send_mail()
+        message = self.order.message_ids.filtered(lambda m: m.message_type == 'comment' and m.attachment_ids)[:1]
+        self.assertTrue(message, 'El bono enviado queda en el historial del pedido.')
+        self.assertEqual(message.attachment_ids.name, 'Bono-Agencia-%s.pdf' % self.order.name)
+        self.assertIn(self.order.partner_id, message.partner_ids)
 
     def test_voucher_has_the_paid_stamp_and_no_prices(self):
         self.order.action_mark_paid()

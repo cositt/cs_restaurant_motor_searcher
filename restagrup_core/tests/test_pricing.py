@@ -52,3 +52,12 @@ class TestPricing(TransactionCase):
         settings = self.env['res.config.settings'].create({'restagrup_default_margin_percent': 0.0})
         settings.execute()
         self.assertEqual(self._pricing().margin_percent(), 0.0)
+
+    # --- importes en los textos que lee el equipo (chatter, avisos) ---
+
+    def test_format_amount_uses_spanish_separators(self):
+        self.assertEqual(self._pricing().format_amount(1102.5), '1.102,50')
+
+    def test_format_amount_ignores_an_english_context(self):
+        """El correo entrante y los procesos automáticos corren sin idioma de usuario: el importe sale igual."""
+        self.assertEqual(self._pricing().with_context(lang='en_US').format_amount(1170.0), '1.170,00')

@@ -17,6 +17,7 @@ class RestagrupLeadEvent(models.Model):
     sequence = fields.Integer(string='Orden', default=10)
     city = fields.Char(string='Ciudad')
     event_date = fields.Date(string='Fecha')
+    event_time = fields.Float(string='Hora', help='Hora del servicio (p. ej. 14:00). Pasa al presupuesto de venta.')
     event_type_id = fields.Many2one('restagrup.event.type', string='Tipo', ondelete='restrict')
     pax = fields.Integer(string='Comensales')
     notes = fields.Text(string='Notas')

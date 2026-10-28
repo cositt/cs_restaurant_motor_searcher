@@ -70,7 +70,7 @@ class TestAiActivityRestaurants(TransactionCase):
         self._reply(self.line, {'importe': 1200})
         log = self._logs('quote_extraction', self.line)
         self.assertEqual(log.activity_ids.user_id, self.owner)
-        self.assertIn('1200', log.activity_ids.summary)
+        self.assertIn('1.200,00 €', log.activity_ids.summary)
         self.line.action_register_quote()
         self.assertFalse(log.activity_ids)
 

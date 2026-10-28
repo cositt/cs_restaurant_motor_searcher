@@ -12,7 +12,7 @@
                 </header>
                 <field name="create_date" string="Creado"/>
                 <field name="recipient_email"/>
-                <field name="lead_id"/>
+                <field name="group_id"/>
                 <field name="line_id"/>
                 <field name="reason"/>
                 <field name="subject"/>
@@ -38,7 +38,7 @@
                     <group>
                         <group>
                             <field name="kind"/>
-                            <field name="lead_id"/>
+                            <field name="group_id"/>
                             <field name="line_id"/>
                             <field name="reason"/>
                         </group>
@@ -54,6 +54,7 @@
                         <field name="body" nolabel="1" colspan="2" readonly="state != 'pending'"/>
                     </group>
                 </sheet>
+                <chatter/>
             </form>
         </field>
     </record>

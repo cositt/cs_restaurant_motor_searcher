@@ -124,6 +124,11 @@ class TestRestaurantSearch(TransactionCase):
         line.action_register_quote()
         self.assertEqual(line.etiqueta, 'presupuesto_recibido')
 
+    def test_register_quote_note_shows_the_amount_in_spanish_format(self):
+        line = self._create_line(quote_amount=1102.5)
+        line.action_register_quote()
+        self.assertIn('1.102,50 €', self.search.message_ids[:1].body)
+
     # --- extracción IA del texto pegado (LLM mockeado, sin red real) ---
 
     def test_extract_quote_from_text_requires_text(self):

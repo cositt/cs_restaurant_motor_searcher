@@ -49,6 +49,12 @@ class TestMultiEventOrder(TransactionCase):
         self.assertEqual(str(line.service_date), '2026-11-15')
         self.assertEqual(line.service_event_type_id, self.dinner)
 
+    def test_event_hour_travels_to_the_order_line(self):
+        search = self._event_search(city='Sevilla', date='2026-12-11', pax=45)
+        search.event_id.event_time = 14.0
+        line = self._create_order(search, self.rest_b).order_line
+        self.assertEqual(line.service_hour, 14.0)
+
     def test_event_info_is_in_the_line_description(self):
         search = self._event_search(city='Sevilla', event_type=self.dinner, date='2026-11-16', pax=40)
         line = self._create_order(search, self.rest_b).order_line

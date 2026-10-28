@@ -1040,7 +1040,7 @@ class RestaurantSearchLine(models.Model):
         })
         self.search_id.message_post_if_exists(_(
             '%(name)s: presupuesto recibido — %(amount)s €.'
-        ) % {'name': self.name, 'amount': self.quote_amount})
+        ) % {'name': self.name, 'amount': self.env['restagrup.pricing'].format_amount(self.quote_amount)})
         if self.env.context.get('choose_after_register'):
             self._choose_line()
         return {'type': 'ir.actions.act_window_close'}
@@ -1091,5 +1091,5 @@ class RestaurantSearchLine(models.Model):
         self._fetch_google_phone()
         self.search_id.chosen_line_id = self.id
         self.search_id.message_post_if_exists(_('Elegido: %(name)s (presupuesto %(amount)s €).') % {
-            'name': self.name, 'amount': self.quote_amount,
+            'name': self.name, 'amount': self.env['restagrup.pricing'].format_amount(self.quote_amount),
         })
