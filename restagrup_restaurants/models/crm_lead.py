@@ -57,10 +57,14 @@ class CrmLead(models.Model):
     def _restagrup_can_ask(self):
         return bool(self._restagrup_sender_email()) and self.restagrup_data_request_count < MAX_DATA_REQUESTS
 
-    def _restagrup_data_request_content(self, missing, signer):
+    def _restagrup_data_request_content(self, missing, signer, option_lines=None):
+        """(asunto, cuerpo) de la petición de datos. `option_lines`: opciones orientativas que van antes de la firma."""
         subject = _('Datos que nos faltan de vuestra petición — %s') % (self.name or '')
         lines = [_('Hola,'), '', _('Para poder buscar restaurante nos faltan estos datos de vuestra petición:'), '']
-        lines += ['- %s' % item for item in missing] + ['', _('Gracias,'), signer]
+        lines += ['- %s' % item for item in missing]
+        if option_lines:
+            lines += [''] + list(option_lines)
+        lines += ['', _('Gracias,'), signer]
         return subject, '\n'.join(lines)
 
     def _restagrup_ask_for_missing_data(self):
@@ -79,8 +83,9 @@ class CrmLead(models.Model):
             queue._enqueue_lead_data_request(self, email_to, subject, body, missing)
         return True
 
-    def _restagrup_send_data_request(self, subject, body_text, email_to):
-        """Envía la petición por el hilo del lead: la respuesta de la agencia vuelve a este mismo lead."""
+    def _restagrup_send_data_request(self, subject, body_text, email_to, attachments=None):
+        """Envía la petición por el hilo del lead: la respuesta de la agencia vuelve a este mismo lead.
+        `attachments`: lista de (nombre, contenido), p. ej. el PDF de opciones orientativas."""
         self.ensure_one()
         self.message_post(
             body=Markup('<br/>').join(Markup.escape(line) for line in body_text.splitlines()),
@@ -89,6 +94,7 @@ class CrmLead(models.Model):
             subtype_xmlid='mail.mt_comment',
             email_from=self.env['restagrup.system.mail'].email_from(self.user_id.email or self.env.user.email),
             outgoing_email_to=email_to,
+            attachments=attachments or [],
         )
         self.restagrup_data_request_count += 1
 

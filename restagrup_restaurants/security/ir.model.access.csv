@@ -5,3 +5,6 @@ access_restagrup_pending_mail,restagrup.pending.mail,model_restagrup_pending_mai
 access_restagrup_ai_dashboard,restagrup.ai.dashboard,model_restagrup_ai_dashboard,base.group_user,1,1,1,1
 access_restagrup_restaurant_menu,restagrup.restaurant.menu,model_restagrup_restaurant_menu,base.group_user,1,1,1,1
 access_restagrup_restaurant_menu_line,restagrup.restaurant.menu.line,model_restagrup_restaurant_menu_line,base.group_user,1,1,1,1
+access_restagrup_pending_mail_option,restagrup.pending.mail.option,model_restagrup_pending_mail_option,base.group_user,1,1,1,1
+access_restagrup_approx_options_wizard,restagrup.approx.options.wizard,model_restagrup_approx_options_wizard,base.group_user,1,1,1,1
+access_restagrup_approx_options_wizard_line,restagrup.approx.options.wizard.line,model_restagrup_approx_options_wizard_line,base.group_user,1,1,1,1

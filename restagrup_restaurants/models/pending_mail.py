@@ -155,7 +155,8 @@ class RestagrupPendingMail(models.Model):
     def _send_lead_data_request(self):
         if not self.recipient_email:
             raise UserError(_('Este correo no tiene destinatario.'))
-        self.request_lead_id._restagrup_send_data_request(self.subject, self.body, self.recipient_email)
+        self.request_lead_id._restagrup_send_data_request(
+            self.subject, self.body, self.recipient_email, attachments=self._approx_attachments())
 
     def action_approve(self):
         """Envía los correos pendientes. Un fallo en uno queda anotado y no para al resto."""
