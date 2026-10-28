@@ -10,3 +10,4 @@ from . import ai_dashboard
 from . import restaurant_menu
 from . import client_comparison
 from . import pending_mail_approx
+from . import restaurant_search_bulk_quote
