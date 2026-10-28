@@ -79,9 +79,10 @@ class RestagrupPendingMail(models.Model):
         self.message_post(
             body=Markup('<p>%s</p><ul>%s</ul>') % (
                 _('%s ha añadido opciones orientativas al correo:') % self.env.user.name,
-                Markup('').join(Markup('<li>%s — %s: %s €</li>') % (
+                Markup('').join(Markup('<li>%s — %s: %s %s</li>') % (
                     option.partner_id.name, option.menu_name,
-                    self.env['restagrup.pricing'].format_amount(option.price_per_person))
+                    self.env['restagrup.pricing'].format_amount(option.price_per_person),
+                    option.currency_id.symbol or '€')
                     for option in self.option_ids)),
             subtype_xmlid='mail.mt_note',
         )

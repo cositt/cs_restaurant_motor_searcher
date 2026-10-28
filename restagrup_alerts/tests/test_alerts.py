@@ -96,9 +96,17 @@ class TestAlerts(TransactionCase):
         self.assertTrue(lead.restagrup_unseen)
         lead.user_id = self.ana
         self.assertEqual(self._alerts(self.ana)['new_request']['count'], 1)
-        lead.with_user(self.bea).web_read({'name': {}})
-        self.assertFalse(lead.restagrup_unseen)
+        lead.with_user(self.bea).web_read({'display_name': {}})
+        self.assertTrue(lead.restagrup_unseen, 'leer solo su nombre (desde otro registro) no es abrirla')
+        lead.with_user(self.bea).web_read({'name': {}, 'restagrup_unseen': {}})
+        self.assertFalse(lead.restagrup_unseen, 'abrir la ficha sí')
         self.assertNotIn('new_request', self._alerts(self.ana))
+
+    def test_opening_a_record_linked_to_the_request_does_not_mark_it_seen(self):
+        lead, pending = self._lead_with_pending(self.ana)
+        lead.restagrup_unseen = True
+        pending.with_user(self.ana).web_read({'request_lead_id': {'fields': {'display_name': {}}}})
+        self.assertTrue(lead.restagrup_unseen)
 
     def test_leads_created_by_hand_are_not_new_requests(self):
         lead = self.env['crm.lead'].create({'name': 'A mano', 'user_id': self.ana.id})

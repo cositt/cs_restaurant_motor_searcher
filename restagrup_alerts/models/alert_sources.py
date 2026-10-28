@@ -47,8 +47,10 @@ class CrmLead(models.Model):
         return res
 
     def web_read(self, specification):
-        # Abrir la ficha (lectura de un solo registro desde el cliente web) la da por vista.
-        unseen = self.filtered('restagrup_unseen') if len(self) == 1 and not self.env.user.share else self.browse()
+        # Solo la ficha de la petición pide este campo (va invisible en el formulario): abrirla la da por vista.
+        # Leer el lead desde otro registro (su nombre en un campo relacionado) no cuenta.
+        opened = len(self) == 1 and 'restagrup_unseen' in specification and not self.env.user.share
+        unseen = self.filtered('restagrup_unseen') if opened else self.browse()
         if unseen:
             unseen.sudo().restagrup_unseen = False
         return super().web_read(specification)
