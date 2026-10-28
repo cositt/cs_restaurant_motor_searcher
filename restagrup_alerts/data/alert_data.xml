@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Por defecto cada comercial ve los avisos de sus propias peticiones. -->
+    <record id="param_alerts_notify_owner" model="ir.config_parameter">
+        <field name="key">restagrup.alerts_notify_owner</field>
+        <field name="value">True</field>
+    </record>
+</odoo>
