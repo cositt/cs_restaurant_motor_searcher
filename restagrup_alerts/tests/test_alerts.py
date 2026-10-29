@@ -29,6 +29,8 @@ class TestAlerts(TransactionCase):
         cls.carla = cls.env['res.users'].create({'name': 'Carla Avisos', 'login': 'carla_avisos', 'group_ids': [(4, group_user.id)]})
         cls.env['crm.lead'].search([('user_id', '=', False)]).write({'user_id': cls.env.ref('base.user_admin').id})
         cls.env['crm.lead'].search([('restagrup_assigned_unseen', '=', True)]).write({'restagrup_assigned_unseen': False})
+        cls.env['sale.order'].search([('restagrup_payment_proof_state', '!=', False)]).write(
+            {'restagrup_payment_proof_state': False})
 
     def _lead_with_pending(self, owner):
         lead = self.env['crm.lead'].create({
@@ -233,3 +235,37 @@ class TestAlerts(TransactionCase):
         self._unassigned_request()
         views = self._alerts(self.carla)['unassigned']['action']['views']
         self.assertEqual(views[0], [self.env.ref('restagrup_service_orders.view_crm_lead_restagrup_list').id, 'list'])
+
+    # --- justificantes de pago ---
+
+    def _confirmed_order(self, owner):
+        agency = self.env['res.partner'].create({'name': 'Agencia avisos', 'email': 'ag-avisos@example.com'})
+        order = self.env['sale.order'].create({
+            'partner_id': agency.id, 'user_id': owner.id,
+            'order_line': [(0, 0, {'product_id': self.env['product.product'].create({
+                'name': 'Menú avisos', 'type': 'service', 'list_price': 20.0}).id, 'product_uom_qty': 10})]})
+        order.action_confirm()
+        return order
+
+    def test_payment_receipt_alerts_its_owner_until_confirmed(self):
+        order = self._confirmed_order(self.ana)
+        order.restagrup_payment_proof_state = 'received'
+        alert = self._alerts(self.ana)['payment_proof']
+        self.assertEqual(alert['action']['domain'], [('id', 'in', order.ids)])
+        self.assertNotIn('payment_proof', self._alerts(self.bea))
+        self.Sub.create({'user_id': self.carla.id, 'payment_proof': True})
+        self.assertIn('payment_proof', self._alerts(self.carla), 'administración puede suscribirse')
+        order.action_confirm_payment_proof()
+        self.assertNotIn('payment_proof', self._alerts(self.ana))
+
+    def test_payment_receipt_pings_the_owner(self):
+        order = self._confirmed_order(self.ana)
+        with patch.object(type(self.env['bus.bus']), '_sendone') as sendone:
+            order.restagrup_payment_proof_state = 'received'
+        self.assertIn(self.ana.partner_id, {call.args[0] for call in sendone.call_args_list})
+
+    def test_pending_mail_of_an_order_alerts_the_order_owner(self):
+        order = self._confirmed_order(self.ana)
+        self.Pending.create({'kind': 'agency_payment_request', 'sale_order_id': order.id,
+                             'recipient_email': 'ag-avisos@example.com', 'subject': 'Pago', 'body': 'Pago'})
+        self.assertIn('pending_approval', self._alerts(self.ana))

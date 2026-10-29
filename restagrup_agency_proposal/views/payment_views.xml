@@ -8,7 +8,7 @@
         <field name="arch" type="xml">
             <xpath expr="//setting[@id='restagrup_margin']" position="after">
                 <setting id="restagrup_payment_deadlines"
-                         help="Plazos de pago de las reservas. Los avisos los lleva el equipo de RestaGrup: aquí solo se fijan las fechas.">
+                         help="Plazos de pago de las reservas. Con ellos se pide y se reclama el pago a la agencia; los textos están en Restagrup → Plantillas de correo.">
                     <div class="content-group">
                         <div class="row"><label class="col-6" for="restagrup_payment_request_days"/><field name="restagrup_payment_request_days" class="col-2"/></div>
                         <div class="row"><label class="col-6" for="restagrup_payment_alert_hours"/><field name="restagrup_payment_alert_hours" class="col-2"/></div>
@@ -17,25 +17,31 @@
                         <div class="row"><label class="col-6" for="restagrup_invoice_days"/><field name="restagrup_invoice_days" class="col-2"/></div>
                     </div>
                 </setting>
-                <setting id="restagrup_payment_texts"
-                         help="Textos para copiar en los correos de pago. {agencia} se sustituye por el nombre de la agencia.">
-                    <div class="content-group">
-                        <label for="restagrup_payment_request_text"/>
-                        <field name="restagrup_payment_request_text"/>
-                        <label for="restagrup_payment_urgent_text"/>
-                        <field name="restagrup_payment_urgent_text"/>
-                    </div>
-                </setting>
             </xpath>
         </field>
     </record>
 
-    <!-- Plazos y textos en el propio pedido -->
+    <!-- Plazos, peticiones de pago y justificante en el propio pedido -->
     <record id="view_order_form_payment_deadlines" model="ir.ui.view">
         <field name="name">sale.order.form.restagrup.payment.deadlines</field>
         <field name="model">sale.order</field>
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_confirm_payment_proof" type="object" string="Confirmar pago" class="btn-primary"
+                        invisible="restagrup_payment_proof_state != 'received'"/>
+                <button name="action_discard_payment_proof" type="object" string="Descartar justificante"
+                        class="btn-secondary" invisible="restagrup_payment_proof_state != 'received'"/>
+            </xpath>
+            <xpath expr="//sheet" position="before">
+                <div class="alert alert-warning mb-0" role="alert" invisible="restagrup_payment_proof_state != 'received'">
+                    La agencia ha mandado el justificante (leído por la IA):
+                    <field name="restagrup_payment_proof_amount" class="oe_inline" widget="monetary"
+                           options="{'currency_field': 'currency_id'}"/>
+                    <span invisible="not restagrup_payment_proof_name"> · <field name="restagrup_payment_proof_name" class="oe_inline"/></span>.
+                    Compruébalo en el historial y pulsa «Confirmar pago».
+                </div>
+            </xpath>
             <xpath expr="//field[@name='order_line']" position="after">
                 <group string="Plazos de pago" invisible="not restagrup_first_service_date">
                     <group>
@@ -45,8 +51,11 @@
                         <field name="restagrup_invoice_deadline"/>
                     </group>
                     <group>
-                        <field name="restagrup_payment_request_text" readonly="1"/>
-                        <field name="restagrup_payment_urgent_text" readonly="1"/>
+                        <field name="restagrup_payment_requested_date" invisible="not restagrup_payment_requested_date"/>
+                        <field name="restagrup_payment_urgent_date" invisible="not restagrup_payment_urgent_date"/>
+                        <field name="restagrup_payment_proof_state" invisible="1"/>
+                        <field name="restagrup_payment_proof_date" invisible="not restagrup_payment_proof_state"/>
+                        <field name="restagrup_payment_proof_reference" invisible="not restagrup_payment_proof_state"/>
                     </group>
                 </group>
             </xpath>
@@ -67,6 +76,7 @@
                 <field name="restagrup_restaurant_payment_date"/>
                 <field name="restagrup_invoice_deadline" optional="hide"/>
                 <field name="amount_total" sum="Total"/>
+                <field name="restagrup_payment_proof_state" widget="badge" decoration-warning="restagrup_payment_proof_state == 'received'"/>
                 <field name="restagrup_paid" widget="boolean_toggle" readonly="1"/>
             </list>
         </field>

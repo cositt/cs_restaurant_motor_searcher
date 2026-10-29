@@ -40,7 +40,13 @@ para un grupo. Devuelve SOLO un objeto JSON, sin texto adicional, con estas clav
 exactas: "importe" (número en euros -- el precio total indicado, o null si no aparece
 un importe claro), "notas" (string corto con condiciones relevantes mencionadas --
 fecha alternativa, aforo distinto, política de cancelación, depósito -- o null si no
-hay nada relevante).
+hay nada relevante), "menus" (lista de los menús que describe el restaurante, en el
+texto o en los adjuntos; lista vacía si no describe ninguno). Cada menú es un objeto con:
+"nombre" (string o null), "tipo" (uno de "almuerzo", "cena", "desayuno", "buffet",
+"picnic", "show", o null), "precio_persona" (número en euros por persona o null),
+"bebidas" (string con las bebidas incluidas o null), "platos" (lista de objetos
+{"tipo": uno de "entrante", "principal", "postre", "bebida", "otro"; "nombre": string}),
+"min_comensales" (entero o null), "max_comensales" (entero o null).
 Si un dato no aparece claramente en el texto, pon null -- nunca lo inventes."""
 
 ETIQUETA_SELECTION = [
@@ -959,6 +965,10 @@ class RestaurantSearchLine(models.Model):
         text = html2plaintext(raw_body).strip() if raw_body else ''
         if not text:
             return
+        from .restaurant_menu_ai import _attachment_text  # noqa: PLC0415 -- orden de registro de modelos
+        attached = _attachment_text(msg_dict.get('attachments'))
+        if attached:
+            text = '%s\n\n%s' % (text, attached)
 
         connector = self.env['restagrup.llm.connector']
         data, provider, _log = connector.run('quote_extraction', EXTRACT_QUOTE_SYSTEM_PROMPT, text, source=self, label=self.name)
@@ -974,6 +984,7 @@ class RestaurantSearchLine(models.Model):
             vals['quote_notes'] = data['notas']
         if vals:
             self.write(vals)
+        self._restagrup_menus_from_reply(data.get('menus'))
         self.search_id.message_post_if_exists(_(
             '%(name)s: respuesta de presupuesto recibida por email, importe extraído'
             ' por IA (%(provider)s) — revisa antes de registrar.'
@@ -1004,6 +1015,7 @@ class RestaurantSearchLine(models.Model):
         if data.get('notas'):
             vals['quote_notes'] = data['notas']
         self.write(vals)
+        self._restagrup_menus_from_reply(data.get('menus'))
         self.search_id.message_post_if_exists(_(
             '%(name)s: importe extraído por IA (%(provider)s) — revisa antes de registrar.'
         ) % {'name': self.name, 'provider': provider})

@@ -5,9 +5,20 @@
         <field name="model">restagrup.restaurant.menu</field>
         <field name="arch" type="xml">
             <form>
+                <header>
+                    <button name="action_mark_reviewed" type="object" string="Revisado" class="btn-primary"
+                            invisible="not ai_pending_review"/>
+                </header>
                 <sheet>
+                    <div class="alert alert-warning" role="alert" invisible="not ai_pending_review">
+                        Creado por la IA desde la respuesta del restaurante: revisa platos y precio y pulsa «Revisado».
+                    </div>
+                    <div class="alert alert-info" role="alert" invisible="not similar_menu_id">
+                        Ya había uno parecido: <field name="similar_menu_id" class="oe_inline"/>. No se ha tocado.
+                    </div>
                     <group>
                         <group>
+                            <field name="ai_pending_review" invisible="1"/>
                             <field name="name"/>
                             <field name="partner_id"/>
                             <field name="menu_type"/>
@@ -25,6 +36,7 @@
                             <field name="max_pax"/>
                             <field name="drinks_included"/>
                             <field name="drinks_description" invisible="not drinks_included"/>
+                            <field name="source_line_id" invisible="not source_line_id"/>
                         </group>
                     </group>
                     <notebook>
@@ -61,6 +73,8 @@
                 <field name="sequence" widget="handle"/>
                 <field name="partner_id" optional="show"/>
                 <field name="name"/>
+                <field name="ai_pending_review" widget="boolean_toggle" string="Sin revisar" optional="show"
+                       readonly="1" invisible="not ai_pending_review"/>
                 <field name="currency_id" column_invisible="1"/>
                 <field name="season" options="{'enable_formatting': false}"/>
                 <field name="menu_type" optional="show"/>
@@ -87,6 +101,7 @@
                 <field name="max_pax" string="Capacidad mín." filter_domain="[('max_pax', '&gt;=', self)]"/>
                 <filter name="current_season" string="Temporada actual"
                         domain="[('season', '=', context_today().year)]"/>
+                <filter name="ai_pending_review" string="Creados por IA sin revisar" domain="[('ai_pending_review', '=', True)]"/>
                 <filter name="archived" string="Archivados" domain="[('active', '=', False)]"/>
                 <group>
                     <filter name="group_restaurant" string="Restaurante" context="{'group_by': 'partner_id'}"/>
@@ -120,9 +135,10 @@
                 <page name="restaurant_menu_catalog" string="Menús" invisible="not is_restaurant">
                     <field name="restaurant_menu_ids" nolabel="1"
                            context="{'default_partner_id': id}">
-                        <list>
+                        <list decoration-warning="ai_pending_review">
                             <field name="sequence" widget="handle"/>
                             <field name="name"/>
+                            <field name="ai_pending_review" column_invisible="1"/>
                             <field name="currency_id" column_invisible="1"/>
                             <field name="menu_type"/>
                             <field name="cost_price"/>

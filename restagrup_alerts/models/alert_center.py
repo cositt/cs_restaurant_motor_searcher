@@ -18,7 +18,8 @@ KIND_SPECS = {
     'pending_approval': {
         'model': 'restagrup.pending.mail',
         'domain': [('state', '=', 'pending')],
-        'owner': ['|', ('lead_id.user_id', '=', '{uid}'), ('request_lead_id.user_id', '=', '{uid}')],
+        'owner': ['|', '|', ('lead_id.user_id', '=', '{uid}'), ('request_lead_id.user_id', '=', '{uid}'),
+                  ('sale_order_id.user_id', '=', '{uid}')],
         'icon': 'fa-envelope-o',
     },
     'new_request': {
@@ -48,6 +49,12 @@ KIND_SPECS = {
         'owner': None,
         'icon': 'fa-user-times',
         'list_view': GROUPS_LIST,
+    },
+    'payment_proof': {
+        'model': 'sale.order',
+        'domain': [('restagrup_payment_proof_state', '=', 'received')],
+        'owner': [('user_id', '=', '{uid}')],
+        'icon': 'fa-money',
     },
     'assigned': {
         'model': 'crm.lead',
@@ -79,6 +86,7 @@ class RestagrupAlertCenter(models.AbstractModel):
                                  _('%s presupuestos de restaurante por confirmar')),
             'client_choice': (_('1 cliente ha elegido restaurante'), _('%s clientes han elegido restaurante')),
             'unassigned': (_('1 petición sin asignar'), _('%s peticiones sin asignar')),
+            'payment_proof': (_('1 justificante de pago por confirmar'), _('%s justificantes de pago por confirmar')),
             'assigned': (_('1 petición asignada a ti sin abrir'), _('%s peticiones asignadas a ti sin abrir')),
         }
         singular, plural = titles[kind]

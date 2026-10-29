@@ -59,11 +59,9 @@ class TestPaymentSettings(TransactionCase):
     def test_saving_the_settings_screen_stores_the_values(self):
         self.env['res.config.settings'].create({
             'restagrup_payment_request_days': 9, 'restagrup_final_pax_hours': 24,
-            'restagrup_payment_request_text': 'Hola {agencia}, el pago, por favor.',
         }).execute()
         self.assertEqual(self.env[SETTINGS].value('payment_request_days'), 9)
         self.assertEqual(self.env[SETTINGS].value('final_pax_hours'), 24)
-        self.assertEqual(self.env[SETTINGS].text('payment_request_text'), 'Hola {agencia}, el pago, por favor.')
 
     # --- plazos del pedido ---
 
@@ -86,18 +84,6 @@ class TestPaymentSettings(TransactionCase):
         order = self.env['sale.order'].create({'partner_id': self.agency.id})
         self.assertFalse(order.restagrup_payment_request_date)
         self.assertFalse(order.restagrup_invoice_deadline)
-
-    # --- textos ---
-
-    def test_payment_request_text_names_the_agency(self):
-        self.assertIn('Agencia plazos', self.order.restagrup_payment_request_text)
-        self.assertNotIn('{agencia}', self.order.restagrup_payment_request_text)
-
-    def test_custom_texts_are_used(self):
-        self._set('payment_request_text', 'Pago de {agencia}, gracias.')
-        self.assertEqual(self.order.restagrup_payment_request_text, 'Pago de Agencia plazos, gracias.')
-        self._set('payment_urgent_text', 'URGENTE {agencia}')
-        self.assertEqual(self.order.restagrup_payment_urgent_text, 'URGENTE Agencia plazos')
 
     # --- los documentos usan los plazos ---
 
