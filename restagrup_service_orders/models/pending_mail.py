@@ -13,7 +13,8 @@ class RestagrupPendingMail(models.Model):
     kind = fields.Selection(selection_add=[
         ('agency_reminder', 'Recordatorio a la agencia'),
         ('group_cancelled', 'Aviso de grupo cancelado'),
-    ], ondelete={'agency_reminder': 'cascade', 'group_cancelled': 'cascade'})
+        ('final_data_request', 'Datos que faltan antes del servicio'),
+    ], ondelete={'agency_reminder': 'cascade', 'group_cancelled': 'cascade', 'final_data_request': 'cascade'})
     sale_order_id = fields.Many2one(
         'sale.order', string='Presupuesto', ondelete='cascade', readonly=True, index=True,
     )
@@ -40,6 +41,24 @@ class RestagrupPendingMail(models.Model):
         if not self.recipient_email:
             raise UserError(_('Este correo no tiene destinatario.'))
         self.sale_order_id._post_agency_reminder(self.subject, self.body, self.recipient_email)
+
+    # --- datos que faltan antes del servicio ---
+
+    def _enqueue_final_data_request(self, lead, email_to, subject, body, missing):
+        lead.ensure_one()
+        return self.create({
+            'kind': 'final_data_request', 'request_lead_id': lead.id, 'recipient_email': email_to,
+            'subject': subject, 'body': body, 'reason': _('Servicio cerca y faltan: %s') % ', '.join(missing),
+        })
+
+    def _still_applies_final_data_request(self):
+        lead = self.request_lead_id
+        return bool(lead.active and lead.restagrup_stage_key == 'expediente' and lead._restagrup_final_missing())
+
+    def _send_final_data_request(self):
+        if not self.recipient_email:
+            raise UserError(_('Este correo no tiene destinatario.'))
+        self.request_lead_id._restagrup_post_final_data_request(self.subject, self.body, self.recipient_email)
 
     # --- grupo cancelado ---
 

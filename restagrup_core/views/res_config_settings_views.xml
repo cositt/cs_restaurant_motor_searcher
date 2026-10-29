@@ -18,19 +18,12 @@
                             <field name="restagrup_groq_api_key" password="True"/>
                             <field name="restagrup_gemini_api_key" password="True"/>
                         </setting>
-                        <setting id="restagrup_quote_reminder"
-                                 help="Texto del recordatorio automático a restaurantes que no responden a la petición de presupuesto.">
-                            <field name="restagrup_quote_reminder_text" widget="text"
-                                   placeholder="Vacío = texto por defecto"/>
-                        </setting>
                         <setting id="restagrup_final_data" help="Aviso interno de los datos que faltan por cerrar.">
                             <field name="restagrup_final_data_days"/>
                         </setting>
                         <setting id="restagrup_agency_reminder"
                                  help="Recordatorio a agencias con presupuesto enviado y sin respuesta.">
                             <field name="restagrup_agency_reminder_days"/>
-                            <field name="restagrup_agency_reminder_text" widget="text"
-                                   placeholder="Vacío = texto por defecto"/>
                         </setting>
                         <setting id="restagrup_change_confirm"
                                  help="Reenviar cambios: qué cambio de comensales vuelve la hoja del restaurante a «pendiente de confirmar». Fecha y hora siempre piden confirmación.">

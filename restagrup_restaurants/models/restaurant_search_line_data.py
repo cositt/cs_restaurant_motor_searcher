@@ -97,12 +97,18 @@ class RestaurantSearchLineData(models.Model):
         """Asunto y texto del correo que pide al restaurante solo los datos que faltan en su ficha."""
         self.ensure_one()
         missing = self.partner_id._restaurant_missing_labels()
-        subject = _('Datos para trabajar con grupos — %s') % self.env.company.name
-        lines = [
-            _('Hola,'), '',
-            _('Para poder proponeros grupos nos faltan estos datos de %s:') % self.name, '',
-        ] + ['- %s' % label for label in missing] + ['', _('Gracias,'), signer_name]
-        return subject, '\n'.join(lines)
+        values = dict(self._mail_values(signer_name), restaurante=self.name or '',
+                      faltan='\n'.join('- %s' % label for label in missing))
+
+        def fallback():
+            subject = _('Datos para trabajar con grupos — %s') % self.env.company.name
+            lines = [
+                _('Hola,'), '',
+                _('Para poder proponeros grupos nos faltan estos datos de %s:') % self.name, '',
+            ] + ['- %s' % label for label in missing] + ['', _('Gracias,'), signer_name]
+            return subject, '\n'.join(lines)
+
+        return self.env['restagrup.mail.template']._compose('data_request', values, fallback)
 
     def action_request_missing_data(self):
         """Pide al restaurante los datos vacíos de su ficha. Con el modo «con aprobación» el correo va a la
@@ -112,7 +118,7 @@ class RestaurantSearchLineData(models.Model):
         if not self.partner_id.restaurant_is_incomplete:
             raise UserError(_('La ficha de este restaurante ya está completa (o aún no es un contacto).'))
         email_to = self._get_quote_email_to()  # sin email no hay a quién pedírselo
-        if queue._send_mode() == 'automatic':
+        if queue._is_automatic('data_request'):
             subject, body = self._data_request_content(self.env.user.name)
             self._post_email(subject, body, email_to)
             self._mark_data_requested()

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_restagrup_mail_template_list" model="ir.ui.view">
+        <field name="name">restagrup.mail.template.list</field>
+        <field name="model">restagrup.mail.template</field>
+        <field name="arch" type="xml">
+            <list string="Plantillas de correo" create="false" delete="false">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="recipient"/>
+                <field name="subject"/>
+                <field name="can_auto_send" column_invisible="1"/>
+                <field name="auto_send" widget="boolean_toggle" readonly="not can_auto_send"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_restagrup_mail_template_form" model="ir.ui.view">
+        <field name="name">restagrup.mail.template.form</field>
+        <field name="model">restagrup.mail.template</field>
+        <field name="arch" type="xml">
+            <form string="Plantilla de correo" create="false" delete="false">
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="recipient"/>
+                            <field name="note"/>
+                        </group>
+                        <group>
+                            <field name="can_auto_send" invisible="1"/>
+                            <field name="auto_send" widget="boolean_toggle" invisible="not can_auto_send"/>
+                            <div class="text-muted" colspan="2" invisible="can_auto_send">
+                                Lo manda una persona con un botón: siempre sale cuando ella lo pulsa.
+                            </div>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="subject"/>
+                        <field name="body" widget="text" class="font-monospace"/>
+                        <field name="placeholders"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_restagrup_mail_template" model="ir.actions.act_window">
+        <field name="name">Plantillas de correo</field>
+        <field name="res_model">restagrup.mail.template</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p>Un texto por cada correo que prepara el sistema. «Enviar automáticamente» hace que ese tipo salga solo,
+               sin pasar por «Pendientes de aprobar».</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_restagrup_mail_template" name="Plantillas de correo" parent="menu_restagrup_root"
+              action="action_restagrup_mail_template" sequence="90"/>
+</odoo>

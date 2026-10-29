@@ -25,6 +25,8 @@
         'reports/approx_options_report.xml',
         'views/inbox_mail_views.xml',
         'views/ai_log_views.xml',
+        'views/mail_template_views.xml',
+        'data/mail_template_data.xml',
         'data/restaurant_data.xml',
         'data/ir_cron_data.xml',
     ],

@@ -59,13 +59,21 @@ class CrmLead(models.Model):
 
     def _restagrup_data_request_content(self, missing, signer, option_lines=None):
         """(asunto, cuerpo) de la petición de datos. `option_lines`: opciones orientativas que van antes de la firma."""
-        subject = _('Datos que nos faltan de vuestra petición — %s') % (self.name or '')
-        lines = [_('Hola,'), '', _('Para poder buscar restaurante nos faltan estos datos de vuestra petición:'), '']
-        lines += ['- %s' % item for item in missing]
-        if option_lines:
-            lines += [''] + list(option_lines)
-        lines += ['', _('Gracias,'), signer]
-        return subject, '\n'.join(lines)
+        values = {
+            'grupo': self.name or '', 'faltan': '\n'.join('- %s' % item for item in missing),
+            'opciones': '\n'.join(option_lines or []), 'firma': signer,
+        }
+
+        def fallback():
+            subject = _('Datos que nos faltan de vuestra petición — %s') % (self.name or '')
+            lines = [_('Hola,'), '', _('Para poder buscar restaurante nos faltan estos datos de vuestra petición:'), '']
+            lines += ['- %s' % item for item in missing]
+            if option_lines:
+                lines += [''] + list(option_lines)
+            lines += ['', _('Gracias,'), signer]
+            return subject, '\n'.join(lines)
+
+        return self.env['restagrup.mail.template']._compose('lead_data_request', values, fallback)
 
     def _restagrup_ask_for_missing_data(self):
         """Pide a la agencia lo que falta. Con envíos «con aprobación» (por defecto) el correo espera en la cola;
@@ -77,7 +85,7 @@ class CrmLead(models.Model):
             return False
         subject, body = self._restagrup_data_request_content(missing, self.user_id.name or self.env.company.name)
         queue = self.env['restagrup.pending.mail']
-        if queue._send_mode() == 'automatic':
+        if queue._is_automatic('lead_data_request'):
             self._restagrup_send_data_request(subject, body, email_to)
         else:
             queue._enqueue_lead_data_request(self, email_to, subject, body, missing)

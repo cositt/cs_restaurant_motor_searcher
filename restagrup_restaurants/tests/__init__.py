@@ -10,3 +10,4 @@ from . import test_restaurant_menu
 from . import test_client_comparison
 from . import test_approx_options
 from . import test_bulk_quote
+from . import test_mail_templates
