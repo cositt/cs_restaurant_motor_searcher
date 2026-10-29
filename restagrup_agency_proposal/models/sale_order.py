@@ -125,10 +125,6 @@ class SaleOrder(models.Model):
     restagrup_invoice_deadline = fields.Date(
         string='Facturar antes de', compute='_compute_restagrup_payment_deadlines',
         help='Las facturas se envían después del último servicio y dentro de este plazo.')
-    restagrup_payment_request_text = fields.Text(
-        string='Texto para pedir el pago', compute='_compute_restagrup_payment_texts')
-    restagrup_payment_urgent_text = fields.Text(
-        string='Texto del recordatorio urgente', compute='_compute_restagrup_payment_texts')
 
     @api.depends('order_line.service_date')
     def _compute_restagrup_service_dates(self):
@@ -150,14 +146,6 @@ class SaleOrder(models.Model):
             order.restagrup_payment_alert_date = first - alert if first else False
             order.restagrup_restaurant_payment_date = first - restaurant if first else False
             order.restagrup_invoice_deadline = last + invoice if last else False
-
-    @api.depends('partner_id')
-    def _compute_restagrup_payment_texts(self):
-        settings = self.env['restagrup.payment.settings']
-        for order in self:
-            agency = order.partner_id.commercial_partner_id.name or ''
-            order.restagrup_payment_request_text = settings.text('payment_request_text').replace('{agencia}', agency)
-            order.restagrup_payment_urgent_text = settings.text('payment_urgent_text').replace('{agencia}', agency)
 
     def restagrup_final_pax_hours(self):
         return self.env['restagrup.payment.settings'].value('final_pax_hours')

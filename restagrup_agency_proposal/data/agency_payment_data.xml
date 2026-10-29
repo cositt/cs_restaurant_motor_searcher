@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Textos de partida (del manual de RestaGrup). noupdate: lo que edite el equipo no se pisa al actualizar. -->
+    <data noupdate="1">
+        <record id="mail_template_agency_payment_request" model="restagrup.mail.template">
+            <field name="code">agency_payment_request</field>
+            <field name="name">Petición de pago a la agencia</field>
+            <field name="recipient">agency</field>
+            <field name="sequence">60</field>
+            <field name="note">Cada día: pedidos confirmados sin pagar cuando faltan 7 días para el servicio (plazo en Ajustes). Una vez por pedido.</field>
+            <field name="can_auto_send" eval="True"/>
+            <field name="placeholders">{agencia} {pedido} {grupo} {fecha} {importe} {cuenta} {firma}</field>
+            <field name="subject">Pago de la reserva {pedido} — servicio {fecha}</field>
+            <field name="body">Hola {agencia},
+
+se acerca la fecha de vuestro servicio ({pedido}, {fecha}). Os pedimos que nos enviéis la transferencia del 100 % de la reserva ({importe}) y el justificante de pago para poder emitir el bono de agencia.
+
+{cuenta}
+
+Gracias.
+{firma}</field>
+        </record>
+
+        <record id="mail_template_agency_payment_urgent" model="restagrup.mail.template">
+            <field name="code">agency_payment_urgent</field>
+            <field name="name">Reclamación urgente del pago</field>
+            <field name="recipient">agency</field>
+            <field name="sequence">61</field>
+            <field name="note">Cada día: pedidos confirmados sin pagar a 72 h del servicio (plazo en Ajustes). Una vez por pedido.</field>
+            <field name="can_auto_send" eval="True"/>
+            <field name="placeholders">{agencia} {pedido} {grupo} {fecha} {importe} {cuenta} {firma}</field>
+            <field name="subject">URGENTE: justificante de pago de {pedido} — servicio {fecha}</field>
+            <field name="body">Hola {agencia},
+
+debido a la proximidad del servicio ({pedido}, {fecha}) necesitamos recibir el justificante de pago ({importe}) para poder enviaros el bono de agencia.
+
+{cuenta}
+
+Gracias.
+{firma}</field>
+        </record>
+    </data>
+
+    <data noupdate="1">
+    <record id="ir_cron_agency_payments" model="ir.cron">
+        <field name="name">Restagrup: pedir y reclamar el pago a las agencias</field>
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_agency_payments()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+    </record>
+    </data>
+
+    <!-- Lo que se hubiera escrito en Ajustes pasa a su plantilla (cada actualización; no hace nada si ya pasó). -->
+    <function model="restagrup.mail.template" name="_import_payment_texts"/>
+</odoo>

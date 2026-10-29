@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models
 
-ALERT_KINDS = ('pending_approval', 'new_request', 'quote_to_confirm', 'client_choice', 'unassigned')
+ALERT_KINDS = ('pending_approval', 'new_request', 'quote_to_confirm', 'client_choice', 'unassigned', 'payment_proof')
 
 
 class RestagrupAlertSubscription(models.Model):
@@ -22,6 +22,8 @@ class RestagrupAlertSubscription(models.Model):
     quote_to_confirm = fields.Boolean(string='Presupuestos por confirmar')
     client_choice = fields.Boolean(string='El cliente eligió')
     unassigned = fields.Boolean(string='Sin asignar', help='Peticiones que aún no lleva nadie: para quien reparte el trabajo.')
+    payment_proof = fields.Boolean(
+        string='Justificantes de pago', help='La agencia mandó el justificante y falta confirmar el pago: para administración.')
 
     _user_unique = models.Constraint('unique(user_id)', 'Ese usuario ya tiene su fila de avisos.')
 

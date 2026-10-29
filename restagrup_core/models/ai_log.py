@@ -17,6 +17,7 @@ KINDS = [
     ('lead_matching', 'Enlace de un correo a un grupo'),
     ('lead_completion', 'Datos que aporta la agencia'),
     ('sheet_classification', 'Respuesta a una hoja de servicio'),
+    ('payment_proof', 'Justificante de pago de la agencia'),
 ]
 STATES = [
     ('pending', 'Pendiente de revisar'),

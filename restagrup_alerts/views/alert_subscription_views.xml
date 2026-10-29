@@ -12,6 +12,7 @@
                 <field name="quote_to_confirm" widget="boolean_toggle" readonly="receive_all"/>
                 <field name="client_choice" widget="boolean_toggle" readonly="receive_all"/>
                 <field name="unassigned" widget="boolean_toggle" readonly="receive_all"/>
+                <field name="payment_proof" widget="boolean_toggle" readonly="receive_all"/>
                 <field name="active" column_invisible="1"/>
             </list>
         </field>
