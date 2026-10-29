@@ -80,7 +80,7 @@ class TestFirewallDocuments(TransactionCase):
 
 @tagged('post_install', '-at_install')
 class TestFirewallClose(TransactionCase):
-    """Cerrar el expediente: cobro recibido y servicio terminado."""
+    """Cerrar el expediente: cobro recibido, servicio terminado, transferencia y facturas (ver test_close_checklist)."""
 
     def _lead_with_confirmed_order(self, event_date):
         agency = self.env['res.partner'].create({'name': 'Agencia cierre', 'email': 'ag@example.com'})
@@ -101,11 +101,15 @@ class TestFirewallClose(TransactionCase):
 
     def test_warns_when_unpaid_and_service_not_done(self):
         lead, _order = self._lead_with_confirmed_order(date.today() + timedelta(days=10))
-        self.assertEqual(self._codes(lead), {'paid', 'service_done'})
+        self.assertEqual(self._codes(lead), {
+            'paid', 'service_done', 'restaurant_paid', 'agency_invoice_sent', 'restaurant_invoice'})
 
     def test_clean_when_paid_and_service_done(self):
         lead, order = self._lead_with_confirmed_order(date.today() - timedelta(days=2))
         order.action_mark_paid()
+        order.action_mark_invoice_sent()
+        order.restaurant_po_ids.action_mark_restaurant_paid()
+        order.restaurant_po_ids.action_mark_invoice_received()
         self.assertEqual(self._codes(lead), set())
 
     def test_warns_when_there_is_no_confirmed_order(self):

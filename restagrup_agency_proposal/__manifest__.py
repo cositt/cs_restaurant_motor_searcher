@@ -22,6 +22,8 @@
         'views/client_comparison_wizard_views.xml',
         'views/portal_templates.xml',
         'views/restaurant_search_views.xml',
+        'views/close_checklist_views.xml',
+        'data/firewall_close_data.xml',
     ],
     'installable': True,
     'application': False,

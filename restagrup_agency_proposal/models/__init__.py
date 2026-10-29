@@ -6,3 +6,4 @@ from . import purchase_order
 from . import lead_firewall
 from . import client_comparison
 from . import final_data
+from . import close_checklist
