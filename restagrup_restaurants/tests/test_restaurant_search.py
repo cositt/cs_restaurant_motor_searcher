@@ -318,9 +318,7 @@ class TestRestaurantSearch(TransactionCase):
         self.assertTrue(line.quote_reminder_sent_date)
 
     def test_send_quote_reminder_uses_configured_text(self):
-        self.env['ir.config_parameter'].sudo().set_param(
-            'restagrup.quote_reminder_text', 'Texto propio de recordatorio XYZ',
-        )
+        self.env['restagrup.mail.template']._get('quote_reminder').body = 'Texto propio de recordatorio XYZ\n\n{firma}'
         line = self._stale_line()
         line.action_send_quote_reminder()
         self.assertIn('Texto propio de recordatorio XYZ', self._reminder_messages(line).body)
@@ -375,18 +373,17 @@ class TestRestaurantSearch(TransactionCase):
 
     # --- ajustes: la pantalla de Ajustes debe cargar con los campos de Restagrup ---
 
-    def test_settings_screen_loads_and_saves_reminder_text(self):
+    def test_settings_screen_loads_and_saves(self):
         """Regresión: un campo Text con config_parameter hacía reventar TODA la pantalla
         de Ajustes ('must have type boolean, integer, float, char...') y ningún test
-        lo veía porque nadie abría res.config.settings."""
+        lo veía porque nadie abría res.config.settings. El texto del recordatorio ya no
+        está aquí: vive en su plantilla de correo."""
         settings_model = self.env['res.config.settings']
         settings_model.default_get(list(settings_model._fields))
-        settings = settings_model.create({'restagrup_quote_reminder_text': 'Texto de prueba'})
+        self.assertNotIn('restagrup_quote_reminder_text', settings_model._fields)
+        settings = settings_model.create({'restagrup_agency_reminder_days': 9})
         settings.execute()
-        self.assertEqual(
-            self.env['ir.config_parameter'].sudo().get_param('restagrup.quote_reminder_text'),
-            'Texto de prueba',
-        )
+        self.assertEqual(self.env['ir.config_parameter'].sudo().get_param('restagrup.agency_reminder_days'), '9')
 
     # --- chatter en la búsqueda: aquí se ve todo lo que ocurre con el grupo ---
 

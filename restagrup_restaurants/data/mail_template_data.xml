@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Textos de partida (de los ejemplos de RestaGrup). noupdate: lo que edite el equipo no se pisa al actualizar. -->
+    <data noupdate="1">
+        <record id="mail_template_quote_request" model="restagrup.mail.template">
+            <field name="code">quote_request</field>
+            <field name="name">Consulta de disponibilidad al restaurante</field>
+            <field name="recipient">restaurant</field>
+            <field name="sequence">10</field>
+            <field name="note">Botón «Pedir presupuesto» de la búsqueda. Lo manda una persona: no pasa por la cola.</field>
+            <field name="can_auto_send" eval="False"/>
+            <field name="placeholders">{restaurante} {grupo} {fecha} {servicio} {hora} {ciudad} {pax} {menu} {notas} {empresa} {firma}</field>
+            <field name="subject">Consulta de disponibilidad — {fecha} {servicio}, {pax} pax</field>
+            <field name="body">Buenos días,
+
+Consulto disponibilidad para este grupo:
+{fecha} {servicio} {hora}
+{pax} pax
+
+{menu}
+
+{notas}
+
+A la espera de tu ok, para enviar información y presupuesto detallado al grupo.
+
+Gracias!
+{firma}</field>
+        </record>
+
+        <record id="mail_template_quote_reminder" model="restagrup.mail.template">
+            <field name="code">quote_reminder</field>
+            <field name="name">Recordatorio al restaurante sin respuesta</field>
+            <field name="recipient">restaurant</field>
+            <field name="sequence">20</field>
+            <field name="note">Cada día: consultas de disponibilidad sin respuesta tras 3 días. Una sola vez por restaurante.</field>
+            <field name="can_auto_send" eval="True"/>
+            <field name="placeholders">{restaurante} {grupo} {fecha} {servicio} {ciudad} {pax} {empresa} {firma}</field>
+            <field name="subject">Recordatorio: consulta de disponibilidad — {ciudad}, {pax} pax</field>
+            <field name="body">Buenos días,
+
+Hace unos días os consultamos disponibilidad para este grupo ({grupo}) y todavía no hemos recibido respuesta. ¿Podríais confirmárnoslo o decirnos si no os es posible?
+
+Gracias!
+{firma}</field>
+        </record>
+
+        <record id="mail_template_data_request" model="restagrup.mail.template">
+            <field name="code">data_request</field>
+            <field name="name">Datos que faltan en la ficha del restaurante</field>
+            <field name="recipient">restaurant</field>
+            <field name="sequence">30</field>
+            <field name="note">Cuando la ficha del restaurante está incompleta (p. ej. sin cuenta bancaria).</field>
+            <field name="can_auto_send" eval="True"/>
+            <field name="placeholders">{restaurante} {faltan} {empresa} {firma}</field>
+            <field name="subject">Datos para trabajar con grupos — {empresa}</field>
+            <field name="body">Buenos días,
+
+Para poder proponeros grupos nos faltan estos datos de {restaurante}:
+
+{faltan}
+
+Quedamos a la espera,
+Gracias!
+{firma}</field>
+        </record>
+
+        <record id="mail_template_lead_data_request" model="restagrup.mail.template">
+            <field name="code">lead_data_request</field>
+            <field name="name">Datos que faltan en la petición de la agencia</field>
+            <field name="recipient">agency</field>
+            <field name="sequence">40</field>
+            <field name="note">Cuando llega una petición sin ciudad, fecha o número de comensales. Hasta dos veces.</field>
+            <field name="can_auto_send" eval="True"/>
+            <field name="placeholders">{grupo} {faltan} {opciones} {firma}</field>
+            <field name="subject">Datos que nos faltan de vuestra petición — {grupo}</field>
+            <field name="body">Buenos días,
+
+Para poder buscar restaurante nos faltan estos datos de vuestra petición:
+
+{faltan}
+
+{opciones}
+
+Gracias!
+{firma}</field>
+        </record>
+    </data>
+
+    <!-- Lo que se hubiera escrito en Ajustes pasa a su plantilla (cada actualización; no hace nada si ya pasó). -->
+    <function model="restagrup.mail.template" name="_import_legacy_texts"/>
+</odoo>

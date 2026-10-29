@@ -20,6 +20,7 @@
         'data/firewall_data.xml',
         'data/notice_template_data.xml',
         'data/agency_followup_data.xml',
+        'data/mail_template_data.xml',
         'views/lead_stage_views.xml',
         'views/firewall_views.xml',
         'views/sale_order_views.xml',

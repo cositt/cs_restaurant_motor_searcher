@@ -101,7 +101,7 @@ class TestAgencyFollowup(TransactionCase):
         self.assertEqual(len(self._queued(order)), 1)
 
     def test_custom_reminder_text_is_used(self):
-        self.env['ir.config_parameter'].sudo().set_param('restagrup.agency_reminder_text', 'Texto propio de prueba')
+        self.env['restagrup.mail.template']._get('agency_reminder').body = 'Texto propio de prueba\n\n{enlace}\n\n{firma}'
         order = self._order(days=7)
         self.env['sale.order']._cron_agency_reminders()
         self.assertIn('Texto propio de prueba', self._queued(order).body)

@@ -23,22 +23,11 @@ class ResConfigSettings(models.TransientModel):
     restagrup_gemini_api_key = fields.Char(
         string='Gemini API Key', config_parameter='restagrup.gemini_api_key',
     )
-    restagrup_quote_reminder_text = fields.Char(
-        string='Texto del recordatorio de presupuesto',
-        config_parameter='restagrup.quote_reminder_text',
-        help='Mensaje que Odoo manda solo a un restaurante que no ha respondido a la'
-             ' petición de presupuesto (una vez, a los 3 días). Vacío = texto por defecto.',
-    )
     restagrup_agency_reminder_days = fields.Integer(
         string='Días antes del servicio para reclamar', config_parameter='restagrup.agency_reminder_days',
         default=14,
         help='Un presupuesto enviado a la agencia y sin respuesta genera un recordatorio cuando faltan estos'
              ' días o menos para el servicio.',
-    )
-    restagrup_agency_reminder_text = fields.Char(
-        string='Texto del recordatorio a la agencia', config_parameter='restagrup.agency_reminder_text',
-        help='Mensaje del recordatorio a la agencia (el enlace al presupuesto y la firma se añaden solos).'
-             ' Vacío = texto por defecto.',
     )
     restagrup_final_data_days = fields.Integer(
         string='Días antes del servicio para avisar de datos pendientes', config_parameter='restagrup.final_data_days',
@@ -76,10 +65,10 @@ class ResConfigSettings(models.TransientModel):
         [('approval', 'Con aprobación'), ('automatic', 'Automático')],
         string='Modo de envíos automáticos', default='approval',
         config_parameter='restagrup.send_mode',
-        help='Con aprobación (por defecto): los correos que genera el sistema (p. ej. el recordatorio a'
-             ' restaurantes) quedan en Restagrup > Pendientes de aprobar y no salen hasta que una persona'
-             ' los aprueba. Automático: salen solos. Los envíos que dispara una persona con un botón'
-             ' no pasan por la cola.',
+        help='Con aprobación (por defecto): los correos que genera el sistema quedan en Restagrup > Pendientes'
+             ' de aprobar y no salen hasta que una persona los aprueba, salvo los tipos marcados «Enviar'
+             ' automáticamente» en Restagrup > Plantillas de correo. Automático: salen solos todos. Los envíos'
+             ' que dispara una persona con un botón no pasan por la cola.',
     )
     restagrup_default_margin_percent = fields.Float(
         string='Margen por defecto (%)', default=20.0,

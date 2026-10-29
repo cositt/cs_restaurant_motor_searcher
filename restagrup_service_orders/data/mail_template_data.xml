@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="mail_template_agency_reminder" model="restagrup.mail.template">
+            <field name="code">agency_reminder</field>
+            <field name="name">Presupuesto a la agencia sin respuesta</field>
+            <field name="recipient">agency</field>
+            <field name="sequence">50</field>
+            <field name="note">Cada día: presupuestos enviados sin respuesta cuando el servicio está cerca (días en Ajustes). Uno por presupuesto.</field>
+            <field name="can_auto_send" eval="True"/>
+            <field name="placeholders">{presupuesto} {grupo} {agencia} {enlace} {firma}</field>
+            <field name="subject">Recordatorio: presupuesto {presupuesto} pendiente</field>
+            <field name="body">Buenos días,
+
+Cuando puedan, salvo error, no tuvimos respuesta al presupuesto enviado para este grupo. Queríamos saber si habían podido valorarlo y si finalmente necesitarán la reserva.
+
+Podéis verlo y aceptarlo aquí:
+{enlace}
+
+Gracias!
+{firma}</field>
+        </record>
+
+        <record id="mail_template_final_data_request" model="restagrup.mail.template">
+            <field name="code">final_data_request</field>
+            <field name="name">Datos que faltan antes del servicio</field>
+            <field name="recipient">agency</field>
+            <field name="sequence">60</field>
+            <field name="note">Cada día: expedientes cuyo servicio está a pocos días (días en Ajustes) y aún sin platos, intolerancias, guía, comensales definitivos o justificante de pago. Uno por grupo.</field>
+            <field name="can_auto_send" eval="True"/>
+            <field name="placeholders">{grupo} {agencia} {fecha} {faltan} {firma}</field>
+            <field name="subject">Datos pendientes — {grupo} ({fecha})</field>
+            <field name="body">Buenos días,
+
+Cuando puedas, debido a la proximidad de la fecha del servicio, nos faltaría saber:
+
+{faltan}
+
+Quedamos a la espera de tus comentarios,
+Gracias!
+{firma}</field>
+        </record>
+    </data>
+
+    <function model="restagrup.mail.template" name="_import_legacy_texts"/>
+</odoo>

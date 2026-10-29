@@ -118,6 +118,15 @@ class RestaurantMenu(models.Model):
         for menu in self:
             menu.display_text = menu._render_text()
 
+    def _render_text_for_restaurant(self):
+        """Texto del menú para escribir al propio restaurante: con su precio (el de coste), nunca el nuestro."""
+        self.ensure_one()
+        text = self._render_text(with_price=False)
+        if self.cost_price:
+            text += '\n' + _('Precio %(price)s %(symbol)s', price=formatLang(self.env, self.cost_price, digits=2),
+                               symbol=self.currency_id.symbol or '')
+        return text
+
     def _render_text(self, with_price=True):
         """Texto plano del menú. Lleva el precio de VENTA (nunca el coste del restaurante). `with_price=False`
         para las propuestas, donde el precio lo pone la propia comparativa."""

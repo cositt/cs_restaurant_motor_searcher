@@ -65,6 +65,12 @@ class RestagrupPendingMail(models.Model):
         return mode if mode in SEND_MODES else DEFAULT_SEND_MODE
 
     @api.model
+    def _is_automatic(self, code):
+        """Si el correo de este tipo sale solo: todos con el modo «Automático» de Ajustes, o solo los tipos que
+        tengan marcado «Enviar automáticamente» en su plantilla."""
+        return self._send_mode() == 'automatic' or bool(self.env['restagrup.mail.template']._get(code).auto_send)
+
+    @api.model
     def _enqueue_quote_reminder(self, line):
         """Deja el recordatorio de la línea en la cola. No duplica: si ya hubo uno (pendiente, enviado o
         descartado) no se vuelve a crear, así un descarte no se repite cada día."""

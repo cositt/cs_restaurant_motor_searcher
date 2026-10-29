@@ -72,11 +72,18 @@ class SaleOrder(models.Model):
     def _agency_reminder_content(self, signer_name):
         """Asunto y texto (con enlace al portal y firma) del recordatorio de un presupuesto sin respuesta."""
         self.ensure_one()
-        subject = _('Recordatorio: presupuesto %s pendiente') % self.name
-        text = self.env['ir.config_parameter'].sudo().get_param('restagrup.agency_reminder_text')
-        text = text or AGENCY_REMINDER_DEFAULT_TEXT % {'name': self.name}
         link = self.get_base_url() + self._get_share_url(redirect=True)
-        return subject, '\n'.join(text.splitlines() + ['', link, '', signer_name])
+        values = {
+            'presupuesto': self.name, 'grupo': self.opportunity_id.name or '', 'agencia': self.partner_id.name or '',
+            'enlace': link, 'firma': signer_name,
+        }
+
+        def fallback():
+            text = AGENCY_REMINDER_DEFAULT_TEXT % {'name': self.name}
+            return (_('Recordatorio: presupuesto %s pendiente') % self.name,
+                    '\n'.join(text.splitlines() + ['', link, '', signer_name]))
+
+        return self.env['restagrup.mail.template']._compose('agency_reminder', values, fallback)
 
     def _post_agency_reminder(self, subject, body_text, email_to):
         """Envía el recordatorio por el hilo del presupuesto y anota la fecha: solo se manda uno."""
@@ -104,7 +111,7 @@ class SaleOrder(models.Model):
             ('restagrup_agency_reminder_date', '=', False),
         ])
         queue = self.env['restagrup.pending.mail']
-        automatic = queue._send_mode() == 'automatic'
+        automatic = queue._is_automatic('agency_reminder')
         for order in orders:
             email_to = (order.partner_id.email or '').strip()
             if not email_to:

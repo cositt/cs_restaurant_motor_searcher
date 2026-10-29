@@ -70,6 +70,12 @@ WEEKDAY_PLURALS = {
 }
 QUOTE_STALE_DAYS = 3
 REPLY_EXCERPT_CHARS = 300
+def _format_hour(value):
+    """14.5 → «14:30»."""
+    hours, minutes = divmod(round(value * 60), 60)
+    return '%02d:%02d' % (hours, minutes)
+
+
 QUOTE_REMINDER_DEFAULT_TEXT = (
     'Hola,\n\nOs escribimos de %(company)s: hace unos días os pedimos presupuesto para un'
     ' evento y todavía no hemos recibido respuesta. ¿Podríais enviárnoslo o decirnos si no'
@@ -787,24 +793,9 @@ class RestaurantSearchLine(models.Model):
         self.ensure_one()
         email_to = self._get_quote_email_to()
         search = self.search_id
-        subject = _('Petición de presupuesto — %(city)s, %(pax)s pax') % {
-            'city': search.city or '',
-            'pax': search.min_capacity or '?',
-        }
-        body_lines = [
-            _('Hola,'),
-            '',
-            _('Somos %(company)s y estamos organizando un evento en %(city)s para'
-              ' %(pax)s personas. ¿Podríais enviarnos vuestro presupuesto?') % {
-                'company': self.env.company.name,
-                'city': search.city or '',
-                'pax': search.min_capacity or '?',
-            },
-        ]
-        if search.notes:
-            body_lines += ['', _('Notas adicionales: %s') % search.notes]
-        body_lines += ['', _('Gracias,'), self.env.user.name]
-        body_html = Markup('<br/>').join(Markup.escape(line) for line in body_lines)
+        subject, body_text = self.env['restagrup.mail.template']._compose(
+            'quote_request', self._mail_values(self.env.user.name), self._quote_request_fallback)
+        body_html = Markup('<br/>').join(Markup.escape(line) for line in body_text.splitlines())
 
         self.message_post(
             body=body_html,
@@ -824,6 +815,36 @@ class RestaurantSearchLine(models.Model):
             'Presupuesto solicitado a %(name)s (%(email)s).'
         ) % {'name': self.name, 'email': email_to})
 
+    def _mail_values(self, signer_name):
+        """Marcadores de las plantillas de los correos a este restaurante."""
+        self.ensure_one()
+        search = self.search_id
+        event = search.event_id
+        when = ' '.join(part for part in (
+            event.event_date.strftime('%d/%m/%Y') if event.event_date else '', (event.event_type_id.name or '').lower(),
+        ) if part)
+        pax = event.pax or search.min_capacity or '?'
+        return {
+            'grupo': ', '.join(part for part in (when, _('%s pax') % pax) if part),
+            'restaurante': self.partner_id.name or self.name or '',
+            'fecha': event.event_date.strftime('%d/%m/%Y') if event.event_date else '',
+            'servicio': (event.event_type_id.name or '').lower(),
+            'hora': _format_hour(event.event_time) if event.event_time else '',
+            'ciudad': search.city or event.city or '',
+            'pax': event.pax or search.min_capacity or '?',
+            'menu': self.menu_id._render_text_for_restaurant() if self.menu_id else '',
+            'notas': search.notes or '',
+            'empresa': self.env.company.name,
+            'firma': signer_name,
+        }
+
+    def _quote_request_fallback(self):
+        """El texto de siempre, por si alguien borró la plantilla."""
+        values = self._mail_values(self.env.user.name)
+        return (_('Petición de presupuesto — %(ciudad)s, %(pax)s pax') % values,
+                _('Hola,\n\nSomos %(empresa)s y estamos organizando un evento en %(ciudad)s para %(pax)s personas.'
+                  ' ¿Podríais enviarnos vuestro presupuesto?\n\nGracias,\n%(firma)s') % values)
+
     def _get_quote_email_to(self):
         self.ensure_one()
         email_to = (self.partner_id.email or self.email or '').strip()
@@ -837,15 +858,14 @@ class RestaurantSearchLine(models.Model):
     def _quote_reminder_content(self, signer_name):
         """Asunto y texto plano (con firma) del recordatorio de una petición sin respuesta."""
         self.ensure_one()
-        search = self.search_id
-        subject = _('Recordatorio: petición de presupuesto — %(city)s, %(pax)s pax') % {
-            'city': search.city or '',
-            'pax': search.min_capacity or '?',
-        }
-        text = self.env['ir.config_parameter'].sudo().get_param(
-            'restagrup.quote_reminder_text',
-        ) or QUOTE_REMINDER_DEFAULT_TEXT % {'company': self.env.company.name}
-        return subject, '\n'.join(text.splitlines() + ['', signer_name])
+        values = self._mail_values(signer_name)
+
+        def fallback():
+            subject = _('Recordatorio: petición de presupuesto — %(ciudad)s, %(pax)s pax') % values
+            text = QUOTE_REMINDER_DEFAULT_TEXT % {'company': self.env.company.name}
+            return subject, '\n'.join(text.splitlines() + ['', signer_name])
+
+        return self.env['restagrup.mail.template']._compose('quote_reminder', values, fallback)
 
     def _post_email(self, subject, body_text, email_to):
         """Correo real por el hilo de la línea (un mail.thread, no un mail.mail suelto): queda enlazado y una
@@ -893,7 +913,7 @@ class RestaurantSearchLine(models.Model):
             ('quote_reminder_sent_date', '=', False),
         ])
         queue = self.env['restagrup.pending.mail']
-        automatic = queue._send_mode() == 'automatic'
+        automatic = queue._is_automatic('quote_reminder')
         for line in lines:
             try:
                 with self.env.cr.savepoint():
