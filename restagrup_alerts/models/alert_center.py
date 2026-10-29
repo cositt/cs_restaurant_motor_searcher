@@ -18,8 +18,9 @@ KIND_SPECS = {
     'pending_approval': {
         'model': 'restagrup.pending.mail',
         'domain': [('state', '=', 'pending')],
-        'owner': ['|', '|', ('lead_id.user_id', '=', '{uid}'), ('request_lead_id.user_id', '=', '{uid}'),
-                  ('sale_order_id.user_id', '=', '{uid}')],
+        'owner': ['|', '|', '|', ('lead_id.user_id', '=', '{uid}'), ('request_lead_id.user_id', '=', '{uid}'),
+                  ('sale_order_id.user_id', '=', '{uid}'),
+                  ('sheet_owner_id', '=', '{uid}')],
         'icon': 'fa-envelope-o',
     },
     'new_request': {
@@ -56,6 +57,13 @@ KIND_SPECS = {
         'owner': [('user_id', '=', '{uid}')],
         'icon': 'fa-money',
     },
+    'restaurant_payment': {
+        'model': 'purchase.order',
+        'domain': [('restagrup_payment_due', '=', True), ('restagrup_restaurant_paid', '=', False),
+                   ('state', '!=', 'cancel')],
+        'owner': [('restagrup_sale_order_id.user_id', '=', '{uid}')],
+        'icon': 'fa-university',
+    },
     'assigned': {
         'model': 'crm.lead',
         'domain': [('restagrup_assigned_unseen', '=', True)],
@@ -87,6 +95,7 @@ class RestagrupAlertCenter(models.AbstractModel):
             'client_choice': (_('1 cliente ha elegido restaurante'), _('%s clientes han elegido restaurante')),
             'unassigned': (_('1 petición sin asignar'), _('%s peticiones sin asignar')),
             'payment_proof': (_('1 justificante de pago por confirmar'), _('%s justificantes de pago por confirmar')),
+            'restaurant_payment': (_('1 restaurante por pagar'), _('%s restaurantes por pagar')),
             'assigned': (_('1 petición asignada a ti sin abrir'), _('%s peticiones asignadas a ti sin abrir')),
         }
         singular, plural = titles[kind]

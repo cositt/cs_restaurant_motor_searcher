@@ -31,6 +31,7 @@ class TestAlerts(TransactionCase):
         cls.env['crm.lead'].search([('restagrup_assigned_unseen', '=', True)]).write({'restagrup_assigned_unseen': False})
         cls.env['sale.order'].search([('restagrup_payment_proof_state', '!=', False)]).write(
             {'restagrup_payment_proof_state': False})
+        cls.env['purchase.order'].search([('restagrup_payment_due', '=', True)]).write({'restagrup_payment_due': False})
 
     def _lead_with_pending(self, owner):
         lead = self.env['crm.lead'].create({
@@ -268,4 +269,35 @@ class TestAlerts(TransactionCase):
         order = self._confirmed_order(self.ana)
         self.Pending.create({'kind': 'agency_payment_request', 'sale_order_id': order.id,
                              'recipient_email': 'ag-avisos@example.com', 'subject': 'Pago', 'body': 'Pago'})
+        self.assertIn('pending_approval', self._alerts(self.ana))
+
+    # --- pagos a restaurantes ---
+
+    def _restaurant_sheet(self, owner):
+        restaurant = self.env['res.partner'].create({'name': 'Casa avisos', 'is_restaurant': True, 'email': 'c@example.com'})
+        product = self.env['product.template'].create({
+            'name': 'Menú casa avisos', 'type': 'service', 'standard_price': 10.0, 'sale_ok': True,
+            'restaurant_id': restaurant.id}).product_variant_id
+        order = self.env['sale.order'].create({
+            'partner_id': restaurant.id, 'user_id': owner.id,
+            'order_line': [(0, 0, {'product_id': product.id, 'product_uom_qty': 10})]})
+        order.action_confirm()
+        return order.restaurant_po_ids
+
+    def test_restaurant_payment_due_alerts_the_group_owner_and_subscribers(self):
+        purchase = self.env.ref('purchase.group_purchase_user')
+        (self.ana | self.bea | self.carla).write({'group_ids': [(4, purchase.id)]})  # quien paga ve las hojas
+        sheet = self._restaurant_sheet(self.ana)
+        sheet.sudo().restagrup_payment_due = True
+        self.assertIn('restaurant_payment', self._alerts(self.ana))
+        self.assertNotIn('restaurant_payment', self._alerts(self.bea))
+        self.Sub.create({'user_id': self.carla.id, 'restaurant_payment': True})
+        self.assertIn('restaurant_payment', self._alerts(self.carla))
+        sheet.sudo().action_mark_restaurant_paid()
+        self.assertNotIn('restaurant_payment', self._alerts(self.ana))
+
+    def test_pending_mail_of_a_sheet_alerts_the_group_owner(self):
+        sheet = self._restaurant_sheet(self.ana)
+        self.Pending.create({'kind': 'restaurant_bank_request', 'purchase_order_id': sheet.id,
+                             'recipient_email': 'c@example.com', 'subject': 'Cuenta', 'body': 'Cuenta'})
         self.assertIn('pending_approval', self._alerts(self.ana))

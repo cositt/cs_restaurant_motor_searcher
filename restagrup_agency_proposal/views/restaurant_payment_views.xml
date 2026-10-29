@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Pagos a restaurantes: hojas de servicio sin transferencia, por fecha del servicio -->
+    <record id="view_purchase_order_restaurant_payments_list" model="ir.ui.view">
+        <field name="name">purchase.order.list.restagrup.restaurant.payments</field>
+        <field name="model">purchase.order</field>
+        <field name="arch" type="xml">
+            <list string="Pagos a restaurantes" default_order="restagrup_service_date asc"
+                  decoration-danger="restagrup_payment_due">
+                <field name="name"/>
+                <field name="partner_id" string="Restaurante"/>
+                <field name="restagrup_sale_order_id"/>
+                <field name="restagrup_service_date"/>
+                <field name="amount_total" sum="Total"/>
+                <field name="restagrup_has_bank"/>
+                <field name="restagrup_bank_request_date" optional="show"/>
+                <field name="restagrup_payment_due"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_restaurant_payments" model="ir.actions.act_window">
+        <field name="name">Pagos a restaurantes</field>
+        <field name="res_model">purchase.order</field>
+        <field name="domain">[('state', '!=', 'cancel'), ('restagrup_sale_order_id', '!=', False), ('restagrup_restaurant_paid', '=', False)]</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_purchase_order_restaurant_payments_list')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('purchase.purchase_order_form')})]"/>
+    </record>
+
+    <menuitem id="menu_restaurant_payments" name="Pagos a restaurantes" parent="restagrup_restaurants.menu_restagrup_root"
+              action="action_restaurant_payments" sequence="6"/>
+</odoo>

@@ -29,6 +29,8 @@
                 <button name="action_unmark_restaurant_paid" type="object" string="Desmarcar transferencia"
                         class="btn-secondary" invisible="not restagrup_restaurant_paid"
                         confirm="¿Seguro que la transferencia no está hecha?"/>
+                <button name="action_send_payment_receipt" type="object" string="Enviar justificante"
+                        class="btn-primary" invisible="not restagrup_restaurant_paid or restagrup_payment_receipt_sent_date"/>
                 <button name="action_mark_invoice_received" type="object" string="Factura recibida"
                         class="btn-secondary" invisible="not restagrup_sale_order_id or restagrup_invoice_received"/>
                 <button name="action_unmark_invoice_received" type="object" string="Desmarcar factura"
@@ -38,6 +40,11 @@
             <xpath expr="//field[@name='partner_ref']" position="after">
                 <field name="restagrup_restaurant_paid" readonly="1" invisible="not restagrup_sale_order_id"/>
                 <field name="restagrup_restaurant_paid_date" readonly="1" invisible="not restagrup_restaurant_paid"/>
+                <field name="restagrup_payment_due" widget="boolean_toggle" readonly="1" invisible="not restagrup_payment_due"
+                       decoration-danger="restagrup_payment_due"/>
+                <field name="restagrup_has_bank" readonly="1" invisible="not restagrup_sale_order_id"/>
+                <field name="restagrup_bank_request_date" readonly="1" invisible="not restagrup_bank_request_date"/>
+                <field name="restagrup_payment_receipt_sent_date" readonly="1" invisible="not restagrup_payment_receipt_sent_date"/>
                 <field name="restagrup_invoice_received" readonly="1" invisible="not restagrup_sale_order_id"/>
                 <field name="restagrup_invoice_received_date" readonly="1" invisible="not restagrup_invoice_received"/>
             </xpath>
