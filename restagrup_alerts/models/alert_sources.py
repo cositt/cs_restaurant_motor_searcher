@@ -23,7 +23,8 @@ class RestagrupPendingMail(models.Model):
     def _restagrup_alert_ping(self):
         if self:
             owners = (self.mapped('lead_id.user_id') | self.mapped('request_lead_id.user_id')
-                      | self.mapped('sale_order_id.user_id'))
+                      | self.mapped('sale_order_id.user_id')
+                      | self.mapped('sheet_owner_id'))
             self.env['restagrup.alert.center']._ping('pending_approval', owners)
 
 
@@ -128,4 +129,14 @@ class SaleOrder(models.Model):
         res = super().write(vals)
         if 'restagrup_payment_proof_state' in vals:
             self.env['restagrup.alert.center']._ping('payment_proof', self.user_id)
+        return res
+
+
+class PurchaseOrder(models.Model):
+    _inherit = 'purchase.order'
+
+    def write(self, vals):
+        res = super().write(vals)
+        if {'restagrup_payment_due', 'restagrup_restaurant_paid'} & set(vals):
+            self.env['restagrup.alert.center']._ping('restaurant_payment', self.restagrup_sale_order_id.user_id)
         return res

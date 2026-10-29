@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Textos de partida (del Word de RestaGrup). noupdate: lo que edite el equipo no se pisa al actualizar. -->
+    <data noupdate="1">
+        <record id="mail_template_restaurant_bank_request" model="restagrup.mail.template">
+            <field name="code">restaurant_bank_request</field>
+            <field name="name">Cuenta bancaria que falta al restaurante</field>
+            <field name="recipient">restaurant</field>
+            <field name="sequence">35</field>
+            <field name="note">Cada día: hojas de servicio de la próxima semana cuyo restaurante no tiene cuenta en su ficha. Va con la proforma adjunta. Una vez por hoja.</field>
+            <field name="can_auto_send" eval="True"/>
+            <field name="placeholders">{restaurante} {grupo} {pedido} {fecha} {hora} {ciudad} {firma}</field>
+            <field name="subject">Número de cuenta para el prepago — {grupo} {fecha}</field>
+            <field name="body">Buenos días,
+
+Debido a la proximidad de la fecha de servicio, necesitamos recibir el numero de cuenta al que realizar el prepago de este grupo. Adjunto de nuevo proforma con todos los detalles de la reserva.
+
+Quedamos a la espera,
+Gracias.
+{firma}</field>
+        </record>
+
+        <record id="mail_template_restaurant_payment_receipt" model="restagrup.mail.template">
+            <field name="code">restaurant_payment_receipt</field>
+            <field name="name">Justificante de pago al restaurante</field>
+            <field name="recipient">restaurant</field>
+            <field name="sequence">36</field>
+            <field name="note">Botón «Enviar justificante» de la hoja de servicio, tras la transferencia. Lleva la confirmación de reserva; la transferencia la adjunta la persona.</field>
+            <field name="can_auto_send" eval="False"/>
+            <field name="placeholders">{restaurante} {grupo} {pedido} {fecha} {hora} {ciudad} {datos_fiscales} {firma}</field>
+            <field name="subject">Transferencia y confirmación de reserva — {grupo} {fecha}</field>
+            <field name="body">Hola {restaurante}.
+
+Adjunto transferencia y confirmación de reserva del grupo {grupo} para el día {fecha} {hora} en {ciudad}.
+
+Nuestros datos fiscales para la factura son:
+{datos_fiscales}
+
+Enviar factura únicamente por email.
+
+Un saludo y gracias!
+{firma}</field>
+        </record>
+
+        <record id="ir_cron_restaurant_payments" model="ir.cron">
+            <field name="name">Restagrup: cuenta y pago a los restaurantes</field>
+            <field name="model_id" ref="purchase.model_purchase_order"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_restaurant_payments()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
+</odoo>
