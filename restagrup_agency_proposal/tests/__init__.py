@@ -7,3 +7,4 @@ from . import test_firewall_documents
 from . import test_payment_settings
 from . import test_review_proposal
 from . import test_mail_templates_followup
+from . import test_close_checklist

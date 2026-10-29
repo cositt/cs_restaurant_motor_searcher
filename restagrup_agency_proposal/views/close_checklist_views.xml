@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_order_form_close_checklist" model="ir.ui.view">
+        <field name="name">sale.order.form.close.checklist</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="view_order_form_proposal"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_send_voucher']" position="after">
+                <button name="action_mark_invoice_sent" type="object" string="Factura enviada" class="btn-secondary"
+                        invisible="state not in ('sale', 'done') or restagrup_invoice_sent"/>
+                <button name="action_unmark_invoice_sent" type="object" string="Desmarcar factura" class="btn-secondary"
+                        invisible="not restagrup_invoice_sent" confirm="¿Seguro que la factura no se ha enviado?"/>
+            </xpath>
+            <xpath expr="//field[@name='restagrup_paid_date']" position="after">
+                <field name="restagrup_invoice_sent" readonly="1"/>
+                <field name="restagrup_invoice_sent_date" readonly="1" invisible="not restagrup_invoice_sent"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_purchase_order_form_close_checklist" model="ir.ui.view">
+        <field name="name">purchase.order.form.close.checklist</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="view_purchase_order_form_confirmation"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_confirmation_restaurant']" position="after">
+                <button name="action_mark_restaurant_paid" type="object" string="Transferencia hecha"
+                        class="btn-secondary" invisible="not restagrup_sale_order_id or restagrup_restaurant_paid"/>
+                <button name="action_unmark_restaurant_paid" type="object" string="Desmarcar transferencia"
+                        class="btn-secondary" invisible="not restagrup_restaurant_paid"
+                        confirm="¿Seguro que la transferencia no está hecha?"/>
+                <button name="action_mark_invoice_received" type="object" string="Factura recibida"
+                        class="btn-secondary" invisible="not restagrup_sale_order_id or restagrup_invoice_received"/>
+                <button name="action_unmark_invoice_received" type="object" string="Desmarcar factura"
+                        class="btn-secondary" invisible="not restagrup_invoice_received"
+                        confirm="¿Seguro que la factura no está recibida?"/>
+            </xpath>
+            <xpath expr="//field[@name='partner_ref']" position="after">
+                <field name="restagrup_restaurant_paid" readonly="1" invisible="not restagrup_sale_order_id"/>
+                <field name="restagrup_restaurant_paid_date" readonly="1" invisible="not restagrup_restaurant_paid"/>
+                <field name="restagrup_invoice_received" readonly="1" invisible="not restagrup_sale_order_id"/>
+                <field name="restagrup_invoice_received_date" readonly="1" invisible="not restagrup_invoice_received"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- En el grupo: qué falta para cerrar el expediente -->
+    <record id="crm_lead_view_form_close_checklist" model="ir.ui.view">
+        <field name="name">crm.lead.form.close.checklist</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Cierre" name="restagrup_close"
+                      invisible="restagrup_stage_key not in ('expediente', 'cerrado')">
+                    <div class="alert alert-success" role="status" invisible="not restagrup_close_ready">
+                        Todo listo: ya se puede cerrar el expediente.
+                    </div>
+                    <div class="alert alert-warning" role="status" invisible="restagrup_close_ready">
+                        Falta para cerrar: <field name="restagrup_close_pending" class="oe_inline fw-bold"/>
+                    </div>
+                    <group>
+                        <field name="restagrup_close_agency_paid" readonly="1"/>
+                        <field name="restagrup_close_restaurant_paid" readonly="1"/>
+                        <field name="restagrup_close_invoice_sent" readonly="1"/>
+                        <field name="restagrup_close_restaurant_invoice" readonly="1"/>
+                        <field name="restagrup_close_ready" invisible="1"/>
+                    </group>
+                    <div class="text-muted">
+                        El pago y la factura a la agencia se marcan en el presupuesto de venta; la transferencia y la
+                        factura de cada restaurante, en su hoja de servicio.
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_crm_lead_restagrup_list_close" model="ir.ui.view">
+        <field name="name">crm.lead.list.restagrup.close</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="restagrup_service_orders.view_crm_lead_restagrup_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='restagrup_assignee_label']" position="after">
+                <field name="restagrup_stage_key" column_invisible="1"/>
+                <field name="restagrup_close_pending" optional="show" decoration-warning="1"
+                       invisible="restagrup_stage_key != 'expediente'"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

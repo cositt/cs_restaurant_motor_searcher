@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Cierre del expediente: estos pasos impiden cerrar mientras falten (se pueden relajar en Cortafuegos). -->
+    <record id="firewall_restaurant_paid" model="restagrup.firewall.check">
+        <field name="code">restaurant_paid</field>
+        <field name="name">La transferencia a cada restaurante está hecha</field>
+        <field name="trigger">close_file</field>
+        <field name="mode">block</field>
+        <field name="sequence">61</field>
+    </record>
+    <record id="firewall_agency_invoice_sent" model="restagrup.firewall.check">
+        <field name="code">agency_invoice_sent</field>
+        <field name="name">La factura se ha enviado a la agencia</field>
+        <field name="trigger">close_file</field>
+        <field name="mode">block</field>
+        <field name="sequence">62</field>
+    </record>
+    <record id="firewall_restaurant_invoice" model="restagrup.firewall.check">
+        <field name="code">restaurant_invoice</field>
+        <field name="name">La factura de cada restaurante está recibida y revisada</field>
+        <field name="trigger">close_file</field>
+        <field name="mode">block</field>
+        <field name="sequence">63</field>
+    </record>
+</odoo>
