@@ -13,7 +13,7 @@
                 <field name="create_date" string="Creado"/>
                 <field name="recipient_email"/>
                 <field name="group_id"/>
-                <field name="line_id"/>
+                <field name="restaurant_name"/>
                 <field name="reason"/>
                 <field name="subject"/>
                 <field name="state" widget="badge"
@@ -46,7 +46,8 @@
                         <group>
                             <field name="kind"/>
                             <field name="group_id"/>
-                            <field name="line_id"/>
+                            <field name="restaurant_name" invisible="not restaurant_name"/>
+                            <field name="line_id" invisible="not line_id"/>
                             <field name="reason"/>
                         </group>
                         <group>

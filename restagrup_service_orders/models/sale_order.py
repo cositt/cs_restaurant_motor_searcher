@@ -2,7 +2,11 @@
 from collections import defaultdict
 from datetime import datetime, time
 
+import pytz
+
 from odoo import _, api, fields, models
+
+DEFAULT_TZ = 'Europe/Madrid'
 
 
 class SaleOrder(models.Model):
@@ -165,13 +169,28 @@ class SaleOrder(models.Model):
         quote = sale_line.restagrup_search_line_id.quote_amount
         return quote or sale_line.price_unit
 
+    def _restagrup_tz(self):
+        """Zona de las horas de servicio: la de quien trabaja o, en los crons, la de Madrid."""
+        return pytz.timezone(self.env.context.get('tz') or self.env.user.tz or DEFAULT_TZ)
+
     @staticmethod
-    def _restagrup_planned_datetime(sale_line):
-        """Fecha y hora del servicio como datetime sin zona (False si la línea no tiene fecha)."""
+    def _restagrup_local_service_datetime(sale_line):
+        """Fecha y hora local del servicio, sin zona (False si la línea no tiene fecha)."""
         if not sale_line.service_date:
             return False
         minutes = int(round((sale_line.service_hour or 0.0) * 60))
         return datetime.combine(sale_line.service_date, time(minutes // 60 % 24, minutes % 60))
+
+    def _restagrup_planned_datetime(self, sale_line):
+        """Fecha y hora del servicio en UTC, como guarda Odoo los datetime (False si la línea no tiene fecha)."""
+        local = self._restagrup_local_service_datetime(sale_line)
+        if not local:
+            return False
+        return self._restagrup_tz().localize(local).astimezone(pytz.utc).replace(tzinfo=None)
+
+    def _restagrup_to_local(self, value):
+        """Datetime guardado (UTC, sin zona) -> hora local sin zona."""
+        return pytz.utc.localize(value).astimezone(self._restagrup_tz()).replace(tzinfo=None)
 
     def _prepare_restaurant_po_line_vals(self, sale_line):
         planned = self._restagrup_planned_datetime(sale_line)
@@ -186,13 +205,14 @@ class SaleOrder(models.Model):
         }
 
     def action_send_restaurant_orders(self):
-        template = self.env.ref('purchase.email_template_edi_purchase', raise_if_not_found=False)
         for order in self:
             order._sync_restaurant_purchase_orders()
             draft_pos = order.sudo().restaurant_po_ids.filtered(lambda po: po.state == 'draft')
             for po in draft_pos:
-                if template:
-                    template.sudo().send_mail(po.id, force_send=True)
+                if not po._restagrup_post_service_sheet():
+                    order._restagrup_log_on_searches(
+                        _('Hoja de servicio sin enviar: %s no tiene email.') % po.partner_id.name)
+                    continue
                 po.write({'state': 'sent'})
                 order._restagrup_log_on_searches(
                     _('Hoja de servicio enviada a %s.') % po.partner_id.name

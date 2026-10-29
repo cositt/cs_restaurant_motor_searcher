@@ -131,6 +131,7 @@ class SaleOrder(models.Model):
             body=Markup('<br/>').join(Markup.escape(line) for line in body_text.splitlines()),
             subject=subject, message_type='email', subtype_xmlid='mail.mt_comment',
             email_from=self.env['restagrup.system.mail'].email_from(self.user_id.email or self.env.user.email),
+            email_add_signature=False,  # el texto ya lleva {firma}
             outgoing_email_to=email_to,
         )
         self.write({PAYMENT_KINDS[kind]: fields.Datetime.now()})

@@ -33,7 +33,7 @@ class RestaurantMenu(models.Model):
         'res.partner', string='Restaurante', required=True, index=True, ondelete='cascade',
         domain=[('is_restaurant', '=', True)],
     )
-    active = fields.Boolean(default=True)
+    active = fields.Boolean(string='Activo', default=True)
     sequence = fields.Integer(default=10)
     currency_id = fields.Many2one(
         'res.currency', string='Moneda', required=True,

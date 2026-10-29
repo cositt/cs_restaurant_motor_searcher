@@ -89,7 +89,6 @@ class SaleOrder(models.Model):
         deja constancia en el chatter y reenvía el correo -- con el resumen de qué cambió -- únicamente a los
         restaurantes afectados. Si el cambio es significativo, la hoja vuelve a «pendiente de confirmar» y el
         correo pide la confirmación. Después avisa también a la agencia."""
-        template = self.env.ref('purchase.email_template_edi_purchase', raise_if_not_found=False)
         for order in self:
             order._sync_restaurant_purchase_orders()
             agency_changes = []
@@ -105,8 +104,8 @@ class SaleOrder(models.Model):
                 if significant:
                     footer = '<p><strong>%s</strong></p>' % _(
                         'Necesitamos que confirméis estos cambios respondiendo a este correo.')
-                order._restagrup_send_with_summary(
-                    template, po, order._restagrup_summary_html(_('Cambios en el servicio:'), texts, footer))
+                po._restagrup_post_service_sheet(
+                    intro_html=order._restagrup_summary_html(_('Cambios en el servicio:'), texts, footer))
                 agency_changes.append((po.partner_id.name, texts))
                 order._restagrup_log_on_searches(_('Cambios reenviados a %(restaurant)s: %(changes)s') % {
                     'restaurant': po.partner_id.name,

@@ -163,7 +163,7 @@ class RestaurantSearch(models.Model):
         selection=SORT_BY_SELECTION, string='Ordenar por', default='default',
         help='Reordena las tarjetas de resultados. No afecta a los datos, solo al orden en que se muestran.',
     )
-    active = fields.Boolean(default=True)
+    active = fields.Boolean(string='Activo', default=True)
     pipeline_stage = fields.Selection(
         selection=PIPELINE_STAGE_SELECTION, string='Estado', compute='_compute_pipeline_stage',
         store=True, default='searching',
@@ -809,6 +809,7 @@ class RestaurantSearchLine(models.Model):
             message_type='email',
             subtype_xmlid='mail.mt_comment',
             email_from=search.user_id.email or self.env.user.email,
+            email_add_signature=False,  # el texto ya lleva {firma}
             outgoing_email_to=email_to,
         )
 
@@ -884,6 +885,7 @@ class RestaurantSearchLine(models.Model):
             subtype_xmlid='mail.mt_comment',
             email_from=self.env['restagrup.system.mail'].email_from(
                 self.search_id.user_id.email or self.env.user.email),
+            email_add_signature=False,  # el texto ya lleva {firma}
             outgoing_email_to=email_to,
         )
 
@@ -931,6 +933,18 @@ class RestaurantSearchLine(models.Model):
                 _logger.warning(
                     'Recordatorio de presupuesto omitido para la línea %s: %s', line.id, exc,
                 )
+
+    @api.model
+    def message_new(self, msg_dict, custom_values=None):
+        """Un correo al buzón de restaurantes que no contesta a ninguno de nuestros hilos no puede crear una línea
+        (no sabemos de qué búsqueda es): va a «Correos por revisar» en vez de perderse con un error."""
+        if (custom_values or {}).get('search_id'):
+            return super().message_new(msg_dict, custom_values=custom_values)
+        return self.env['restagrup.inbox.mail'].message_new(msg_dict, custom_values={
+            'category': 'other',
+            'summary': _('Correo de un restaurante que no contesta a ninguna petición ni hoja: '
+                         'mira de qué grupo es.'),
+        })
 
     def message_update(self, msg_dict, update_vals=None):
         res = super().message_update(msg_dict, update_vals=update_vals)
@@ -985,10 +999,14 @@ class RestaurantSearchLine(models.Model):
         if vals:
             self.write(vals)
         self._restagrup_menus_from_reply(data.get('menus'))
-        self.search_id.message_post_if_exists(_(
-            '%(name)s: respuesta de presupuesto recibida por email, importe extraído'
-            ' por IA (%(provider)s) — revisa antes de registrar.'
-        ) % {'name': self.name, 'provider': provider})
+        if amount:
+            note = _('%(name)s: respuesta de presupuesto recibida por email, importe extraído'
+                     ' por IA (%(provider)s) — revisa antes de registrar.')
+        else:
+            # Varios menús por persona, sin total: no hay importe que revisar, lo elige una persona.
+            note = _('%(name)s: respuesta de presupuesto recibida por email, sin importe total (leída por IA,'
+                     ' %(provider)s) — elige el menú o escribe el importe a mano.')
+        self.search_id.message_post_if_exists(note % {'name': self.name, 'provider': provider})
 
     def action_extract_quote_from_text(self):
         """Propone importe y notas leyendo el texto pegado -- nunca registra sola,

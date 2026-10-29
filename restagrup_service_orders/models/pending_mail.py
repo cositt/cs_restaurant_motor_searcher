@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from markupsafe import Markup
 
-from odoo import _, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools import html2plaintext
 
@@ -18,6 +18,12 @@ class RestagrupPendingMail(models.Model):
     sale_order_id = fields.Many2one(
         'sale.order', string='Presupuesto', ondelete='cascade', readonly=True, index=True,
     )
+
+    @api.depends('lead_id', 'request_lead_id', 'sale_order_id.opportunity_id')
+    def _compute_group_id(self):
+        super()._compute_group_id()
+        for mail in self.filtered(lambda m: not m.group_id):
+            mail.group_id = mail.sale_order_id.opportunity_id
 
     # --- recordatorio a la agencia ---
 

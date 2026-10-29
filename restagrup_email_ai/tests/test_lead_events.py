@@ -189,3 +189,23 @@ class TestLeadEvents(TransactionCase):
         lead, contact = self._extract_with_sender({'eventos': [], 'agencia': None})
         self.assertFalse(contact.parent_id)
         self.assertFalse(lead.partner_name)
+
+    # --- precio por persona que da la agencia (guía en producción, 2026-10-29) ---
+
+    def test_agency_price_per_person_is_kept_and_not_an_estimate(self):
+        data = {'eventos': [{'ciudad': 'Málaga', 'fecha': '2026-11-05', 'tipo': 'comida', 'pax': 30,
+                             'precio_persona': 35, 'notas': 'unos 35 € por persona'}]}
+        event = self._extract(data).restagrup_event_ids
+        self.assertEqual(event.budget_pp, 35.0)
+        self.assertFalse(event.budget_is_estimate)
+
+    def test_without_agency_price_the_baseline_is_used(self):
+        data = {'eventos': [{'ciudad': 'Málaga', 'fecha': '2026-11-05', 'tipo': 'comida', 'pax': 30,
+                             'precio_persona': 'no sé', 'notas': None}]}
+        self.assertTrue(self._extract(data).restagrup_event_ids.budget_is_estimate)
+
+    def test_prompt_asks_for_the_price_per_person(self):
+        lead = self.env['crm.lead'].create({'name': 'Prompt precio'})
+        with patch(LLM, return_value=({'eventos': []}, 'groq')) as llm:
+            lead._restagrup_extract_from_email({'body': '<p>Hola</p>'})
+        self.assertIn('"precio_persona"', llm.call_args.args[0])

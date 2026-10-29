@@ -16,6 +16,7 @@ from odoo.addons.restagrup_restaurants.models.restaurant_menu_ai import _attachm
 _logger = logging.getLogger(__name__)
 
 CONFIRMATION_REPORT = 'restagrup_agency_proposal.report_restaurant_confirmation'
+CHATTER_LANG = 'es_ES'
 IBAN_CANDIDATE_RE = re.compile(r'\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]){10,30}')
 # Longitud del IBAN por país (los habituales); con ella se corta lo que va pegado detrás.
 IBAN_LENGTHS = {'ES': 24, 'PT': 25, 'FR': 27, 'IT': 27, 'DE': 22, 'GB': 22, 'NL': 18, 'BE': 16, 'AD': 24, 'IE': 22}
@@ -166,36 +167,40 @@ class PurchaseOrder(models.Model):
             subject=subject, message_type='email', subtype_xmlid='mail.mt_comment',
             email_from=self.env['restagrup.system.mail'].email_from(
                 self.restagrup_sale_order_id.user_id.email or self.env.user.email),
+            email_add_signature=False,  # el texto ya lleva {firma}
             outgoing_email_to=email_to, attachments=[self._restagrup_proforma()],
         )
         self.write({'restagrup_bank_request_date': fields.Datetime.now()})
 
     # --- la cuenta que contesta el restaurante ---
 
-    def message_update(self, msg_dict, update_vals=None):
-        res = super().message_update(msg_dict, update_vals=update_vals)
-        for sheet in self:
-            sheet._restagrup_read_bank_account(msg_dict)
-        return res
+    def _restagrup_classify_response(self, msg_dict):
+        """La respuesta con la cuenta es la de la petición de cuenta, no la de la hoja: no se clasifica."""
+        if self._restagrup_read_bank_account(msg_dict):
+            return False
+        return super()._restagrup_classify_response(msg_dict)
 
     def _restagrup_read_bank_account(self, msg_dict):
-        """Si le pedimos la cuenta y contesta con un IBAN válido, se guarda en su ficha. Sin IA: se comprueba."""
+        """Si le pedimos la cuenta y contesta con un IBAN, se guarda en su ficha si es válido. Sin IA: se comprueba.
+        True si la respuesta traía la cuenta."""
         self.ensure_one()
         if not self.restagrup_bank_request_date or self.restagrup_has_bank:
-            return
+            return False
         raw_body = msg_dict.get('body') or ''
         text = '\n'.join([html2plaintext(raw_body) if raw_body else '', _attachment_text(msg_dict.get('attachments'))])
         iban, valid = _find_iban(text)
         if not iban:
-            return
+            return False
         if not valid:
             self.message_post(body=_('El restaurante ha mandado una cuenta (%s) que no es válida: revísala con él.')
                               % _masked(iban))
-            return
-        self.env['res.partner.bank'].sudo().create({
+            return True
+        # En español: Odoo deja en la ficha «Cuenta bancaria creada» en el idioma del contexto, y el buzón no tiene.
+        self.env['res.partner.bank'].sudo().with_context(lang=CHATTER_LANG).create({
             'partner_id': self.partner_id.commercial_partner_id.id, 'acc_number': iban})
         self.message_post(body=_('Cuenta bancaria guardada en la ficha de %(name)s: %(iban)s.') % {
             'name': self.partner_id.name, 'iban': _masked(iban)})
+        return True
 
     # --- pagar y mandar el justificante ---
 
@@ -229,7 +234,7 @@ class PurchaseOrder(models.Model):
             'context': {
                 'default_model': self._name, 'default_res_ids': self.ids, 'default_composition_mode': 'comment',
                 'default_partner_ids': self.partner_id.ids, 'default_attachment_ids': attachment.ids,
-                'default_subject': subject,
+                'default_subject': subject, 'default_email_add_signature': False,  # el texto ya lleva {firma}
                 'default_body': Markup('<br/>').join(Markup.escape(line) for line in body.splitlines()),
                 'default_email_from': self.env['restagrup.system.mail'].email_from(
                     self.restagrup_sale_order_id.user_id.email_formatted or self.env.user.email_formatted),
@@ -255,6 +260,19 @@ class RestagrupPendingMail(models.Model):
     # Guardado: el aviso del comercial no tiene que leer la hoja de compra (puede no tener permiso de compras).
     sheet_owner_id = fields.Many2one(
         related='purchase_order_id.restagrup_sale_order_id.user_id', string='Responsable de la hoja', store=True)
+
+    @api.depends('lead_id', 'request_lead_id', 'sale_order_id.opportunity_id',
+                 'purchase_order_id.restagrup_sale_order_id.opportunity_id')
+    def _compute_group_id(self):
+        super()._compute_group_id()
+        for mail in self.filtered(lambda m: not m.group_id):
+            mail.group_id = mail.sudo().purchase_order_id.restagrup_sale_order_id.opportunity_id
+
+    @api.depends('line_id.name', 'line_id.partner_id.name', 'purchase_order_id.partner_id.name')
+    def _compute_restaurant_name(self):
+        super()._compute_restaurant_name()
+        for mail in self.filtered(lambda m: not m.restaurant_name):
+            mail.restaurant_name = mail.sudo().purchase_order_id.partner_id.name or False
 
     def _still_applies_restaurant_bank_request(self):
         sheet = self.purchase_order_id

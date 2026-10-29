@@ -94,6 +94,7 @@ class SaleOrder(models.Model):
             message_type='email',
             subtype_xmlid='mail.mt_comment',
             email_from=self.env['restagrup.system.mail'].email_from(self.user_id.email or self.env.user.email),
+            email_add_signature=False,  # el texto ya lleva {firma}
             outgoing_email_to=email_to,
         )
         self.write({'restagrup_agency_reminder_date': fields.Datetime.now()})

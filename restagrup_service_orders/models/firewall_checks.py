@@ -50,6 +50,8 @@ class CrmLeadFirewall(models.Model):
     def _fw_service_done(self):
         dates = [e.event_date for e in self.restagrup_event_ids if e.event_date] or (
             [self.restagrup_service_date] if self.restagrup_service_date else [])
+        # La fecha que vale al final es la del pedido: si se cambia ahí, el evento de la petición no se entera.
+        dates += [d for d in self._restagrup_firewall_orders().order_line.mapped('service_date') if d]
         last = max(dates) if dates else False
         if last and last >= fields.Date.context_today(self):
             return _('El último servicio todavía no ha terminado (%s).') % last.strftime('%d/%m/%Y')

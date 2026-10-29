@@ -31,7 +31,7 @@ class FirewallCheck(models.Model):
         help='Avisar y consultar: se muestra lo que falta y la persona decide si continúa (queda anotado en el'
              ' chatter). Impedir continuar: no deja avanzar hasta que se resuelva.',
     )
-    active = fields.Boolean(default=True)
+    active = fields.Boolean(string='Activo', default=True)
     sequence = fields.Integer(default=10)
     is_review = fields.Boolean(
         string='Punto de revisión', readonly=True,

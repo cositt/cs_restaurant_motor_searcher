@@ -40,6 +40,27 @@ Quedamos a la espera de tus comentarios,
 Gracias!
 {firma}</field>
         </record>
+
+        <record id="mail_template_service_sheet" model="restagrup.mail.template">
+            <field name="code">service_sheet</field>
+            <field name="name">Hoja de servicio al restaurante</field>
+            <field name="recipient">restaurant</field>
+            <field name="sequence">40</field>
+            <field name="note">Botón «Enviar hojas de servicio» del presupuesto confirmado (y «Reenviar cambios», con el resumen de qué cambió delante). Va con la hoja en PDF; su respuesta vuelve a la hoja.</field>
+            <field name="can_auto_send" eval="False"/>
+            <field name="placeholders">{restaurante} {grupo} {pedido} {servicios} {firma}</field>
+            <field name="subject">Hoja de servicio {pedido} — {grupo}</field>
+            <field name="body">Hola {restaurante},
+
+Os enviamos la hoja de servicio del grupo {grupo}:
+
+{servicios}
+
+Adjuntamos la hoja en PDF. Por favor, confirmadnos la reserva respondiendo a este correo.
+
+Gracias!
+{firma}</field>
+        </record>
     </data>
 
     <function model="restagrup.mail.template" name="_import_legacy_texts"/>

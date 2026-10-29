@@ -64,7 +64,7 @@
                 <field name="restagrup_invoice_received_date" readonly="1" invisible="not restagrup_invoice_received"/>
                 <field name="restagrup_invoice_proof_state" invisible="1"/>
                 <field name="restagrup_invoice_number" invisible="not restagrup_invoice_number"/>
-                <field name="restagrup_invoice_date" invisible="not restagrup_invoice_number"/>
+                <field name="restagrup_invoice_date_display" invisible="not restagrup_invoice_number"/>
                 <field name="restagrup_invoice_claim_level" invisible="not restagrup_invoice_claim_level"/>
                 <field name="restagrup_invoice_claim_date" invisible="not restagrup_invoice_claim_level"/>
             </xpath>

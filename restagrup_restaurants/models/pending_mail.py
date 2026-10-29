@@ -45,6 +45,10 @@ class RestagrupPendingMail(models.Model):
         'crm.lead', string='Grupo', compute='_compute_group_id',
         help='La petición de la agencia de la que trata este correo.',
     )
+    restaurant_name = fields.Char(
+        string='Restaurante', compute='_compute_restaurant_name',
+        help='El restaurante al que va el correo (o del que trata).',
+    )
     recipient_email = fields.Char(string='Destinatario')
     subject = fields.Char(string='Asunto', required=True)
     body = fields.Text(string='Mensaje', required=True)
@@ -57,6 +61,15 @@ class RestagrupPendingMail(models.Model):
     def _compute_group_id(self):
         for mail in self:
             mail.group_id = mail.request_lead_id or mail.lead_id
+
+    @api.depends('line_id.name', 'line_id.partner_id.name')
+    def _compute_restaurant_name(self):
+        for mail in self:
+            mail.restaurant_name = mail.line_id.partner_id.name or mail.line_id.name or False
+
+    def _creation_message(self):
+        # Los crean los crons, que corren sin idioma: el «… created» de Odoo saldría en inglés.
+        return _('Correo preparado, pendiente de aprobar.')
 
     @api.model
     def _send_mode(self):
