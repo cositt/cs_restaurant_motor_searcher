@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import re
 
 from odoo import _, fields, models
 from odoo.tools import html2plaintext
@@ -12,16 +13,18 @@ viaje envían a un restaurante-broker, en español o en inglés. Hoy es {hoy}.
 Devuelve SOLO un objeto JSON, sin texto adicional, con estas claves exactas:
 "eventos": lista con UN objeto por cada servicio pedido (cada comida, cena, desayuno... en cada
 ciudad y fecha). Cada objeto tiene: "ciudad" (string o null), "fecha" (string YYYY-MM-DD o
-null), "tipo" (uno de: desayuno, aperitivo, comida, cena, coffee_break, otro; o null si el
+null), "hora" (string HH:MM en 24 h o null), "tipo" (uno de: desayuno, aperitivo, comida, cena, coffee_break, otro; o null si el
 texto no lo dice), "pax" (entero o null) y "notas" (string corto con requisitos como alergias
 o presupuesto por persona, o null). Si una fecha no indica el año, usa la próxima vez que
 ocurra a partir de hoy. Si no se pide ningún servicio, "eventos" es una lista vacía.
 Además: "ciudad" (string o null), "num_pax" (entero o null) y "fecha_servicio" (string
-YYYY-MM-DD o null) del primer evento, y "tipo_grupo" (string corto:
-corporativo/escolar/familiar/otro, o null).
+YYYY-MM-DD o null) del primer evento, "tipo_grupo" (string corto:
+corporativo/escolar/familiar/otro, o null) y "agencia" (nombre de la agencia o empresa que hace la
+petición, tal como firma el correo; null si no aparece o escribe un particular).
 Si un dato no aparece claramente en el texto, pon null -- nunca lo inventes."""
 
 MAX_EVENTS = 20
+HOUR_RE = re.compile(r'^(\d{1,2})(?:[:.h](\d{2}))?$')
 EVENT_TYPE_XMLIDS = {
     'desayuno': 'restagrup_core.event_type_breakfast',
     'aperitivo': 'restagrup_core.event_type_aperitif',
@@ -95,13 +98,16 @@ class CrmLead(models.Model):
             'restagrup_extraction_state': 'done',
             'restagrup_extraction_provider': provider,
         })
+        self._restagrup_set_agency(data.get('agencia'))
         if event_vals:
             self.env['restagrup.lead.event'].create([dict(vals, lead_id=self.id) for vals in event_vals])
         self.message_post(body=_(
             'Datos extraídos automáticamente por IA (%(provider)s) -- revisar antes de'
             ' convertir en presupuesto.'
         ) % {'provider': provider})
-        self._restagrup_after_extraction(log)
+        # El correo aún no está guardado en el lead (message_new lo guarda después): se pasa a quien lo necesite.
+        incoming = {'body': raw_body, 'email_from': msg_dict.get('email_from'), 'date': msg_dict.get('date')}
+        self.with_context(restagrup_incoming_mail=incoming)._restagrup_after_extraction(log)
 
     # --- ¿está completa la petición? ---
 
@@ -183,6 +189,7 @@ class CrmLead(models.Model):
                 'sequence': 10 * (len(vals_list) + 1),
                 'city': (event.get('ciudad') or '') or False,
                 'event_date': self._restagrup_safe_date(event.get('fecha')),
+                'event_time': self._restagrup_safe_hour(event.get('hora')),
                 'event_type_id': self._restagrup_event_type_id(event.get('tipo')),
                 'pax': self._restagrup_safe_int(event.get('pax')),
                 'notes': (event.get('notas') or '') or False,
@@ -204,6 +211,42 @@ class CrmLead(models.Model):
             return fields.Date.to_date(value) or False
         except (ValueError, TypeError, OverflowError):
             return False
+
+    @staticmethod
+    def _restagrup_safe_hour(value):
+        """«14:00» / «13.30» -> 14.0 / 13.5 (como el widget de hora de Odoo). Lo que no sea una hora válida: 0."""
+        if not isinstance(value, str):
+            return 0.0
+        match = HOUR_RE.match(value.strip())
+        if not match:
+            return 0.0
+        hours, minutes = int(match.group(1)), int(match.group(2) or 0)
+        if hours > 23 or minutes > 59:
+            return 0.0
+        return hours + minutes / 60.0
+
+    # --- agencia: la empresa que pide; quien escribe es su contacto ---
+
+    def _restagrup_set_agency(self, name):
+        self.ensure_one()
+        name = name.strip() if isinstance(name, str) else ''
+        if not name:
+            return
+        self.partner_name = name
+        self._restagrup_link_agency()
+
+    def _restagrup_link_agency(self):
+        """Cuelga el contacto del lead de su agencia (existente o nueva). Un contacto que ya es empresa o que ya
+        pertenece a una no se toca: lo que alguien dejó configurado manda sobre lo que lee la IA."""
+        self.ensure_one()
+        contact = self.partner_id
+        if not self.partner_name or not contact or contact.is_company or contact.parent_id:
+            return
+        Partner = self.env['res.partner'].sudo()
+        agency = Partner.search([('is_company', '=', True), ('name', '=ilike', self.partner_name)], limit=1)
+        if not agency:
+            agency = Partner.create({'name': self.partner_name, 'is_company': True})
+        contact.sudo().parent_id = agency
 
     @staticmethod
     def _restagrup_safe_int(value):

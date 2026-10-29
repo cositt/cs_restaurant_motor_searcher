@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_restagrup_alert_subscription_list" model="ir.ui.view">
+        <field name="name">restagrup.alert.subscription.list</field>
+        <field name="model">restagrup.alert.subscription</field>
+        <field name="arch" type="xml">
+            <list string="Quién recibe cada aviso" editable="bottom">
+                <field name="user_id"/>
+                <field name="receive_all" widget="boolean_toggle"/>
+                <field name="pending_approval" widget="boolean_toggle" readonly="receive_all"/>
+                <field name="new_request" widget="boolean_toggle" readonly="receive_all"/>
+                <field name="quote_to_confirm" widget="boolean_toggle" readonly="receive_all"/>
+                <field name="client_choice" widget="boolean_toggle" readonly="receive_all"/>
+                <field name="unassigned" widget="boolean_toggle" readonly="receive_all"/>
+                <field name="active" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_restagrup_alert_subscription" model="ir.actions.act_window">
+        <field name="name">Avisos: quién recibe qué</field>
+        <field name="res_model">restagrup.alert.subscription</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Añade una fila por usuario</p>
+            <p>Marca los avisos que debe ver cada uno, o «Todos». Además, si está activado en Ajustes, cada comercial
+               ve los avisos de sus propias peticiones.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_restagrup_alert_subscription" name="Avisos" parent="restagrup_restaurants.menu_restagrup_root"
+              action="action_restagrup_alert_subscription" sequence="95" groups="base.group_system"/>
+</odoo>

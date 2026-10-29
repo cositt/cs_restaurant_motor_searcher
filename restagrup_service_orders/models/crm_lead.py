@@ -39,6 +39,7 @@ class CrmLead(models.Model):
         con los datos del remitente. Sin email no se inventa nada. Devuelve el contacto o un recordset vacío."""
         self.ensure_one()
         if self.partner_id:
+            self._restagrup_link_agency()
             return self.partner_id
         email = email_normalize(self.email_from or '')
         if not email:
@@ -52,6 +53,7 @@ class CrmLead(models.Model):
                 'name': sender_name, 'email': email, 'phone': self.phone or False,
             })
         self.sudo().partner_id = partner  # un lead sin asignar no es escribible por todos los comerciales
+        self._restagrup_link_agency()
         return partner
 
     def _restagrup_notice_line_vals(self):

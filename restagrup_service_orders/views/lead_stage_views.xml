@@ -36,6 +36,9 @@
                 <div class="text-muted mb-1" invisible="not restagrup_doc_number">
                     Documento <field name="restagrup_doc_number" class="oe_inline fw-bold"/>
                 </div>
+                <div class="mb-1" invisible="user_id">
+                    <span class="badge text-bg-danger">Pendiente de asignación</span>
+                </div>
             </xpath>
         </field>
     </record>
@@ -53,7 +56,8 @@
                 <field name="restagrup_first_service_city"/>
                 <field name="restagrup_chosen_summary" string="Restaurante"/>
                 <field name="restagrup_total_pax"/>
-                <field name="user_id" string="Asignado a" widget="many2one_avatar_user"/>
+                <field name="user_id" column_invisible="1"/>
+                <field name="restagrup_assignee_label" decoration-danger="not user_id" decoration-bf="not user_id"/>
                 <field name="stage_id" string="Estado" widget="badge"/>
             </list>
         </field>
@@ -70,6 +74,7 @@
                 <field name="restagrup_first_service_city" string="Población"/>
                 <field name="user_id" string="Asignado a"/>
                 <filter name="mine" string="Mis grupos" domain="[('user_id', '=', uid)]"/>
+                <filter name="unassigned" string="Pendientes de asignación" domain="[('user_id', '=', False)]"/>
             </search>
         </field>
     </record>

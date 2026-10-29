@@ -34,6 +34,15 @@ class CrmLead(models.Model):
     )
     restagrup_first_service_city = fields.Char(string='Población 1º servicio', compute='_compute_restagrup_first_service')
     restagrup_total_pax = fields.Integer(string='Nº comensales', compute='_compute_restagrup_first_service')
+    restagrup_assignee_label = fields.Char(
+        string='Asignado a', compute='_compute_restagrup_assignee_label',
+        help='Quién lleva el grupo, o «Pendiente de asignación» si aún no lo lleva nadie.',
+    )
+
+    @api.depends('user_id')
+    def _compute_restagrup_assignee_label(self):
+        for lead in self:
+            lead.restagrup_assignee_label = lead.user_id.name or _('Pendiente de asignación')
 
     @api.depends('partner_id', 'partner_name', 'contact_name', 'email_from')
     def _compute_restagrup_agency_name(self):

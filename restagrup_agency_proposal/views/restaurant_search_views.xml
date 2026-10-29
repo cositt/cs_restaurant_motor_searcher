@@ -5,6 +5,8 @@
         <field name="model">restagrup.restaurant.search</field>
         <field name="inherit_id" ref="restagrup_restaurants.view_restaurant_search_form"/>
         <field name="arch" type="xml">
+            <!-- Mostrar u ocultar los restaurantes se decide junto al envío de la comparativa. -->
+            <xpath expr="//sheet//field[@name='restaurant_visible']" position="replace"/>
             <xpath expr="//header/button[@name='action_view_on_map']" position="after">
                 <button name="%(action_report_client_comparison)d" type="action"
                         string="Comparativa para el cliente" class="btn-secondary"
@@ -12,6 +14,11 @@
                 <button name="%(action_client_comparison_wizard)d" type="action"
                         string="Enviar comparativa al cliente" class="btn-primary"
                         context="{'default_search_id': id}" invisible="not line_ids"/>
+                <div class="d-inline-flex align-items-center ms-2" invisible="not line_ids"
+                     title="Si está apagado, la agencia solo ve «Opción N» con su menú y su precio">
+                    <field name="restaurant_visible" widget="boolean_toggle" nolabel="1"/>
+                    <span>Mostrar restaurantes</span>
+                </div>
             </xpath>
         </field>
     </record>

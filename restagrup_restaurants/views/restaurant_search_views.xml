@@ -10,6 +10,11 @@
                             class="btn-primary" invisible="not city"/>
                     <button name="action_view_on_map" type="object" string="Ver en mapa"
                             class="btn-secondary" invisible="not line_ids"/>
+                    <field name="interested_count" invisible="1"/>
+                    <button name="action_request_quote_interested" type="object" class="btn-primary"
+                            icon="fa-paper-plane" invisible="not interested_count"
+                            string="Pedir presupuesto a interesados"
+                            confirm="Se enviará la petición de presupuesto por correo a todos los restaurantes marcados como «Interesado» (también a los que tengan avisos de aforo o día de cierre). ¿Continuar?"/>
                     <field name="pipeline_stage" widget="statusbar"
                            statusbar_visible="searching,quotes_requested,quotes_received,chosen"/>
                 </header>

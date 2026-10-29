@@ -177,7 +177,8 @@ class RestaurantSearch(models.Model):
         event = self.event_id
         if not event:
             return {}
-        return {'service_date': event.event_date, 'service_event_type_id': event.event_type_id.id}
+        return {'service_date': event.event_date, 'service_hour': event.event_time,
+                'service_event_type_id': event.event_type_id.id}
 
     def _event_label(self):
         """'Cena · 16/11' -- vacío si la búsqueda no es de un evento."""

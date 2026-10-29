@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="restagrup_alerts.Alerts">
+        <div class="o_rg_alerts d-print-none" t-if="state.alerts.length" role="status" aria-label="Avisos de Restagrup">
+            <t t-foreach="state.alerts" t-as="alert" t-key="alert.kind">
+                <button type="button" t-att-class="'o_rg_alert o_rg_alert_' + alert.kind + (state.bumped[alert.kind] ? ' o_rg_alert_bump' : '')"
+                        t-att-title="alert.title" t-att-aria-label="alert.title" t-on-click="() => this.open(alert)">
+                    <i t-att-class="'fa ' + alert.icon" aria-hidden="true"/>
+                    <span class="o_rg_alert_count" t-esc="alert.count > 99 ? '99+' : alert.count"/>
+                </button>
+            </t>
+        </div>
+    </t>
+</templates>

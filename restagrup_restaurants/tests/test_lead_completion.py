@@ -82,6 +82,36 @@ class TestLeadCompletion(TransactionCase):
         self.assertFalse(self._emails(lead))
         self.assertEqual(lead.restagrup_data_request_count, 0)
 
+    def test_queued_request_shows_the_incoming_email_in_its_chatter(self):
+        """Quien aprueba ve por qué la IA pide datos: el correo de la agencia y lo que falta. La IA lee el correo
+        antes de que Odoo lo guarde en la petición, así que se toma del propio correo entrante."""
+        lead = self.env['crm.lead'].create({
+            'name': 'Petición A5c', 'email_from': '"Ana" <ana@agencia.example.com>', 'user_id': self.owner.id})
+        data = {'eventos': [self._event(day=None)], 'ciudad': 'Madrid'}
+        with patch(LLM_PATH, return_value=(data, 'groq')):
+            lead._restagrup_extract_from_email({
+                'body': '<p>Somos 30 para cenar en Madrid, aún sin fecha.</p><script>alert(1)</script>',
+                'email_from': '"Ana" <ana@agencia.example.com>', 'date': '2026-10-27 10:00:00'})
+        chatter = ' '.join(self._requests(lead).message_ids.mapped('body'))
+        self.assertIn('Somos 30 para cenar en Madrid', chatter)
+        self.assertIn('ana@agencia.example.com', chatter)
+        self.assertIn('Fecha del servicio', chatter)
+        self.assertNotIn('<script', chatter)
+
+    def test_a_later_request_quotes_the_first_email_of_the_lead(self):
+        lead = self.env['crm.lead'].create({
+            'name': 'Petición A5c', 'email_from': '"Ana" <ana@agencia.example.com>', 'user_id': self.owner.id})
+        lead.message_post(body='Somos 30 para cenar en Madrid, aún sin fecha.', message_type='email',
+                          author_id=False, email_from='"Ana" <ana@agencia.example.com>')
+        self.env['restagrup.lead.event'].create({'lead_id': lead.id, 'city': 'Madrid', 'pax': 30})
+        lead._restagrup_ask_for_missing_data()  # p. ej. tras una respuesta que no lo aclaró
+        chatter = ' '.join(self._requests(lead).message_ids.mapped('body'))
+        self.assertIn('Somos 30 para cenar en Madrid', chatter)
+
+    def test_queued_request_shows_its_group(self):
+        lead = self._extract([self._event(day=None)])
+        self.assertEqual(self._requests(lead).group_id, lead)
+
     def test_incomplete_request_does_not_ask_a_person_to_review(self):
         lead = self._extract([self._event(day=None)])
         log = self.Log.search([('kind', '=', 'lead_extraction'), ('source_res_id', '=', lead.id)])
@@ -147,6 +177,18 @@ class TestLeadCompletion(TransactionCase):
         self._reply(lead, {'eventos': [{'id': event.id, 'fecha': '2026-12-12', 'pax': 99}]})
         self.assertEqual(event.pax, 40)
         self.assertEqual(event.event_date, date(2026, 12, 12))
+
+    def test_the_reply_also_brings_the_service_hour(self):
+        """La agencia suele dar la hora junto a la fecha aunque solo se le pidiera la fecha."""
+        lead, event = self._asked([self._event(city='Sevilla', day=None, pax=40)])
+        self._reply(lead, {'eventos': [{'id': event.id, 'fecha': '2026-12-11', 'hora': '14:00'}]})
+        self.assertEqual(event.event_time, 14.0)
+
+    def test_the_reply_never_overwrites_a_known_hour(self):
+        lead, event = self._asked([self._event(city='Sevilla', day=None, pax=40)])
+        event.event_time = 13.5
+        self._reply(lead, {'eventos': [{'id': event.id, 'fecha': '2026-12-11', 'hora': '15:00'}]})
+        self.assertEqual(event.event_time, 13.5)
 
     def test_ids_that_are_not_events_of_this_lead_are_ignored(self):
         lead, event = self._asked()

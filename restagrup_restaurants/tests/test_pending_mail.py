@@ -63,6 +63,7 @@ class TestPendingMail(TransactionCase):
         self.assertTrue(pending.body)
         self.assertEqual(pending.search_id, self.search)
         self.assertEqual(pending.lead_id, self.lead)
+        self.assertEqual(pending.group_id, self.lead)
         self.assertFalse(self._emails(line))
         self.assertFalse(line.quote_reminder_sent_date)
 

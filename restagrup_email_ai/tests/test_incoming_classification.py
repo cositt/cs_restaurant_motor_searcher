@@ -147,6 +147,13 @@ class TestIncomingClassification(TransactionCase):
         self.assertEqual(inbox.lead_id.name, 'Quizá sí era petición')
         self.assertEqual(inbox.lead_id.restagrup_city, 'Madrid')
 
+    def test_rescued_lead_waits_for_assignment_like_any_request_from_email(self):
+        _leads, inbox, _calls = self._receive('other', subject='Era petición', body='Comida para 30 en Cádiz.')
+        fake, _calls2 = self._fake_llm('new_request')
+        with patch(LLM_PATH, side_effect=fake):
+            inbox.action_create_lead()
+        self.assertFalse(inbox.lead_id.user_id, 'quien la rescata no pasa a llevarla: se reparte como las demás')
+
     def test_mark_done(self):
         _leads, inbox, _calls = self._receive('invoice')
         inbox.action_mark_done()

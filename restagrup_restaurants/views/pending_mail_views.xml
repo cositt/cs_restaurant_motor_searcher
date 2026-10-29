@@ -12,7 +12,7 @@
                 </header>
                 <field name="create_date" string="Creado"/>
                 <field name="recipient_email"/>
-                <field name="lead_id"/>
+                <field name="group_id"/>
                 <field name="line_id"/>
                 <field name="reason"/>
                 <field name="subject"/>
@@ -32,13 +32,20 @@
                     <button name="action_approve" type="object" string="Aprobar y enviar" class="btn-primary"
                             invisible="state != 'pending'"/>
                     <button name="action_discard" type="object" string="Descartar" invisible="state != 'pending'"/>
+                    <button name="action_open_approx_options" type="object" icon="fa-cutlery"
+                            string="Añadir opciones orientativas"
+                            invisible="state != 'pending' or kind != 'lead_data_request'"
+                            help="Restaurantes y menús guardados con su precio por persona, para que la agencia
+                                  tenga una idea mientras nos manda lo que falta. Van en este mismo correo y en PDF."/>
+                    <button name="action_clear_approx_options" type="object" string="Quitar opciones"
+                            invisible="state != 'pending' or not option_ids"/>
                     <field name="state" widget="statusbar" statusbar_visible="pending,sent"/>
                 </header>
                 <sheet>
                     <group>
                         <group>
                             <field name="kind"/>
-                            <field name="lead_id"/>
+                            <field name="group_id"/>
                             <field name="line_id"/>
                             <field name="reason"/>
                         </group>
@@ -53,7 +60,19 @@
                         <field name="subject" readonly="state != 'pending'"/>
                         <field name="body" nolabel="1" colspan="2" readonly="state != 'pending'"/>
                     </group>
+                    <group string="Opciones orientativas" invisible="not option_ids">
+                        <field name="option_show_restaurants" readonly="1"/>
+                        <field name="option_ids" nolabel="1" colspan="2" readonly="1">
+                            <list>
+                                <field name="partner_id"/>
+                                <field name="menu_name"/>
+                                <field name="currency_id" column_invisible="1"/>
+                                <field name="price_per_person"/>
+                            </list>
+                        </field>
+                    </group>
                 </sheet>
+                <chatter/>
             </form>
         </field>
     </record>

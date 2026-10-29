@@ -10,17 +10,51 @@ from odoo.exceptions import UserError
 AGENCY_FROM = 'Lucía Prieto <lucia@costaviajes.demo>'
 AGENCY_EMAIL = 'lucia@costaviajes.demo'
 AGENCY_SUBJECT = 'Comida para un grupo senior en Sevilla'
-AGENCY_BODY = """Hola, buenos días:
+AGENCY_NAME = 'Costa Viajes Ibéricos'
+MENUS_SEEN_PARAM = 'restagrup_demo2.menus_seen_lead'  # id de la petición con la que ya se miraron fichas y menús
+AGENCY_BODY = """Buenos días:
 
-Somos Costa Viajes Ibéricos y necesitamos una comida de grupo en Sevilla para 45 personas, un grupo senior (adultos
-mayores de 65 años). Aún no tenemos cerrada la fecha, os la confirmo en cuanto la tengamos.
+Os escribo de Costa Viajes Ibéricos. Estamos cerrando un circuito por Andalucía para un grupo senior y necesitamos
+una comida de grupo en Sevilla el día que pasen por la ciudad.
 
-¿Podríais enviarnos opciones de restaurante con menú y precio?
+Datos del grupo:
+- Destino: Sevilla
+- Personas: 45 en total (todos mayores de 65 años)
+- Servicio: comida de mediodía
+- Fecha: todavía sin confirmar; el hotel aún no nos ha confirmado el día de llegada. Os la paso en cuanto la tengamos.
+- Necesidades: menú sencillo, sin picantes, y local con buen acceso para el autobús y sin escaleras.
 
-Un saludo,
+¿Nos podéis enviar dos o tres opciones con el menú y el precio por persona (IVA incluido)?
+
+Muchas gracias y un saludo,
+
 Lucía Prieto
+Departamento de Grupos
 Costa Viajes Ibéricos
+Tel. 952 000 000 · www.costaviajes.demo
+
+Este mensaje y sus anexos son confidenciales y van dirigidos exclusivamente a su destinatario.
 """
+AGENCY_BODY_HTML = """<div style="font-family: Arial, sans-serif; font-size: 14px; color: #222;">
+<p>Buenos días:</p>
+<p>Os escribo de Costa Viajes Ibéricos. Estamos cerrando un circuito por Andalucía para un grupo senior y
+necesitamos una comida de grupo en Sevilla el día que pasen por la ciudad.</p>
+<p><b>Datos del grupo:</b></p>
+<ul>
+<li><b>Destino:</b> Sevilla</li>
+<li><b>Personas:</b> 45 en total (todos mayores de 65 años)</li>
+<li><b>Servicio:</b> comida de mediodía</li>
+<li><b>Fecha:</b> todavía sin confirmar; el hotel aún no nos ha confirmado el día de llegada. Os la paso en cuanto
+la tengamos.</li>
+<li><b>Necesidades:</b> menú sencillo, sin picantes, y local con buen acceso para el autobús y sin escaleras.</li>
+</ul>
+<p>¿Nos podéis enviar dos o tres opciones con el menú y el precio por persona (IVA incluido)?</p>
+<p>Muchas gracias y un saludo,</p>
+<p style="color: #555;"><b>Lucía Prieto</b><br/>Departamento de Grupos<br/><b>Costa Viajes Ibéricos</b><br/>
+Tel. 952 000 000 · www.costaviajes.demo</p>
+<p style="color: #999; font-size: 11px;">Este mensaje y sus anexos son confidenciales y van dirigidos exclusivamente a
+su destinatario.</p>
+</div>"""
 AGENCY_REPLY = """Hola, gracias por escribirnos.
 
 La fecha es el viernes 11 de diciembre de 2026, a las 14:00. No tenemos un presupuesto cerrado: lo que sea
@@ -68,7 +102,7 @@ class RestagrupDemo2Guide(models.AbstractModel):
             'ask': bool(pending) or asked,
             'approve': asked,
             'reply': asked and not lead._restagrup_missing_request_data(),
-            'menus': bool(search),
+            'menus': bool(search) or self._menus_seen(lead),
             'search': bool(search),
             'request': len(lines.filtered('quote_requested_date')) >= len(QUOTE_RESTAURANTS),
             'answers': len(lines.filtered(lambda l: l.quote_amount > 0)) >= len(QUOTE_RESTAURANTS),
@@ -94,7 +128,7 @@ class RestagrupDemo2Guide(models.AbstractModel):
     # --- simulación de correo entrante -----------------------------------------------------------------------
 
     @api.model
-    def _message(self, sender, to, subject, body, domain, in_reply_to=False):
+    def _message(self, sender, to, subject, body, domain, in_reply_to=False, html=False):
         msg = EmailMessage()
         msg['From'] = sender
         msg['To'] = to
@@ -105,6 +139,8 @@ class RestagrupDemo2Guide(models.AbstractModel):
             msg['In-Reply-To'] = in_reply_to
             msg['References'] = in_reply_to
         msg.set_content(body)
+        if html:  # como un cliente de correo real: texto y HTML
+            msg.add_alternative(html, subtype='html')
         return msg
 
     @api.model
@@ -118,7 +154,8 @@ class RestagrupDemo2Guide(models.AbstractModel):
         if self._lead():
             return self._lead().id
         self._deliver('crm.lead', self._message(
-            AGENCY_FROM, 'peticiones@restagrup.local', AGENCY_SUBJECT, AGENCY_BODY, 'costaviajes.demo'))
+            AGENCY_FROM, 'peticiones@restagrup.local', AGENCY_SUBJECT, AGENCY_BODY, 'costaviajes.demo',
+            html=AGENCY_BODY_HTML))
         return self._lead().id
 
     @api.model
@@ -213,6 +250,17 @@ class RestagrupDemo2Guide(models.AbstractModel):
 
     # --- reinicio ------------------------------------------------------------------------------------------------
 
+    def _menus_seen(self, lead):
+        return bool(lead) and self.env['ir.config_parameter'].sudo().get_param(MENUS_SEEN_PARAM) == str(lead.id)
+
+    @api.model
+    def mark_menus_seen(self):
+        """Paso 5 (mirar fichas y menús): no deja rastro en los datos, así que se anota al abrirlos."""
+        lead = self._lead()
+        if lead:
+            self.env['ir.config_parameter'].sudo().set_param(MENUS_SEEN_PARAM, str(lead.id))
+        return True
+
     @api.model
     def reset_demo(self):
         """Quita solo lo del recorrido (la agencia Costa Viajes y su petición). Los documentos de ejemplo de las
@@ -234,4 +282,6 @@ class RestagrupDemo2Guide(models.AbstractModel):
         if lead:
             lead.sudo().with_context(active_test=False).unlink()
         env['res.partner'].sudo().search([('email', 'ilike', AGENCY_EMAIL), ('is_restaurant', '=', False)]).unlink()
+        env['res.partner'].sudo().search([('name', '=', AGENCY_NAME), ('is_company', '=', True)]).unlink()
+        env['ir.config_parameter'].sudo().set_param(MENUS_SEEN_PARAM, False)
         return True

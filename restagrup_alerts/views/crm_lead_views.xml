@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Campo invisible: que el formulario lo pida es la señal de que alguien ha abierto la petición. -->
+    <record id="crm_lead_view_form_alerts" model="ir.ui.view">
+        <field name="name">crm.lead.form.restagrup.alerts</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <field name="restagrup_unseen" invisible="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -131,3 +131,61 @@ class TestLeadEvents(TransactionCase):
         event.write({'notes': 'Revisado'})
         self.assertEqual(event.notes, 'Revisado')
         event.unlink()
+
+    # --- hora del servicio ---
+
+    def test_event_hour_is_read_from_the_email(self):
+        data = {'eventos': [{'ciudad': 'Sevilla', 'fecha': '2026-12-11', 'hora': '14:00', 'tipo': 'comida',
+                             'pax': 45, 'notas': None}]}
+        self.assertEqual(self._extract(data).restagrup_event_ids.event_time, 14.0)
+
+    def test_event_hour_with_minutes_and_garbage(self):
+        data = {'eventos': [
+            {'ciudad': 'Sevilla', 'fecha': None, 'hora': '13:30', 'tipo': 'comida', 'pax': 10, 'notas': None},
+            {'ciudad': 'Sevilla', 'fecha': None, 'hora': 'a mediodía', 'tipo': 'comida', 'pax': 10, 'notas': None},
+            {'ciudad': 'Sevilla', 'fecha': None, 'hora': '25:00', 'tipo': 'comida', 'pax': 10, 'notas': None},
+        ]}
+        self.assertEqual(self._extract(data).restagrup_event_ids.mapped('event_time'), [13.5, 0.0, 0.0])
+
+    def test_prompt_asks_for_the_hour_and_the_agency(self):
+        lead = self.env['crm.lead'].create({'name': 'Prompt'})
+        with patch(LLM, return_value=({'eventos': []}, 'groq')) as llm:
+            lead._restagrup_extract_from_email({'body': '<p>Hola</p>'})
+        system_prompt = llm.call_args.args[0]
+        self.assertIn('"hora"', system_prompt)
+        self.assertIn('"agencia"', system_prompt)
+
+    # --- agencia: la empresa que pide, no la persona que escribe ---
+
+    def _extract_with_sender(self, data):
+        contact = self.env['res.partner'].create({'name': 'Lucía Prieto', 'email': 'lucia@costaviajes.example'})
+        lead = self.env['crm.lead'].create({'name': 'Petición', 'partner_id': contact.id})
+        with patch(LLM, return_value=(data, 'groq')):
+            lead._restagrup_extract_from_email({'body': '<p>Somos Costa Viajes Ibéricos</p>'})
+        return lead, contact
+
+    def test_agency_becomes_the_company_of_the_sender(self):
+        lead, contact = self._extract_with_sender({'eventos': [], 'agencia': 'Costa Viajes Ibéricos'})
+        agency = contact.parent_id
+        self.assertTrue(agency.is_company)
+        self.assertEqual(agency.name, 'Costa Viajes Ibéricos')
+        self.assertEqual(lead.partner_name, 'Costa Viajes Ibéricos')
+        self.assertEqual(contact.commercial_partner_id, agency)
+
+    def test_an_existing_agency_is_reused(self):
+        existing = self.env['res.partner'].create({'name': 'Costa Viajes Ibéricos', 'is_company': True})
+        _lead, contact = self._extract_with_sender({'eventos': [], 'agencia': 'costa viajes ibéricos'})
+        self.assertEqual(contact.parent_id, existing)
+
+    def test_a_sender_who_already_has_a_company_is_left_alone(self):
+        other = self.env['res.partner'].create({'name': 'Viajes Previos', 'is_company': True})
+        contact = self.env['res.partner'].create({'name': 'Pepe', 'parent_id': other.id})
+        lead = self.env['crm.lead'].create({'name': 'Petición', 'partner_id': contact.id})
+        with patch(LLM, return_value=({'eventos': [], 'agencia': 'Otra Agencia'}, 'groq')):
+            lead._restagrup_extract_from_email({'body': '<p>Hola</p>'})
+        self.assertEqual(contact.parent_id, other)
+
+    def test_without_agency_nothing_changes(self):
+        lead, contact = self._extract_with_sender({'eventos': [], 'agencia': None})
+        self.assertFalse(contact.parent_id)
+        self.assertFalse(lead.partner_name)

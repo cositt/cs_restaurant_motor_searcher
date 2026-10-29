@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_restagrup_approx_options_wizard_form" model="ir.ui.view">
+        <field name="name">restagrup.approx.options.wizard.form</field>
+        <field name="model">restagrup.approx.options.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Opciones orientativas">
+                <div class="alert alert-info" role="alert">
+                    Marca los menús que quieres ofrecer. Irán en el mismo correo que pide los datos que faltan,
+                    con su precio por persona (IVA incluido) y en PDF, como «orientativo, sujeto a disponibilidad».
+                    El texto del correo se vuelve a generar con las opciones.
+                </div>
+                <group>
+                    <group>
+                        <field name="city" placeholder="Cualquier ciudad"/>
+                        <field name="pax"/>
+                    </group>
+                    <group>
+                        <field name="season" options="{'enable_formatting': false}"/>
+                        <field name="show_restaurants"/>
+                    </group>
+                </group>
+                <button name="action_refresh" type="object" string="Actualizar lista" icon="fa-refresh"
+                        class="btn-secondary mb-2"/>
+                <field name="line_ids" nolabel="1">
+                    <list editable="bottom" create="0" delete="0">
+                        <field name="selected" widget="boolean_toggle"/>
+                        <field name="partner_id" readonly="1"/>
+                        <field name="city" readonly="1"/>
+                        <field name="menu_id" readonly="1"/>
+                        <field name="menu_type" readonly="1" optional="show"/>
+                        <field name="capacity" readonly="1" optional="show"/>
+                        <field name="currency_id" column_invisible="1"/>
+                        <field name="price_per_person" readonly="1"/>
+                    </list>
+                </field>
+                <footer>
+                    <button name="action_apply" type="object" string="Añadir al correo" class="btn-primary"/>
+                    <button special="cancel" string="Cancelar"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

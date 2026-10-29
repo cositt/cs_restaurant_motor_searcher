@@ -34,29 +34,42 @@ class ClientComparisonWizard(models.TransientModel):
 
     search_id = fields.Many2one('restagrup.restaurant.search', string='Búsqueda', required=True, readonly=True)
     email_to = fields.Char(string='Para', default=lambda self: self._default_email_to())
-    subject = fields.Char(string='Asunto')
-    body = fields.Text(string='Mensaje')
+    subject = fields.Char(string='Asunto', default=lambda self: self._default_subject())
+    body = fields.Text(string='Mensaje', default=lambda self: self._default_body())
     include_portal_link = fields.Boolean(
-        string='Incluir enlace de portal', default=False,
+        string='Incluir enlace de portal', default=True,
         help='Además del PDF, el correo lleva un enlace donde el cliente puede ver la comparativa y elegir.'
              ' Sin marcar, solo se envía el PDF.',
     )
 
+    def _context_search(self):
+        return self.env['restagrup.restaurant.search'].browse(self.env.context.get('default_search_id'))
+
     @api.model
     def _default_email_to(self):
-        search = self.env['restagrup.restaurant.search'].browse(self.env.context.get('default_search_id'))
+        search = self._context_search()
         return search.lead_id._restagrup_sender_email() if search.lead_id else False
+
+    @api.model
+    def _default_subject(self, search=None):
+        search = search or self._context_search()
+        return _('Comparativa de restaurantes — %s', search.city or search.display_name) if search else False
+
+    @api.model
+    def _default_body(self):
+        return _(
+            'Hola,\n\nTe enviamos la comparativa de los restaurantes que nos han presupuestado,'
+            ' con el menú y el precio por persona de cada uno, para que puedas elegir el que mejor te encaje.'
+            '\n\nUn saludo,'
+        )
 
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             search = self.env['restagrup.restaurant.search'].browse(vals.get('search_id'))
-            vals.setdefault('subject', _('Comparativa de restaurantes — %s', search.city or search.display_name))
-            vals.setdefault('body', _(
-                'Hola,\n\nTe enviamos la comparativa de los restaurantes que nos han presupuestado,'
-                ' con el menú y el precio por persona de cada uno, para que puedas elegir el que mejor te encaje.'
-                '\n\nUn saludo,'
-            ))
+            if not vals.get('subject'):
+                vals['subject'] = self._default_subject(search)
+            vals.setdefault('body', self._default_body())
             if 'email_to' not in vals and search.lead_id:
                 vals['email_to'] = search.lead_id._restagrup_sender_email()
         return super().create(vals_list)
