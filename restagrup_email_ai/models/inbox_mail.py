@@ -65,6 +65,7 @@ class RestagrupInboxMail(models.Model):
         original = self._original_email()
         lead = self.env['crm.lead'].create({
             'name': self.name, 'email_from': self.email_from, 'description': original.body or False,
+            'user_id': False,  # como cualquier petición que llega por correo: queda pendiente de asignación
         })
         lead._restagrup_extract_from_email({'body': original.body or ''})
         self.ai_log_id._close('corrected')  # la IA no lo vio como petición y lo era

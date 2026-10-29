@@ -27,16 +27,19 @@ class TestAlerts(TransactionCase):
         cls.ana = cls.env['res.users'].create({'name': 'Ana Avisos', 'login': 'ana_avisos', 'group_ids': [(4, group_user.id)]})
         cls.bea = cls.env['res.users'].create({'name': 'Bea Avisos', 'login': 'bea_avisos', 'group_ids': [(4, group_user.id)]})
         cls.carla = cls.env['res.users'].create({'name': 'Carla Avisos', 'login': 'carla_avisos', 'group_ids': [(4, group_user.id)]})
+        cls.env['crm.lead'].search([('user_id', '=', False)]).write({'user_id': cls.env.ref('base.user_admin').id})
+        cls.env['crm.lead'].search([('restagrup_assigned_unseen', '=', True)]).write({'restagrup_assigned_unseen': False})
 
     def _lead_with_pending(self, owner):
         lead = self.env['crm.lead'].create({
-            'name': 'Grupo %s' % owner.name, 'email_from': 'agencia@example.com', 'user_id': owner.id})
+            'name': 'Grupo %s' % owner.name, 'email_from': 'agencia@example.com', 'user_id': owner.id,
+            'restagrup_assigned_unseen': False})  # aquí no se prueba la asignación
         self.env['restagrup.lead.event'].create({'lead_id': lead.id, 'city': 'Sevilla', 'pax': 40})
         lead._restagrup_ask_for_missing_data()
         return lead, self.Pending.search([('request_lead_id', '=', lead.id)])
 
     def _search(self):
-        lead = self.env['crm.lead'].create({'name': 'Grupo búsqueda', 'user_id': self.ana.id})
+        lead = self.env['crm.lead'].create({'name': 'Grupo búsqueda', 'user_id': self.ana.id, 'restagrup_assigned_unseen': False})
         return self.env['restagrup.restaurant.search'].create({
             'lead_id': lead.id, 'city': 'Sevilla', 'user_id': self.ana.id})
 
@@ -161,3 +164,72 @@ class TestAlerts(TransactionCase):
         self.assertIn(self.ana.partner_id, pinged)
         self.assertIn(self.carla.partner_id, pinged)
         self.assertNotIn(self.bea.partner_id, pinged)
+
+    # --- asignación ---
+
+    def _unassigned_request(self):
+        stage = self.env.ref('restagrup_service_orders.stage_peticion')
+        return self.env['crm.lead'].create({'name': 'Grupo libre', 'user_id': False, 'stage_id': stage.id})
+
+    def test_unassigned_requests_alert_only_subscribers(self):
+        self._unassigned_request()
+        self.assertNotIn('unassigned', self._alerts(self.ana), 'no es de nadie: solo lo ve quien reparte')
+        self.Sub.create({'user_id': self.carla.id, 'unassigned': True})
+        alert = self._alerts(self.carla)['unassigned']
+        self.assertEqual(alert['count'], 1)
+        self.assertIn('sin asignar', alert['title'])
+
+    def test_unassigned_alert_ignores_closed_and_lost_groups(self):
+        self.Sub.create({'user_id': self.carla.id, 'unassigned': True})
+        closed = self._unassigned_request()
+        closed.stage_id = self.env.ref('restagrup_service_orders.stage_cerrado')
+        self._unassigned_request().action_archive()
+        self.assertNotIn('unassigned', self._alerts(self.carla))
+
+    def test_assigning_someone_else_alerts_the_assignee_until_they_open_it(self):
+        lead = self._unassigned_request()
+        lead.with_user(self.carla).write({'user_id': self.ana.id})
+        alert = self._alerts(self.ana)['assigned']
+        self.assertEqual(alert['count'], 1)
+        self.assertIn('asignada', alert['title'])
+        self.assertNotIn('assigned', self._alerts(self.carla), 'el aviso es solo para quien la recibe')
+        lead.with_user(self.bea).web_read({'name': {}, 'restagrup_unseen': {}})
+        self.assertIn('assigned', self._alerts(self.ana), 'que la abra otro no cuenta')
+        lead.with_user(self.ana).web_read({'name': {}, 'restagrup_unseen': {}})
+        self.assertNotIn('assigned', self._alerts(self.ana))
+
+    def test_assigned_alert_does_not_depend_on_owner_setting_nor_on_receive_all(self):
+        self.env['ir.config_parameter'].sudo().set_param('restagrup.alerts_notify_owner', 'False')
+        self.Sub.create({'user_id': self.carla.id, 'receive_all': True})
+        lead = self._unassigned_request()
+        lead.with_user(self.bea).write({'user_id': self.ana.id})
+        self.assertIn('assigned', self._alerts(self.ana))
+        self.assertNotIn('assigned', self._alerts(self.carla), '«Todos» no incluye lo asignado a otros')
+
+    def test_taking_a_request_yourself_does_not_alert(self):
+        lead = self._unassigned_request()
+        lead.with_user(self.ana).write({'user_id': self.ana.id})
+        self.assertNotIn('assigned', self._alerts(self.ana))
+
+    def test_reassigning_moves_the_alert_to_the_new_responsible(self):
+        lead = self._unassigned_request()
+        lead.with_user(self.carla).write({'user_id': self.ana.id})
+        lead.with_user(self.carla).write({'user_id': self.bea.id})
+        self.assertNotIn('assigned', self._alerts(self.ana))
+        self.assertIn('assigned', self._alerts(self.bea))
+
+    def test_assignment_pings_the_assignee_and_who_distributes_work(self):
+        self.Sub.create({'user_id': self.carla.id, 'unassigned': True})
+        lead = self._unassigned_request()
+        with patch.object(type(self.env['bus.bus']), '_sendone') as sendone:
+            lead.with_user(self.carla).write({'user_id': self.ana.id})
+        pinged = {(call.args[0], call.args[2]['kind']) for call in sendone.call_args_list
+                  if call.args[1] == 'restagrup_alerts_refresh'}
+        self.assertIn((self.ana.partner_id, 'assigned'), pinged)
+        self.assertIn((self.carla.partner_id, 'unassigned'), pinged)
+
+    def test_request_alerts_open_the_groups_list_not_the_crm_one(self):
+        self.Sub.create({'user_id': self.carla.id, 'unassigned': True})
+        self._unassigned_request()
+        views = self._alerts(self.carla)['unassigned']['action']['views']
+        self.assertEqual(views[0], [self.env.ref('restagrup_service_orders.view_crm_lead_restagrup_list').id, 'list'])

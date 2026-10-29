@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models
 
-ALERT_KINDS = ('pending_approval', 'new_request', 'quote_to_confirm', 'client_choice')
+ALERT_KINDS = ('pending_approval', 'new_request', 'quote_to_confirm', 'client_choice', 'unassigned')
 
 
 class RestagrupAlertSubscription(models.Model):
@@ -21,15 +21,18 @@ class RestagrupAlertSubscription(models.Model):
     new_request = fields.Boolean(string='Peticiones nuevas')
     quote_to_confirm = fields.Boolean(string='Presupuestos por confirmar')
     client_choice = fields.Boolean(string='El cliente eligió')
+    unassigned = fields.Boolean(string='Sin asignar', help='Peticiones que aún no lleva nadie: para quien reparte el trabajo.')
 
     _user_unique = models.Constraint('unique(user_id)', 'Ese usuario ya tiene su fila de avisos.')
 
     @api.model
     def _subscribers(self, kind):
-        """Usuarios que reciben todos los avisos de este tipo."""
+        """Usuarios que reciben todos los avisos de este tipo (ninguno en los avisos personales, que no se suscriben)."""
+        if kind not in ALERT_KINDS:
+            return self.env['res.users']
         subs = self.sudo().search(['|', ('receive_all', '=', True), (kind, '=', True)])
         return subs.user_id.filtered('active')
 
     def _wants(self, kind):
         self.ensure_one()
-        return self.receive_all or self[kind]
+        return kind in ALERT_KINDS and (self.receive_all or self[kind])

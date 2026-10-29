@@ -33,6 +33,25 @@ class CrmLead(models.Model):
         string='Petición sin abrir', default=False, copy=False, index=True,
         help='Llegó por correo y aún no la ha abierto nadie del equipo.',
     )
+    restagrup_assigned_unseen = fields.Boolean(
+        string='Asignada sin abrir', default=False, copy=False, index=True,
+        help='Otra persona se la ha asignado al responsable y él aún no ha abierto la ficha.',
+    )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        vals_list = [{'restagrup_assigned_unseen': self._restagrup_assigned_by_other(vals['user_id']), **vals}
+                     if vals.get('user_id') else vals for vals in vals_list]
+        leads = super().create(vals_list)
+        center = self.env['restagrup.alert.center']
+        if leads.filtered('restagrup_assigned_unseen'):
+            center._ping('assigned', leads.filtered('restagrup_assigned_unseen').user_id)
+        if leads.filtered(lambda lead: not lead.user_id):
+            center._ping('unassigned')
+        return leads
+
+    def _restagrup_assigned_by_other(self, user_id):
+        return bool(user_id) and user_id != self.env.uid
 
     @api.model
     def message_new(self, msg_dict, custom_values=None):
@@ -41,9 +60,18 @@ class CrmLead(models.Model):
         return lead
 
     def write(self, vals):
+        reassigned = 'user_id' in vals and self.filtered(lambda lead: lead.user_id.id != vals['user_id'])
+        previous_owners = reassigned.user_id if reassigned else self.env['res.users']
+        if reassigned:
+            reassigned.write({
+                'restagrup_assigned_unseen': self._restagrup_assigned_by_other(vals['user_id'])})
         res = super().write(vals)
+        center = self.env['restagrup.alert.center']
         if 'restagrup_unseen' in vals or ('user_id' in vals and any(self.mapped('restagrup_unseen'))):
-            self.env['restagrup.alert.center']._ping('new_request', self.user_id)
+            center._ping('new_request', self.user_id)
+        if reassigned:
+            center._ping('assigned', previous_owners | reassigned.user_id)
+            center._ping('unassigned')
         return res
 
     def web_read(self, specification):
@@ -53,6 +81,11 @@ class CrmLead(models.Model):
         unseen = self.filtered('restagrup_unseen') if opened else self.browse()
         if unseen:
             unseen.sudo().restagrup_unseen = False
+        mine = self.filtered(lambda lead: lead.restagrup_assigned_unseen and lead.user_id == self.env.user) \
+            if opened else self.browse()
+        if mine:
+            mine.sudo().restagrup_assigned_unseen = False
+            self.env['restagrup.alert.center']._ping('assigned', self.env.user)
         return super().web_read(specification)
 
 
