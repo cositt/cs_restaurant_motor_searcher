@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Reclamaciones de factura (Word de RestaGrup). noupdate: lo que edite el equipo no se pisa al actualizar. -->
+    <data noupdate="1">
+        <record id="mail_template_restaurant_invoice_claim_1" model="restagrup.mail.template">
+            <field name="code">restaurant_invoice_claim_1</field>
+            <field name="name">Primera reclamación de factura (día siguiente al servicio)</field>
+            <field name="recipient">restaurant</field>
+            <field name="sequence">41</field>
+            <field name="note">Al día siguiente del último servicio de la hoja, si no ha llegado la factura. Tono amable.</field>
+            <field name="can_auto_send" eval="True"/>
+            <field name="placeholders">{restaurante} {grupo} {pedido} {fecha} {hora} {ciudad} {datos_reserva} {datos_fiscales} {firma}</field>
+            <field name="subject">Solicitud de factura del servicio {grupo}</field>
+            <field name="body">Buenos días,
+
+Esperamos que todo haya ido genial con el grupo de ayer. Quedamos a la espera de la factura correspondiente. Te dejamos aquí nuestros datos fiscales y los detalles del servicio para facilitarte la emisión:
+
+Datos de la reserva:
+{datos_reserva}
+
+Datos fiscales de nuestra empresa:
+{datos_fiscales}
+
+Muchas gracias por su colaboración.
+{firma}</field>
+        </record>
+
+        <record id="mail_template_restaurant_invoice_claim_2" model="restagrup.mail.template">
+            <field name="code">restaurant_invoice_claim_2</field>
+            <field name="name">Segunda reclamación de factura (7 días)</field>
+            <field name="recipient">restaurant</field>
+            <field name="sequence">42</field>
+            <field name="note">A los 7 días del servicio sin factura. Recordatorio más firme.</field>
+            <field name="can_auto_send" eval="True"/>
+            <field name="placeholders">{restaurante} {grupo} {pedido} {fecha} {hora} {ciudad} {datos_reserva} {datos_fiscales} {firma}</field>
+            <field name="subject">Recordatorio de solicitud de factura pendiente — {grupo}</field>
+            <field name="body">Buenos días,
+
+Nos ponemos de nuevo en contacto para recordaros que aún no hemos recibido la factura correspondiente al servicio prestado el pasado {fecha}. Entendemos que podéis estar ocupados, pero os agradeceríamos que nos la enviéis a la mayor brevedad posible.
+
+A continuación, os dejamos los detalles del servicio y nuestros datos fiscales para facilitar la emisión:
+
+Datos de la reserva:
+{datos_reserva}
+
+Datos fiscales de nuestra empresa:
+{datos_fiscales}
+
+Agradecemos su atención a esta solicitud. Quedamos a la espera de la factura.
+{firma}</field>
+        </record>
+
+        <record id="mail_template_restaurant_invoice_claim_3" model="restagrup.mail.template">
+            <field name="code">restaurant_invoice_claim_3</field>
+            <field name="name">Tercera reclamación de factura (15 días)</field>
+            <field name="recipient">restaurant</field>
+            <field name="sequence">43</field>
+            <field name="note">A los 15 días del servicio sin factura. Más insistente.</field>
+            <field name="can_auto_send" eval="True"/>
+            <field name="placeholders">{restaurante} {grupo} {pedido} {fecha} {hora} {ciudad} {datos_reserva} {datos_fiscales} {firma}</field>
+            <field name="subject">Segunda reclamación de factura pendiente — {grupo}</field>
+            <field name="body">Buenos días,
+
+Nos vemos en la obligación de contactarles nuevamente, ya que, después de solicitudes anteriores, seguimos sin haber recibido la factura correspondiente al servicio prestado el pasado {fecha}.
+
+Este retraso está suponiendo un inconveniente para nuestra contabilidad.
+
+Como comprenderán, gestionar varias reclamaciones supone un coste adicional para nosotros, algo que no podemos asumir más a largo plazo. De no recibir la factura en los próximos días, lamentablemente nos veremos obligados a reconsiderar futuras colaboraciones con sus servicios.
+
+Le reiteramos nuestros datos fiscales y los detalles de la reserva:
+
+Datos de la reserva:
+{datos_reserva}
+
+Datos fiscales de nuestra empresa:
+{datos_fiscales}
+
+Agradecemos su pronta respuesta.
+{firma}</field>
+        </record>
+
+        <record id="mail_template_restaurant_invoice_claim_4" model="restagrup.mail.template">
+            <field name="code">restaurant_invoice_claim_4</field>
+            <field name="name">Cuarta reclamación de factura (30 días, tono legal)</field>
+            <field name="recipient">restaurant</field>
+            <field name="sequence">44</field>
+            <field name="note">A los 30 días del servicio sin factura. Siempre la revisa una persona antes de salir: nunca se envía sola.</field>
+            <field name="can_auto_send" eval="False"/>
+            <field name="placeholders">{restaurante} {grupo} {pedido} {fecha} {hora} {ciudad} {datos_reserva} {datos_fiscales} {firma}</field>
+            <field name="subject">Reclamación urgente de factura pendiente – Medidas legales — {grupo}</field>
+            <field name="body">Buenos días,
+
+Nos dirigimos a ustedes por cuarta vez debido a la falta de respuesta respecto a la factura correspondiente al servicio prestado el pasado {fecha}.
+
+Esta situación está generando una serie de dificultades administrativas y contables para nuestra empresa, y lamentablemente nos vemos obligados a tomar medidas.
+
+Les recordamos que, según la legislación vigente, en concreto el artículo 29 de la Ley General Tributaria, están obligados a emitir la factura en un plazo razonable. En caso de no recibir la factura en los próximos 5 días, nos veremos en la obligación de tomar las acciones oportunas, entre las que se incluye la posibilidad de presentar el gasto ante Hacienda, dejando en manos de esta institución la revisión del caso.
+
+Esperamos su pronta respuesta para evitar estos trámites innecesarios. A continuación, le recordamos los detalles de la reserva y nuestros datos fiscales:
+
+Datos de la reserva:
+{datos_reserva}
+
+Datos fiscales de nuestra empresa:
+{datos_fiscales}
+
+Agradecemos de antemano su colaboración en la resolución de este asunto.
+
+Saludos cordiales,
+{firma}</field>
+        </record>
+
+        <record id="ir_cron_restaurant_invoice_claims" model="ir.cron">
+            <field name="name">Restagrup: reclamar facturas a los restaurantes</field>
+            <field name="model_id" ref="purchase.model_purchase_order"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_restaurant_invoice_claims()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
+</odoo>

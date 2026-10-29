@@ -137,6 +137,9 @@ class PurchaseOrder(models.Model):
 
     def write(self, vals):
         res = super().write(vals)
+        center = self.env['restagrup.alert.center']
         if {'restagrup_payment_due', 'restagrup_restaurant_paid'} & set(vals):
-            self.env['restagrup.alert.center']._ping('restaurant_payment', self.restagrup_sale_order_id.user_id)
+            center._ping('restaurant_payment', self.restagrup_sale_order_id.user_id)
+        if 'restagrup_invoice_proof_state' in vals:
+            center._ping('restaurant_invoice', self.restagrup_sale_order_id.user_id)
         return res

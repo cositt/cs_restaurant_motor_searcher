@@ -2,7 +2,7 @@
 from odoo import api, fields, models
 
 ALERT_KINDS = ('pending_approval', 'new_request', 'quote_to_confirm', 'client_choice', 'unassigned', 'payment_proof',
-               'restaurant_payment')
+               'restaurant_payment', 'restaurant_invoice')
 
 
 class RestagrupAlertSubscription(models.Model):
@@ -27,6 +27,8 @@ class RestagrupAlertSubscription(models.Model):
         string='Justificantes de pago', help='La agencia mandó el justificante y falta confirmar el pago: para administración.')
     restaurant_payment = fields.Boolean(
         string='Pagos a restaurantes', help='Ha llegado el plazo de pagar a un restaurante (48 h antes): para administración.')
+    restaurant_invoice = fields.Boolean(
+        string='Facturas de restaurante', help='Ha llegado la factura de un restaurante y falta revisarla: para administración.')
 
     _user_unique = models.Constraint('unique(user_id)', 'Ese usuario ya tiene su fila de avisos.')
 

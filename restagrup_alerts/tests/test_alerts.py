@@ -32,6 +32,8 @@ class TestAlerts(TransactionCase):
         cls.env['sale.order'].search([('restagrup_payment_proof_state', '!=', False)]).write(
             {'restagrup_payment_proof_state': False})
         cls.env['purchase.order'].search([('restagrup_payment_due', '=', True)]).write({'restagrup_payment_due': False})
+        cls.env['purchase.order'].search([('restagrup_invoice_proof_state', '!=', False)]).write(
+            {'restagrup_invoice_proof_state': False})
 
     def _lead_with_pending(self, owner):
         lead = self.env['crm.lead'].create({
@@ -301,3 +303,15 @@ class TestAlerts(TransactionCase):
         self.Pending.create({'kind': 'restaurant_bank_request', 'purchase_order_id': sheet.id,
                              'recipient_email': 'c@example.com', 'subject': 'Cuenta', 'body': 'Cuenta'})
         self.assertIn('pending_approval', self._alerts(self.ana))
+
+    def test_restaurant_invoice_to_review_alerts_the_group_owner(self):
+        purchase = self.env.ref('purchase.group_purchase_user')
+        (self.ana | self.bea).write({'group_ids': [(4, purchase.id)]})
+        sheet = self._restaurant_sheet(self.ana)
+        with patch.object(type(self.env['bus.bus']), '_sendone') as sendone:
+            sheet.sudo().restagrup_invoice_proof_state = 'received'
+        self.assertIn(self.ana.partner_id, {call.args[0] for call in sendone.call_args_list})
+        self.assertIn('restaurant_invoice', self._alerts(self.ana))
+        self.assertNotIn('restaurant_invoice', self._alerts(self.bea))
+        sheet.sudo().action_confirm_restaurant_invoice()
+        self.assertNotIn('restaurant_invoice', self._alerts(self.ana))
