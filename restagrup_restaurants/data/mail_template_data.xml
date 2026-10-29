@@ -84,6 +84,25 @@ Para poder buscar restaurante nos faltan estos datos de vuestra petición:
 Gracias!
 {firma}</field>
         </record>
+
+        <record id="mail_template_quote_incomplete" model="restagrup.mail.template">
+            <field name="code">quote_incomplete</field>
+            <field name="name">Faltan datos en la respuesta del restaurante</field>
+            <field name="recipient">restaurant</field>
+            <field name="sequence">25</field>
+            <field name="note">Cuando el restaurante manda su menú sin precio por persona, sin bebidas o sin postre. Una vez por restaurante.</field>
+            <field name="can_auto_send" eval="True"/>
+            <field name="placeholders">{restaurante} {grupo} {fecha} {servicio} {ciudad} {pax} {faltan} {empresa} {firma}</field>
+            <field name="subject">Datos que faltan de vuestro presupuesto — {grupo}</field>
+            <field name="body">Buenos días,
+
+Gracias por tu información, salvo error, faltaría saber:
+
+{faltan}
+
+Gracias!
+{firma}</field>
+        </record>
     </data>
 
     <!-- Lo que se hubiera escrito en Ajustes pasa a su plantilla (cada actualización; no hace nada si ya pasó). -->

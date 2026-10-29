@@ -12,3 +12,4 @@ from . import restaurant_menu
 from . import client_comparison
 from . import pending_mail_approx
 from . import restaurant_search_bulk_quote
+from . import restaurant_menu_ai

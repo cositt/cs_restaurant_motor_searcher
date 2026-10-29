@@ -25,7 +25,8 @@ class RestagrupPendingMail(models.Model):
 
     kind = fields.Selection(
         [('quote_reminder', 'Recordatorio a restaurante'), ('data_request', 'Petición de datos de ficha'),
-         ('lead_data_request', 'Petición de datos a la agencia')], string='Tipo', required=True, readonly=True,
+         ('lead_data_request', 'Petición de datos a la agencia'),
+         ('quote_incomplete', 'Faltan datos en la respuesta del restaurante')], string='Tipo', required=True, readonly=True,
     )
     state = fields.Selection(
         [('pending', 'Pendiente'), ('sent', 'Enviado'), ('discarded', 'Descartado'), ('error', 'Error')],
@@ -206,6 +207,18 @@ class RestagrupPendingMail(models.Model):
         line._post_email(self.subject, self.body, self.recipient_email)
         line._mark_data_requested()
         line.search_id.message_post_if_exists(_('Petición de datos a %(name)s aprobada por %(user)s.') % {
+            'name': line.name, 'user': self.env.user.name,
+        })
+
+    def _still_applies_quote_incomplete(self):
+        return self.line_id.etiqueta in ('solicitado', 'presupuesto_recibido')
+
+    def _send_quote_incomplete(self):
+        if not self.recipient_email:
+            raise UserError(_('Este correo no tiene destinatario.'))
+        line = self.line_id
+        line._post_email(self.subject, self.body, self.recipient_email)
+        line.search_id.message_post_if_exists(_('Petición de datos de su presupuesto a %(name)s aprobada por %(user)s.') % {
             'name': line.name, 'user': self.env.user.name,
         })
 
