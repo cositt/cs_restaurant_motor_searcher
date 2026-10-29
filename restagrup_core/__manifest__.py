@@ -16,6 +16,7 @@
         'data/event_type_data.xml',
         'data/cancel_reason_data.xml',
         'data/price_baseline_data.xml',
+        'data/partner_lang_data.xml',
         'views/res_config_settings_views.xml',
         'views/event_type_views.xml',
         'views/cancel_reason_views.xml',

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Restagrup - Pedidos de servicio',
-    'version': '19.0.1.3.0',
+    'version': '19.0.1.4.0',
     'category': 'Custom',
     'summary': 'Hoja de servicio por restaurante al confirmar el presupuesto, y aviso de cambios',
     'description': '''

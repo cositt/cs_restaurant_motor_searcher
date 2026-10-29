@@ -48,7 +48,10 @@ class PurchaseOrder(models.Model):
         [('received', 'Factura por revisar')], string='Factura del restaurante', copy=False, readonly=True,
         index=True, help='La IA ha leído una factura del restaurante. Una persona la revisa y la da por buena.')
     restagrup_invoice_number = fields.Char(string='Número de factura', copy=False, readonly=True)
-    restagrup_invoice_date = fields.Char(string='Fecha de la factura', copy=False, readonly=True)
+    restagrup_invoice_date = fields.Char(string='Fecha de la factura (IA)', copy=False, readonly=True)
+    restagrup_invoice_date_display = fields.Char(
+        string='Fecha de la factura', compute='_compute_restagrup_invoice_date_display',
+        help='La fecha que leyó la IA, en dd/mm/aaaa (si no era una fecha, tal cual).')
     restagrup_invoice_amount = fields.Float(string='Importe de la factura', copy=False, readonly=True)
     restagrup_invoice_file_name = fields.Char(string='Archivo de la factura', copy=False, readonly=True)
     restagrup_invoice_issues = fields.Char(string='Revisar en la factura', copy=False, readonly=True)
@@ -58,6 +61,15 @@ class PurchaseOrder(models.Model):
         for sheet in self:
             dates = [d for d in sheet.order_line.mapped('restagrup_sale_line_id.service_date') if d]
             sheet.restagrup_service_end_date = max(dates) if dates else False
+
+    @api.depends('restagrup_invoice_date')
+    def _compute_restagrup_invoice_date_display(self):
+        for sheet in self:
+            raw = sheet.restagrup_invoice_date
+            try:
+                sheet.restagrup_invoice_date_display = fields.Date.to_date(raw).strftime('%d/%m/%Y') if raw else False
+            except ValueError:
+                sheet.restagrup_invoice_date_display = raw
 
     # --- reclamar ---
 
@@ -146,24 +158,26 @@ class PurchaseOrder(models.Model):
             subject=subject, message_type='email', subtype_xmlid='mail.mt_comment',
             email_from=self.env['restagrup.system.mail'].email_from(
                 self.restagrup_sale_order_id.user_id.email or self.env.user.email),
+            email_add_signature=False,  # el texto ya lleva {firma}
             outgoing_email_to=email_to,
         )
         self.write({'restagrup_invoice_claim_level': level, 'restagrup_invoice_claim_date': fields.Datetime.now()})
 
     # --- la factura ---
 
-    def message_update(self, msg_dict, update_vals=None):
-        res = super().message_update(msg_dict, update_vals=update_vals)
-        for sheet in self:
-            sheet._restagrup_read_invoice(msg_dict)
-        return res
+    def _restagrup_classify_response(self, msg_dict):
+        """La respuesta con la factura no es la respuesta a la hoja: no se clasifica."""
+        if self._restagrup_read_invoice(msg_dict):
+            return False
+        return super()._restagrup_classify_response(msg_dict)
 
     def _restagrup_read_invoice(self, msg_dict):
+        """True si la respuesta traía la factura."""
         self.ensure_one()
         attachments = msg_dict.get('attachments') or []
         if (not attachments or self.state == 'cancel' or not self.restagrup_sale_order_id
                 or self.restagrup_invoice_received):
-            return
+            return False
         raw_body = msg_dict.get('body') or ''
         names = [attachment[0] for attachment in attachments if attachment[0]]
         text = '\n\n'.join(filter(None, [
@@ -172,7 +186,7 @@ class PurchaseOrder(models.Model):
         data, provider, _log = self.env['restagrup.llm.connector'].run(
             'restaurant_invoice', INVOICE_PROMPT, text, source=self, label=self.name, review=False)
         if not data or not data.get('es_factura'):
-            return
+            return False
         amount = _number(data.get('importe_total'))
         issues = self._restagrup_invoice_issues(data, amount)
         self.write({
@@ -185,6 +199,7 @@ class PurchaseOrder(models.Model):
             'amount': self.env['restagrup.pricing'].format_amount(amount)}
         note += ' ' + (_('Revisar: %s.') % issues if issues else _('Cuadra con la hoja: compruébala y dala por buena.'))
         self.message_post(body=note)
+        return True
 
     def _restagrup_invoice_issues(self, data, amount):
         issues = []

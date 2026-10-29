@@ -56,6 +56,7 @@
             <xpath expr="//header" position="inside">
                 <button name="action_send_restaurant_orders" type="object"
                         string="Enviar hojas de servicio" class="btn-secondary"
+                        confirm="Se enviará por correo la hoja de servicio a cada restaurante que aún no la tenga. ¿Enviar ahora?"
                         invisible="state != 'sale' or not restaurant_po_count"/>
                 <button name="action_resend_restaurant_orders" type="object"
                         string="Reenviar cambios" class="btn-warning"

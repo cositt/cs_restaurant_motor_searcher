@@ -43,6 +43,10 @@ class TestResendChanges(TransactionCase):
         order.order_line.write(line_vals)
         order.action_resend_restaurant_orders()
 
+    def _planned_local(self):
+        """Llegada prevista de la hoja en hora local (Odoo la guarda en UTC)."""
+        return self.po.restagrup_sale_order_id._restagrup_to_local(self.po.order_line.date_planned)
+
     def _mail_to(self, record):
         return self.env['mail.mail'].search([('model', '=', record._name), ('res_id', '=', record.id)],
                                             order='id desc', limit=1)
@@ -51,11 +55,11 @@ class TestResendChanges(TransactionCase):
 
     def test_sheet_line_carries_service_date_and_hour(self):
         self._order(hour=13.5)
-        self.assertEqual(self.po.order_line.date_planned, datetime(2026, 12, 15, 13, 30))
+        self.assertEqual(self._planned_local(), datetime(2026, 12, 15, 13, 30))
 
     def test_line_without_hour_plans_midnight(self):
         self._order(hour=0.0)
-        self.assertEqual(self.po.order_line.date_planned, datetime(2026, 12, 15, 0, 0))
+        self.assertEqual(self._planned_local(), datetime(2026, 12, 15, 0, 0))
 
     # --- detección ---
 
@@ -102,7 +106,7 @@ class TestResendChanges(TransactionCase):
     def test_resend_syncs_sheet_and_clears_pending(self):
         order = self._order()
         self._resend(order, service_hour=14.0, product_uom_qty=11)
-        self.assertEqual(self.po.order_line.date_planned, datetime(2026, 12, 15, 14, 0))
+        self.assertEqual(self._planned_local(), datetime(2026, 12, 15, 14, 0))
         self.assertEqual(self.po.order_line.product_qty, 11)
         self.assertFalse(self.po.restagrup_needs_resend)
 

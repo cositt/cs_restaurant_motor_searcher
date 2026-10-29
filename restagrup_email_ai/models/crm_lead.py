@@ -14,8 +14,9 @@ Devuelve SOLO un objeto JSON, sin texto adicional, con estas claves exactas:
 "eventos": lista con UN objeto por cada servicio pedido (cada comida, cena, desayuno... en cada
 ciudad y fecha). Cada objeto tiene: "ciudad" (string o null), "fecha" (string YYYY-MM-DD o
 null), "hora" (string HH:MM en 24 h o null), "tipo" (uno de: desayuno, aperitivo, comida, cena, coffee_break, otro; o null si el
-texto no lo dice), "pax" (entero o null) y "notas" (string corto con requisitos como alergias
-o presupuesto por persona, o null). Si una fecha no indica el año, usa la próxima vez que
+texto no lo dice), "pax" (entero o null), "precio_persona" (número: el presupuesto por persona en euros que indica la
+agencia, p. ej. 35 si dice «unos 35 € por persona»; null si no lo dice) y "notas" (string corto con
+requisitos como alergias, o null). Si una fecha no indica el año, usa la próxima vez que
 ocurra a partir de hoy. Si no se pide ningún servicio, "eventos" es una lista vacía.
 Además: "ciudad" (string o null), "num_pax" (entero o null) y "fecha_servicio" (string
 YYYY-MM-DD o null) del primer evento, "tipo_grupo" (string corto:
@@ -192,6 +193,7 @@ class CrmLead(models.Model):
                 'event_time': self._restagrup_safe_hour(event.get('hora')),
                 'event_type_id': self._restagrup_event_type_id(event.get('tipo')),
                 'pax': self._restagrup_safe_int(event.get('pax')),
+                'budget_pp': self._restagrup_safe_price(event.get('precio_persona')),
                 'notes': (event.get('notas') or '') or False,
                 'state': 'draft',
             })
@@ -247,6 +249,15 @@ class CrmLead(models.Model):
         if not agency:
             agency = Partner.create({'name': self.partner_name, 'is_company': True})
         contact.sudo().parent_id = agency
+
+    @staticmethod
+    def _restagrup_safe_price(value):
+        """Precio por persona de la agencia; 0 (se usará el baremo) si no es un número positivo."""
+        try:
+            price = round(float(value), 2)
+        except (TypeError, ValueError):
+            return 0.0
+        return price if price > 0 else 0.0
 
     @staticmethod
     def _restagrup_safe_int(value):

@@ -11,3 +11,4 @@ from . import test_close_checklist
 from . import test_agency_payment
 from . import test_restaurant_payment
 from . import test_restaurant_invoice
+from . import test_guia_prod_findings

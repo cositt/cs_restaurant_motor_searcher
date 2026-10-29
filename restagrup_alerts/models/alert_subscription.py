@@ -16,7 +16,7 @@ class RestagrupAlertSubscription(models.Model):
         'res.users', string='Usuario', required=True, ondelete='cascade', index=True,
         domain=[('share', '=', False)],
     )
-    active = fields.Boolean(default=True)
+    active = fields.Boolean(string='Activo', default=True)
     receive_all = fields.Boolean(string='Todos', help='Recibe todos los avisos, también los tipos que se añadan.')
     pending_approval = fields.Boolean(string='Pendientes de aprobar')
     new_request = fields.Boolean(string='Peticiones nuevas')
