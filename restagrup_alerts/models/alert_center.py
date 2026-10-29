@@ -64,6 +64,12 @@ KIND_SPECS = {
         'owner': [('restagrup_sale_order_id.user_id', '=', '{uid}')],
         'icon': 'fa-university',
     },
+    'restaurant_invoice': {
+        'model': 'purchase.order',
+        'domain': [('restagrup_invoice_proof_state', '=', 'received')],
+        'owner': [('restagrup_sale_order_id.user_id', '=', '{uid}')],
+        'icon': 'fa-file-text-o',
+    },
     'assigned': {
         'model': 'crm.lead',
         'domain': [('restagrup_assigned_unseen', '=', True)],
@@ -96,6 +102,8 @@ class RestagrupAlertCenter(models.AbstractModel):
             'unassigned': (_('1 petición sin asignar'), _('%s peticiones sin asignar')),
             'payment_proof': (_('1 justificante de pago por confirmar'), _('%s justificantes de pago por confirmar')),
             'restaurant_payment': (_('1 restaurante por pagar'), _('%s restaurantes por pagar')),
+            'restaurant_invoice': (_('1 factura de restaurante por revisar'),
+                                   _('%s facturas de restaurante por revisar')),
             'assigned': (_('1 petición asignada a ti sin abrir'), _('%s peticiones asignadas a ti sin abrir')),
         }
         singular, plural = titles[kind]

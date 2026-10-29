@@ -9,3 +9,4 @@ from . import final_data
 from . import close_checklist
 from . import agency_payment
 from . import restaurant_payment
+from . import restaurant_invoice

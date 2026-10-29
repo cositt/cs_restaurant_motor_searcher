@@ -18,6 +18,7 @@ KINDS = [
     ('lead_completion', 'Datos que aporta la agencia'),
     ('sheet_classification', 'Respuesta a una hoja de servicio'),
     ('payment_proof', 'Justificante de pago de la agencia'),
+    ('restaurant_invoice', 'Factura de un restaurante'),
 ]
 STATES = [
     ('pending', 'Pendiente de revisar'),

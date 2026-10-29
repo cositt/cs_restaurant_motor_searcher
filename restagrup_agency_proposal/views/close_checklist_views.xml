@@ -31,11 +31,26 @@
                         confirm="¿Seguro que la transferencia no está hecha?"/>
                 <button name="action_send_payment_receipt" type="object" string="Enviar justificante"
                         class="btn-primary" invisible="not restagrup_restaurant_paid or restagrup_payment_receipt_sent_date"/>
+                <button name="action_confirm_restaurant_invoice" type="object" string="Factura correcta"
+                        class="btn-primary" invisible="restagrup_invoice_proof_state != 'received'"/>
+                <button name="action_discard_restaurant_invoice" type="object" string="Descartar factura"
+                        class="btn-secondary" invisible="restagrup_invoice_proof_state != 'received'"/>
                 <button name="action_mark_invoice_received" type="object" string="Factura recibida"
                         class="btn-secondary" invisible="not restagrup_sale_order_id or restagrup_invoice_received"/>
                 <button name="action_unmark_invoice_received" type="object" string="Desmarcar factura"
                         class="btn-secondary" invisible="not restagrup_invoice_received"
                         confirm="¿Seguro que la factura no está recibida?"/>
+            </xpath>
+            <xpath expr="//sheet" position="before">
+                <div class="alert alert-warning mb-0" role="alert" invisible="restagrup_invoice_proof_state != 'received'">
+                    El restaurante ha mandado su factura (leída por la IA):
+                    <field name="restagrup_invoice_number" class="oe_inline fw-bold"/> ·
+                    <field name="restagrup_invoice_amount" class="oe_inline" widget="monetary"
+                           options="{'currency_field': 'currency_id'}"/>
+                    <span invisible="not restagrup_invoice_file_name"> · <field name="restagrup_invoice_file_name" class="oe_inline"/></span>.
+                    <span invisible="not restagrup_invoice_issues"><br/>Revisar: <field name="restagrup_invoice_issues" class="oe_inline text-danger"/></span>
+                    <span invisible="restagrup_invoice_issues"> Cuadra con la hoja: compruébala en el historial y pulsa «Factura correcta».</span>
+                </div>
             </xpath>
             <xpath expr="//field[@name='partner_ref']" position="after">
                 <field name="restagrup_restaurant_paid" readonly="1" invisible="not restagrup_sale_order_id"/>
@@ -47,6 +62,11 @@
                 <field name="restagrup_payment_receipt_sent_date" readonly="1" invisible="not restagrup_payment_receipt_sent_date"/>
                 <field name="restagrup_invoice_received" readonly="1" invisible="not restagrup_sale_order_id"/>
                 <field name="restagrup_invoice_received_date" readonly="1" invisible="not restagrup_invoice_received"/>
+                <field name="restagrup_invoice_proof_state" invisible="1"/>
+                <field name="restagrup_invoice_number" invisible="not restagrup_invoice_number"/>
+                <field name="restagrup_invoice_date" invisible="not restagrup_invoice_number"/>
+                <field name="restagrup_invoice_claim_level" invisible="not restagrup_invoice_claim_level"/>
+                <field name="restagrup_invoice_claim_date" invisible="not restagrup_invoice_claim_level"/>
             </xpath>
         </field>
     </record>

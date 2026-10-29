@@ -14,6 +14,7 @@
                 <field name="unassigned" widget="boolean_toggle" readonly="receive_all"/>
                 <field name="payment_proof" widget="boolean_toggle" readonly="receive_all"/>
                 <field name="restaurant_payment" widget="boolean_toggle" readonly="receive_all"/>
+                <field name="restaurant_invoice" widget="boolean_toggle" readonly="receive_all"/>
                 <field name="active" column_invisible="1"/>
             </list>
         </field>
