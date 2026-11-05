@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- PDF del presupuesto con el formato de Restagrup (el que enviaban desde su CRM): sustituye al
+         documento estándar de Odoo en «Imprimir», en el correo de «Enviar» y en el portal de la agencia. -->
+    <template id="report_restagrup_quote_document">
+        <t t-set="doc" t-value="doc.with_context(lang=doc.partner_id.lang)"/>
+        <t t-set="company" t-value="doc.company_id"/>
+        <div class="header" style="display:none"/>
+        <div class="article o_restagrup_quote" t-att-data-oe-model="doc._name" t-att-data-oe-id="doc.id"
+             t-att-data-oe-lang="doc.env.context.get('lang')" style="font-family: Arial, Helvetica, sans-serif; font-size: 12px;">
+            <h2 style="text-align:center; font-weight:bold; margin:0 0 6px 0;">PRESUPUESTO</h2>
+            <table style="width:100%; border-top:1px solid #000; border-bottom:2px solid #000; margin-bottom:14px;">
+                <tr>
+                    <td style="width:32%; vertical-align:middle; text-align:center; padding:8px;">
+                        <img t-if="company.logo" t-att-src="image_data_uri(company.logo)" style="max-height:110px; max-width:220px;" alt="Logo"/>
+                    </td>
+                    <td style="vertical-align:top;">
+                        <table style="width:100%; border-collapse:collapse;">
+                            <tr t-foreach="doc._restagrup_quote_header()" t-as="row" style="border-bottom:1px solid #000;">
+                                <td style="padding:2px 6px; font-weight:bold; width:45%;" t-out="row[0]"/>
+                                <td style="padding:2px 6px;" t-out="row[1]"/>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+
+            <div t-foreach="doc._restagrup_quote_services()" t-as="service" style="page-break-inside: avoid; margin-bottom:18px;">
+                <h4 style="text-align:center; text-decoration:underline; font-weight:bold; margin:6px 0 12px 0;" t-out="service['title']"/>
+                <table style="width:100%; margin-bottom:8px;">
+                    <tr>
+                        <td style="vertical-align:top;">
+                            <strong t-out="service['restaurant']"/><br/>
+                            <span t-out="service['address']"/>
+                        </td>
+                        <td style="vertical-align:top; width:35%;">
+                            <t t-if="service['service_type']">Tipo de servicio: <span t-out="service['service_type']"/><br/></t>
+                            <t t-if="service['hour']">Hora evento: <span t-out="service['hour']"/></t>
+                        </td>
+                    </tr>
+                </table>
+                <div style="white-space: pre-line; text-transform: uppercase; border-top:1px dashed #000; border-bottom:1px dashed #000; padding:8px 0; margin:8px 0;" t-out="service['menu_text']"/>
+                <p style="font-weight:bold;">PRECIO NETO: <span t-out="service['price_pp']" t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/> por persona (IVA incluido)</p>
+            </div>
+
+            <div style="border-top:1px solid #000; padding-top:8px; margin-top:12px;">
+                <p><u>NOTA</u>: El número final de comensales habrá de ser facilitado en el plazo máximo límite de 48 horas
+                    laborables antes del servicio. Esa cifra será la que se tenga en cuenta a efectos de facturación, salvo en el
+                    caso que hayan asistido un número mayor de comensales.</p>
+                <p>Este presupuesto está sujeto a disponibilidad del restaurante.</p>
+                <p t-if="doc.validity_date">Válido hasta el <span t-out="doc.validity_date.strftime('%d/%m/%Y')"/>.</p>
+            </div>
+        </div>
+        <div class="footer" style="font-family: Arial, Helvetica, sans-serif; font-size:10px; text-align:center; border-top:1px solid #000; padding-top:4px;">
+            <span t-out="company.partner_id.name"/>
+            <t t-if="company.vat"> - CIF: <span t-out="company.vat"/></t>
+            <t t-if="company.street"> - <span t-out="company.street"/></t>
+            <t t-if="company.zip or company.city">. <span t-out="company.zip"/> <span t-out="company.city"/></t>
+            <br/>
+            <t t-if="company.phone">Tlf: <span t-out="company.phone"/></t>
+            <t t-if="company.email"> · Email: <span t-out="company.email"/></t>
+            <br/>Página <span class="page"/> de <span class="topage"/>
+        </div>
+    </template>
+
+    <template id="report_saleorder_raw_restagrup" inherit_id="sale.report_saleorder_raw">
+        <xpath expr="//t[@t-call='sale.report_saleorder_document']" position="attributes">
+            <attribute name="t-call">restagrup_service_orders.report_restagrup_quote_document</attribute>
+        </xpath>
+    </template>
+</odoo>

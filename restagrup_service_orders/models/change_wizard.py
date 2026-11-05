@@ -118,7 +118,7 @@ class RestaurantChangeWizard(models.TransientModel):
             return
         pricing = self.env['restagrup.pricing']
         search = self.search_id
-        qty, unit_cost = search._quote_figures(new.quote_amount)
+        qty, unit_cost = search._quote_figures(new)
         total_cost = new.quote_amount
         if self.keep_client_price:
             price = sum(l.price_unit * l.product_uom_qty * (1 - (l.discount or 0.0) / 100.0) for l in old_lines) / qty

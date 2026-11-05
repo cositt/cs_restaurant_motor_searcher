@@ -7,7 +7,7 @@ class CrmLead(models.Model):
     _inherit = 'crm.lead'
 
     restagrup_notice_ids = fields.One2many('restagrup.restaurant.notice', 'lead_id', string='Avisos a restaurantes')
-    restagrup_event_count = fields.Integer(string='Eventos', compute='_compute_restagrup_summary')
+    restagrup_event_count = fields.Integer(string='Servicios', compute='_compute_restagrup_summary')
     restagrup_chosen_summary = fields.Char(string='Restaurantes elegidos', compute='_compute_restagrup_summary')
     restagrup_order_total = fields.Float(string='Presupuestado (sin IVA)', compute='_compute_restagrup_summary')
     restagrup_confirmation_summary = fields.Char(string='Confirmados', compute='_compute_restagrup_summary')

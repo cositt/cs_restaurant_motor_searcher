@@ -22,4 +22,16 @@
             </xpath>
         </field>
     </record>
+
+    <!-- Razón social: el nombre fiscal de la agencia para las facturas (PPT de Conchita, diapositiva 2). -->
+    <record id="view_partner_form_legal_name" model="ir.ui.view">
+        <field name="name">res.partner.form.restagrup.legal.name</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <field name="vat" position="before">
+                <field name="restagrup_legal_name" invisible="not is_company"/>
+            </field>
+        </field>
+    </record>
 </odoo>

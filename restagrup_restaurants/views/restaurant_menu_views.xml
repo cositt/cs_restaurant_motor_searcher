@@ -8,8 +8,15 @@
                 <header>
                     <button name="action_mark_reviewed" type="object" string="Revisado" class="btn-primary"
                             invisible="not ai_pending_review"/>
+                    <button name="action_complete_dishes_ai" type="object" string="Completar platos con IA"
+                            class="btn-secondary" icon="fa-magic" invisible="not dishes_missing"/>
                 </header>
                 <sheet>
+                    <field name="dishes_missing" invisible="1"/>
+                    <div class="alert alert-info" role="status" invisible="not dishes_missing">
+                        Platos sin completar: el menú está en la descripción. Pulsa «Completar platos con IA» para
+                        separarlo en platos (la descripción no se toca).
+                    </div>
                     <div class="alert alert-warning" role="alert" invisible="not ai_pending_review">
                         Creado por la IA desde la respuesta del restaurante: revisa platos y precio y pulsa «Revisado».
                     </div>
@@ -70,11 +77,17 @@
         <field name="model">restagrup.restaurant.menu</field>
         <field name="arch" type="xml">
             <list>
+                <header>
+                    <button name="action_complete_dishes_ai" type="object" string="Completar platos con IA"
+                            icon="fa-magic"/>
+                </header>
                 <field name="sequence" widget="handle"/>
                 <field name="partner_id" optional="show"/>
                 <field name="name"/>
                 <field name="ai_pending_review" widget="boolean_toggle" string="Sin revisar" optional="show"
                        readonly="1" invisible="not ai_pending_review"/>
+                <field name="dishes_missing" widget="boolean_toggle" string="Platos sin completar" optional="show"
+                       readonly="1" invisible="not dishes_missing"/>
                 <field name="currency_id" column_invisible="1"/>
                 <field name="season" options="{'enable_formatting': false}"/>
                 <field name="menu_type" optional="show"/>
@@ -84,6 +97,28 @@
                 <field name="min_pax" optional="show"/>
                 <field name="max_pax" optional="show"/>
                 <field name="drinks_included" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Menús de un restaurante abiertos desde su tarjeta del buscador: coste, venta y pedir uno concreto. -->
+    <record id="view_restaurant_menu_pick_list" model="ir.ui.view">
+        <field name="name">restagrup.restaurant.menu.pick.list</field>
+        <field name="model">restagrup.restaurant.menu</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <list create="0" delete="0">
+                <field name="name"/>
+                <field name="menu_type"/>
+                <field name="season" options="{'enable_formatting': false}"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="cost_price" string="Coste (€/pers.)"/>
+                <field name="sale_price" string="Venta (€/pers.)"/>
+                <field name="min_pax" optional="show"/>
+                <field name="max_pax" optional="show"/>
+                <field name="description" optional="show"/>
+                <button name="action_request_quote_with_menu" type="object" string="Pedir disponibilidad de este menú"
+                        icon="fa-paper-plane" class="btn-link"/>
             </list>
         </field>
     </record>
@@ -102,6 +137,7 @@
                 <filter name="current_season" string="Temporada actual"
                         domain="[('season', '=', context_today().year)]"/>
                 <filter name="ai_pending_review" string="Creados por IA sin revisar" domain="[('ai_pending_review', '=', True)]"/>
+                <filter name="dishes_missing" string="Platos sin completar" domain="[('dishes_missing', '=', True)]"/>
                 <filter name="archived" string="Archivados" domain="[('active', '=', False)]"/>
                 <group>
                     <filter name="group_restaurant" string="Restaurante" context="{'group_by': 'partner_id'}"/>

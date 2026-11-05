@@ -52,7 +52,8 @@
                 <field name="restagrup_agency_name"/>
                 <field name="name" string="Ref. grupo"/>
                 <field name="restagrup_event_count" string="Nº servicios"/>
-                <field name="restagrup_first_service_date"/>
+                <field name="restagrup_first_service_label"/>
+                <field name="restagrup_first_service_date" optional="hide"/>
                 <field name="restagrup_first_service_city"/>
                 <field name="restagrup_chosen_summary" string="Restaurante"/>
                 <field name="restagrup_total_pax"/>

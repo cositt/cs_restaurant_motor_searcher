@@ -37,8 +37,10 @@ PRICE_LEVEL_SELECTION = [('1', '€'), ('2', '€€'), ('3', '€€€'), ('4'
 EXTRACT_QUOTE_SYSTEM_PROMPT = """\
 Eres un asistente que lee la respuesta de un restaurante a una petición de presupuesto
 para un grupo. Devuelve SOLO un objeto JSON, sin texto adicional, con estas claves
-exactas: "importe" (número en euros -- el precio total indicado, o null si no aparece
-un importe claro), "notas" (string corto con condiciones relevantes mencionadas --
+exactas: "precio_persona" (número en euros -- el precio por persona que ofrece el
+restaurante, si propone un único precio o un único menú; null si ofrece varios menús con
+precios distintos o no da precio por persona), "importe" (número en euros -- el precio
+total del grupo si lo indica expresamente, o null si no aparece), "notas" (string corto con condiciones relevantes mencionadas --
 fecha alternativa, aforo distinto, política de cancelación, depósito -- o null si no
 hay nada relevante), "menus" (lista de los menús que describe el restaurante, en el
 texto o en los adjuntos; lista vacía si no describe ninguno). Cada menú es un objeto con:
@@ -49,6 +51,7 @@ texto o en los adjuntos; lista vacía si no describe ninguno). Cada menú es un 
 "min_comensales" (entero o null), "max_comensales" (entero o null).
 Si un dato no aparece claramente en el texto, pon null -- nunca lo inventes."""
 
+QUOTE_DONE_ETIQUETAS = ('solicitado', 'presupuesto_recibido')
 ETIQUETA_SELECTION = [
     ('visto', 'Visto'),
     ('interesado', 'Interesado'),
@@ -118,12 +121,12 @@ class RestaurantSearch(models.Model):
     _rec_name = 'display_name'
 
     lead_id = fields.Many2one(
-        'crm.lead', string='Grupo / Cliente', required=True, ondelete='cascade', index=True,
+        'crm.lead', string='Grupo', required=True, ondelete='cascade', index=True,
         help='La oportunidad o petición de grupo para la que se buscan restaurantes.',
     )
     display_name = fields.Char(string='Nombre', compute='_compute_display_name', store=True)
     event_id = fields.Many2one(
-        'restagrup.lead.event', string='Evento', ondelete='set null', index=True, copy=False,
+        'restagrup.lead.event', string='Servicio', ondelete='set null', index=True, copy=False,
         help='Evento del grupo (comida, cena…) para el que se hace esta búsqueda.',
     )
     city = fields.Char(string='Ciudad', required=True)
@@ -147,6 +150,10 @@ class RestaurantSearch(models.Model):
     search_type_fastfood = fields.Boolean(string='Comida rápida', default=False)
     notes = fields.Text(string='Notas de la búsqueda')
     user_id = fields.Many2one('res.users', string='Buscado por', default=lambda self: self.env.user)
+    restaurant_name = fields.Char(
+        string='Buscar restaurante por nombre',
+        help='Opcional: solo los restaurantes cuyo nombre contenga este texto (en Odoo y en Google).',
+    )
     chosen_line_id = fields.Many2one(
         'restagrup.restaurant.search.line', string='Restaurante elegido',
         domain="[('search_id', '=', id)]", copy=False,
@@ -283,6 +290,14 @@ class RestaurantSearch(models.Model):
             'target': 'current',
         }
 
+    def action_open_lead(self):
+        """Vuelve a la petición del grupo."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window', 'res_model': 'crm.lead', 'res_id': self.lead_id.id,
+            'view_mode': 'form', 'views': [(False, 'form')], 'target': 'current',
+        }
+
     def action_view_on_map(self):
         """Mapa propio (Leaflet + OpenStreetMap, sin coste) con TODOS los resultados
         que tengan coordenadas -- a diferencia de la vista <map> nativa de Odoo, no
@@ -335,6 +350,8 @@ class RestaurantSearch(models.Model):
             domain.append(('restaurant_cuisine_type', 'ilike', self.cuisine_type))
         if self.max_price_level:
             domain.append(('restaurant_price_level', '<=', self.max_price_level))
+        if self.restaurant_name:
+            domain.append(('name', 'ilike', self.restaurant_name.strip()))
         return self.env['res.partner'].search(domain, order='name')
 
     def _partner_to_line_vals(self, partner, sequence):
@@ -437,13 +454,14 @@ class RestaurantSearch(models.Model):
                 'type': google_type,
                 'key': api_key,
             }
-            if self.cuisine_type:
-                params['keyword'] = self.cuisine_type
+            keyword = ' '.join(part for part in (self.restaurant_name, self.cuisine_type) if part)
+            if keyword:
+                params['keyword'] = keyword
         else:
             # Sin coordenadas (geocoding falló o no hay ciudad): se cae al texto libre
             # de antes, que al menos no deja al usuario sin resultados.
             search_url = GOOGLE_PLACES_TEXTSEARCH_URL
-            query = f'{type_label} {self.cuisine_type or ""} para grupos en {self._full_address_text()}'.replace('  ', ' ').strip()
+            query = f'{self.restaurant_name or type_label} {self.cuisine_type or ""} para grupos en {self._full_address_text()}'.replace('  ', ' ').strip()
             params = {'query': query, 'key': api_key}
         if self.max_price_level:
             # Nuestra escala (1=€ .. 4=€€€€) coincide 1:1 con el price_level de Google
@@ -527,7 +545,7 @@ class RestaurantSearchLine(models.Model):
     _order = 'sequence, id'
 
     search_id = fields.Many2one('restagrup.restaurant.search', required=True, ondelete='cascade', index=True)
-    lead_id = fields.Many2one(related='search_id.lead_id', store=True, string='Grupo / Cliente')
+    lead_id = fields.Many2one(related='search_id.lead_id', store=True, string='Grupo')
     sequence = fields.Integer(default=10)
     default_sequence = fields.Integer(
         default=10,
@@ -558,7 +576,17 @@ class RestaurantSearchLine(models.Model):
     partner_restaurant_rating = fields.Selection(
         related='partner_id.restaurant_internal_rating', string='Valoración interna',
     )
-    quote_amount = fields.Float(string='Presupuesto (€)', digits=(16, 2))
+    # Restagrup trabaja por precio de menú por persona, nunca por total del grupo: lo que se escribe es el
+    # precio por persona y el total sale de multiplicarlo por los comensales de la búsqueda.
+    quote_price_pp = fields.Float(
+        string='Precio por persona (€)',
+        help='Lo que cobra el restaurante por persona (nuestro coste). El total del grupo se calcula solo.',
+    )
+    quote_amount = fields.Float(
+        string='Total del grupo (€)', digits=(16, 2),
+        compute='_compute_quote_amount', inverse='_inverse_quote_amount', store=True, readonly=False,
+        help='Precio por persona × comensales de la búsqueda.',
+    )
     quote_notes = fields.Text(string='Notas del presupuesto')
     cancel_reason_id = fields.Many2one('restagrup.cancel.reason', string='Motivo de cancelación', copy=False)
     cancel_note = fields.Text(string='Nota de cancelación', copy=False)
@@ -621,6 +649,21 @@ class RestaurantSearchLine(models.Model):
         for line in self:
             line.is_chosen = line.search_id.chosen_line_id.id == line.id
 
+    def _quote_pax(self):
+        """Comensales con los que se multiplica el precio por persona; sin comensales, el precio es el total."""
+        self.ensure_one()
+        return int(self.search_id.min_capacity or 0) or 1
+
+    @api.depends('quote_price_pp', 'search_id.min_capacity')
+    def _compute_quote_amount(self):
+        for line in self:
+            line.quote_amount = round(line.quote_price_pp * line._quote_pax(), 2) if line.quote_price_pp else 0.0
+
+    def _inverse_quote_amount(self):
+        """Compatibilidad con lo que aún da el total (respuestas con total, demos): se reparte por persona."""
+        for line in self:
+            line.quote_price_pp = line.quote_amount / line._quote_pax() if line.quote_amount else 0.0
+
     @api.depends('etiqueta', 'quote_amount')
     def _compute_quote_pending_confirmation(self):
         for line in self:
@@ -658,7 +701,7 @@ class RestaurantSearchLine(models.Model):
             event_date = search.event_id.event_date or search.lead_id.restagrup_service_date
             closed = line.partner_id.restaurant_closed_weekday
             if event_date and closed in WEEKDAY_PLURALS and WEEKDAY_CODES[event_date.weekday()] == closed:
-                warnings.append(_('Cierra los %(day)s (evento en ese día)') % {'day': WEEKDAY_PLURALS[closed]})
+                warnings.append(_('Cierra los %(day)s (servicio en ese día)') % {'day': WEEKDAY_PLURALS[closed]})
             line.warnings_text = ' · '.join(warnings)
 
     @api.depends('etiqueta', 'quote_requested_date')
@@ -760,8 +803,10 @@ class RestaurantSearchLine(models.Model):
         self.write({'etiqueta': 'visto'})
 
     def action_mark_interesado(self):
-        self.write({'etiqueta': 'interesado'})
-        for line in self:
+        """Solo antes de pedir presupuesto: un restaurante ya pedido o con presupuesto no vuelve atrás."""
+        lines = self.filtered(lambda l: l.etiqueta not in QUOTE_DONE_ETIQUETAS)
+        lines.write({'etiqueta': 'interesado'})
+        for line in lines:
             line.search_id.message_post_if_exists(_('%s: marcado como interesado.') % line.name)
 
     def action_mark_descartado(self):
@@ -799,8 +844,10 @@ class RestaurantSearchLine(models.Model):
         self.ensure_one()
         email_to = self._get_quote_email_to()
         search = self.search_id
-        subject, body_text = self.env['restagrup.mail.template']._compose(
+        templates = self.env['restagrup.mail.template']
+        subject, body_text = templates._compose(
             'quote_request', self._mail_values(self.env.user.name), self._quote_request_fallback)
+        subject, body_text = templates._with_locator(subject, body_text, search.lead_id._restagrup_locator())
         body_html = Markup('<br/>').join(Markup.escape(line) for line in body_text.splitlines())
 
         self.message_post(
@@ -843,12 +890,13 @@ class RestaurantSearchLine(models.Model):
             'notas': search.notes or '',
             'empresa': self.env.company.name,
             'firma': signer_name,
+            'localizador': search.lead_id._restagrup_locator() or '',
         }
 
     def _quote_request_fallback(self):
         """El texto de siempre, por si alguien borró la plantilla."""
         values = self._mail_values(self.env.user.name)
-        return (_('Petición de presupuesto — %(ciudad)s, %(pax)s pax') % values,
+        return (_('Presupuesto para grupos — %(localizador)s — %(ciudad)s %(fecha)s') % values,
                 _('Hola,\n\nSomos %(empresa)s y estamos organizando un evento en %(ciudad)s para %(pax)s personas.'
                   ' ¿Podríais enviarnos vuestro presupuesto?\n\nGracias,\n%(firma)s') % values)
 
@@ -989,23 +1037,22 @@ class RestaurantSearchLine(models.Model):
         if not data:
             return
 
-        amount = self._restagrup_safe_float(data.get('importe'))
-        vals = {}
-        if amount:
-            vals['quote_amount'] = amount
+        vals = self._quote_price_vals(data)
+        has_price = bool(vals)
+        if has_price:
             vals['quote_received_date'] = fields.Datetime.now()
         if data.get('notas'):
             vals['quote_notes'] = data['notas']
         if vals:
             self.write(vals)
         self._restagrup_menus_from_reply(data.get('menus'))
-        if amount:
-            note = _('%(name)s: respuesta de presupuesto recibida por email, importe extraído'
+        if has_price:
+            note = _('%(name)s: respuesta de presupuesto recibida por email, precio extraído'
                      ' por IA (%(provider)s) — revisa antes de registrar.')
         else:
-            # Varios menús por persona, sin total: no hay importe que revisar, lo elige una persona.
-            note = _('%(name)s: respuesta de presupuesto recibida por email, sin importe total (leída por IA,'
-                     ' %(provider)s) — elige el menú o escribe el importe a mano.')
+            # Varios menús con precios distintos: no hay un precio que revisar, lo elige una persona.
+            note = _('%(name)s: respuesta de presupuesto recibida por email, sin un precio único (leída por IA,'
+                     ' %(provider)s) — elige el menú o escribe el precio por persona a mano.')
         self.search_id.message_post_if_exists(note % {'name': self.name, 'provider': provider})
 
     def action_extract_quote_from_text(self):
@@ -1023,19 +1070,19 @@ class RestaurantSearchLine(models.Model):
                 'No se pudo extraer el importe automáticamente (IA no configurada o'
                 ' sin respuesta) -- introduce el presupuesto a mano.'
             ))
-        amount = self._restagrup_safe_float(data.get('importe'))
-        if not amount:
+        vals = self._quote_price_vals(data)
+        if not vals:
             raise UserError(_(
-                'La IA no encontró un importe claro en el texto -- revísalo e'
-                ' introduce el presupuesto a mano.'
+                'La IA no encontró un precio claro en el texto -- revísalo e'
+                ' introduce el precio por persona a mano.'
             ))
-        vals = {'quote_amount': amount, 'quote_received_date': fields.Datetime.now()}
+        vals['quote_received_date'] = fields.Datetime.now()
         if data.get('notas'):
             vals['quote_notes'] = data['notas']
         self.write(vals)
         self._restagrup_menus_from_reply(data.get('menus'))
         self.search_id.message_post_if_exists(_(
-            '%(name)s: importe extraído por IA (%(provider)s) — revisa antes de registrar.'
+            '%(name)s: precio extraído por IA (%(provider)s) — revisa antes de registrar.'
         ) % {'name': self.name, 'provider': provider})
         return {
             'type': 'ir.actions.act_window',
@@ -1045,6 +1092,30 @@ class RestaurantSearchLine(models.Model):
             'view_id': self.env.ref('restagrup_restaurants.view_restaurant_search_line_quote_form').id,
             'target': 'new',
         }
+
+    def _quote_price_text(self):
+        """«19,00 €/pers. (570,00 € el grupo)» para el historial."""
+        self.ensure_one()
+        fmt = self.env['restagrup.pricing'].format_amount
+        return _('%(pp)s €/pers. (%(total)s € el grupo)') % {
+            'pp': fmt(self.quote_price_pp), 'total': fmt(self.quote_amount)}
+
+    def _quote_price_vals(self, data):
+        """Precio que propone la IA, siempre por persona: el que da el restaurante; si solo da el total, el
+        total (se reparte entre los comensales); si no, el de su único menú con precio. Vacío si no hay
+        un precio claro (p. ej. varios menús con precios distintos: elige una persona)."""
+        price_pp = self._restagrup_safe_float(data.get('precio_persona'))
+        if price_pp:
+            return {'quote_price_pp': price_pp}
+        total = self._restagrup_safe_float(data.get('importe'))
+        if total:
+            return {'quote_amount': total}
+        menu_prices = [self._restagrup_safe_float(menu.get('precio_persona'))
+                       for menu in (data.get('menus') or []) if isinstance(menu, dict)]
+        menu_prices = [price for price in menu_prices if price]
+        if len(menu_prices) == 1:
+            return {'quote_price_pp': menu_prices[0]}
+        return {}
 
     @staticmethod
     def _restagrup_safe_float(value):
@@ -1082,15 +1153,15 @@ class RestaurantSearchLine(models.Model):
     def action_register_quote(self):
         self.ensure_one()
         if not self.quote_amount:
-            raise UserError(_('Indica el importe del presupuesto antes de registrarlo.'))
+            raise UserError(_('Indica el precio por persona del presupuesto antes de registrarlo.'))
         self._review_quote_extraction()
         self.write({
             'etiqueta': 'presupuesto_recibido',
             'quote_received_date': self.quote_received_date or fields.Datetime.now(),
         })
         self.search_id.message_post_if_exists(_(
-            '%(name)s: presupuesto recibido — %(amount)s €.'
-        ) % {'name': self.name, 'amount': self.env['restagrup.pricing'].format_amount(self.quote_amount)})
+            '%(name)s: presupuesto recibido — %(price)s.'
+        ) % {'name': self.name, 'price': self._quote_price_text()})
         if self.env.context.get('choose_after_register'):
             self._choose_line()
         return {'type': 'ir.actions.act_window_close'}
@@ -1101,10 +1172,12 @@ class RestaurantSearchLine(models.Model):
         if not log:
             return
         try:
-            proposed = float(json.loads(log.output or '{}').get('importe') or 0)
+            output = json.loads(log.output or '{}')
         except (TypeError, ValueError):
-            proposed = 0.0
-        log._close('confirmed' if abs(proposed - self.quote_amount) < 0.005 else 'corrected')
+            output = {}
+        proposal = self._quote_price_vals(output if isinstance(output, dict) else {})
+        proposed_pp = proposal.get('quote_price_pp') or proposal.get('quote_amount', 0.0) / self._quote_pax()
+        log._close('confirmed' if abs(proposed_pp - self.quote_price_pp) < 0.005 else 'corrected')
 
     def action_toggle_chosen(self):
         self.ensure_one()
@@ -1140,6 +1213,6 @@ class RestaurantSearchLine(models.Model):
         self.ensure_one()
         self._fetch_google_phone()
         self.search_id.chosen_line_id = self.id
-        self.search_id.message_post_if_exists(_('Elegido: %(name)s (presupuesto %(amount)s €).') % {
-            'name': self.name, 'amount': self.env['restagrup.pricing'].format_amount(self.quote_amount),
+        self.search_id.message_post_if_exists(_('Elegido: %(name)s (presupuesto %(price)s).') % {
+            'name': self.name, 'price': self._quote_price_text(),
         })

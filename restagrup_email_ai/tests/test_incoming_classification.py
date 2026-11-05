@@ -144,7 +144,7 @@ class TestIncomingClassification(TransactionCase):
             inbox.action_create_lead()
         self.assertEqual(inbox.state, 'done')
         self.assertTrue(inbox.lead_id)
-        self.assertEqual(inbox.lead_id.name, 'Quizá sí era petición')
+        self.assertEqual(inbox.lead_id.name, 'Grupo adulto', 'título = referencia del grupo (sin nombre: el tipo)')
         self.assertEqual(inbox.lead_id.restagrup_city, 'Madrid')
 
     def test_rescued_lead_waits_for_assignment_like_any_request_from_email(self):

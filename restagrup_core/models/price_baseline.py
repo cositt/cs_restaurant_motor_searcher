@@ -15,7 +15,7 @@ class RestagrupPriceBaseline(models.Model):
     name = fields.Char(string='Descripción', required=True)
     active = fields.Boolean(string='Activo', default=True)
     event_type_id = fields.Many2one(
-        'restagrup.event.type', string='Tipo de evento', required=True, ondelete='cascade')
+        'restagrup.event.type', string='Tipo de servicio', required=True, ondelete='cascade')
     audience = fields.Selection(AUDIENCE_SELECTION, string='Público', required=True, default='adults')
     day_type = fields.Selection(
         [('any', 'Cualquier día'), ('weekday', 'Entre semana'), ('weekend', 'Fin de semana')],

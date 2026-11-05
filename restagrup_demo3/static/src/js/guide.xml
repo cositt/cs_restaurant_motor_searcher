@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="restagrup_demo3.Guide">
+        <div class="o_rg_guide">
+            <div class="o_rg_guide_head">
+                <img class="o_rg_guide_logo" src="/restagrup_demo3/static/description/icon.png" alt="Restagrup"/>
+                <div class="o_rg_guide_titles">
+                    <h1>Recorrido completo de un grupo</h1>
+                    <p>Del correo de la agencia al expediente cerrado: presupuestos, firma, pagos y facturas.
+                        <span class="o_rg_progress"><t t-esc="doneCount"/> / <t t-esc="steps.length"/></span></p>
+                </div>
+                <button class="o_rg_btn_ghost" t-on-click="toggleNotes">
+                    <t t-if="state.notes">Ocultar notas del presentador</t>
+                    <t t-else="">Notas del presentador</t>
+                </button>
+            </div>
+
+            <div class="o_rg_changes">
+                <div class="o_rg_changes_head" t-on-click="toggleChanges">
+                    <span class="o_rg_new_badge">Nuevo</span>
+                    <b>Lo que cambia desde vuestra presentación del 4 de noviembre</b>
+                    <i t-attf-class="fa {{ state.changes ? 'fa-chevron-up' : 'fa-chevron-down' }}"/>
+                </div>
+                <ul t-if="state.changes">
+                    <li t-foreach="changes" t-as="row" t-key="row_index"><b t-esc="row[0]"/>: <t t-esc="row[1]"/></li>
+                </ul>
+                <p t-if="state.changes" class="o_rg_changes_hint">En cada paso, lo marcado como «Nuevo» es lo que pedisteis.</p>
+            </div>
+
+            <div class="o_rg_steps">
+                <t t-foreach="steps" t-as="step" t-key="step.key">
+                    <div t-if="phaseStart(step_index)" class="o_rg_phase" t-esc="step.phase"/>
+                    <div t-attf-class="o_rg_step {{ stepClass(step_index) }}">
+                        <div class="o_rg_step_num">
+                            <t t-if="state.data.done[step.key]"><i class="fa fa-check"/></t>
+                            <t t-else=""><t t-esc="step_index + 1"/></t>
+                        </div>
+                        <div class="o_rg_step_body">
+                            <div class="o_rg_step_title">
+                                <t t-esc="step.title"/>
+                                <span t-if="step.news" class="o_rg_new_badge">Nuevo</span>
+                            </div>
+                            <div class="o_rg_step_todo" t-esc="step.todo"/>
+                            <ul t-if="step.news" class="o_rg_news">
+                                <li t-foreach="step.news" t-as="item" t-key="item_index" t-esc="item"/>
+                            </ul>
+                            <div t-if="state.notes" class="o_rg_step_say">
+                                <i class="fa fa-comment-o"/> <t t-esc="step.say"/>
+                            </div>
+                            <ol t-if="state.notes" class="o_rg_step_how">
+                                <li t-foreach="step.how" t-as="row" t-key="row_index">
+                                    <span class="o_rg_how_click" t-esc="row[0]"/>
+                                    <span class="o_rg_how_why" t-esc="row[1]"/>
+                                </li>
+                            </ol>
+                        </div>
+                        <div class="o_rg_step_actions">
+                            <t t-foreach="buttonsFor(step)" t-as="btn" t-key="btn_index">
+                                <button t-attf-class="o_rg_btn #{ btn.call ? 'o_rg_btn_primary' : 'o_rg_btn_secondary' }"
+                                        t-att-disabled="btn.disabled or state.busy ? 'disabled' : null"
+                                        t-on-click="() => this.onButton(btn)">
+                                    <t t-esc="btn.label"/>
+                                </button>
+                            </t>
+                        </div>
+                    </div>
+                </t>
+            </div>
+
+            <div class="o_rg_guide_foot">
+                <span t-if="currentIndex === steps.length" class="o_rg_done_msg">
+                    <i class="fa fa-check-circle"/> Recorrido completo.
+                </span>
+                <span t-else=""/>
+                <button class="o_rg_btn_ghost o_rg_reset" t-on-click="askReset">Reiniciar la demo</button>
+            </div>
+        </div>
+    </t>
+</templates>

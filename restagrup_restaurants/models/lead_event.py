@@ -15,7 +15,7 @@ class RestagrupLeadEvent(models.Model):
         search = self.search_ids[:1]
         if not search:
             if not self.city:
-                raise UserError(_('Indica la ciudad del evento antes de buscar restaurantes.'))
+                raise UserError(_('Indica la ciudad del servicio antes de buscar restaurantes.'))
             search = self.env['restagrup.restaurant.search'].create({
                 'lead_id': self.lead_id.id,
                 'event_id': self.id,

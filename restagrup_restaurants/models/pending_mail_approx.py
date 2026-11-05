@@ -63,6 +63,7 @@ class RestagrupPendingMail(models.Model):
         for mail in self.filtered(lambda m: m.state == 'pending' and m.option_ids):
             mail.option_ids.unlink()
             mail.body = mail._approx_body()
+            mail._restagrup_add_locator()
         return True
 
     def _set_approx_options(self, menus, show_restaurants):
@@ -76,6 +77,7 @@ class RestagrupPendingMail(models.Model):
                 Command.create(Option._vals_from_menu(menu, index)) for index, menu in enumerate(ordered, 1)],
         })
         self.body = self._approx_body()
+        self._restagrup_add_locator()
         self.message_post(
             body=Markup('<p>%s</p><ul>%s</ul>') % (
                 _('%s ha añadido opciones orientativas al correo:') % self.env.user.name,

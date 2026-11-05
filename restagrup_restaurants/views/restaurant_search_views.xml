@@ -6,6 +6,8 @@
         <field name="arch" type="xml">
             <form>
                 <header>
+                    <button name="action_open_lead" type="object" string="← Volver a la petición"
+                            class="btn-secondary o_restagrup_back_btn" invisible="not lead_id"/>
                     <button name="action_search" type="object" string="Buscar restaurantes"
                             class="btn-primary" invisible="not city"/>
                     <button name="action_view_on_map" type="object" string="Ver en mapa"
@@ -25,26 +27,39 @@
                     <group>
                         <group>
                             <field name="lead_id" options="{'no_create': True}"/>
+                            <field name="event_id" readonly="1" invisible="not event_id" options="{'no_open': True}"/>
                             <field name="city"/>
-                            <field name="street"/>
-                            <field name="zip"/>
                             <field name="min_capacity"/>
-                            <field name="require_bus_parking"/>
+                            <field name="budget_pp" invisible="not budget_pp"/>
                             <field name="restaurant_visible"/>
                         </group>
                         <group>
-                            <field name="cuisine_type"/>
-                            <field name="max_price_level"/>
-                            <field name="chosen_line_id" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="restaurant_name" placeholder="Opcional: parte del nombre"/>
+                            <field name="chosen_line_id" readonly="1" invisible="not chosen_line_id"
+                                   options="{'no_open': True}" widget="badge"/>
                             <field name="user_id" readonly="1"/>
                         </group>
                     </group>
-                    <group string="Tipo de local a buscar">
-                        <field name="search_type_restaurant"/>
-                        <field name="search_type_bar"/>
-                        <field name="search_type_cafe"/>
-                        <field name="search_type_fastfood"/>
-                    </group>
+                    <details class="o_restagrup_filters mb-3">
+                        <summary>Filtros: calle, código postal, parking de bus, cocina, precio y tipo de local</summary>
+                        <group>
+                            <group>
+                                <field name="street"/>
+                                <field name="zip"/>
+                                <field name="require_bus_parking"/>
+                            </group>
+                            <group>
+                                <field name="cuisine_type"/>
+                                <field name="max_price_level"/>
+                            </group>
+                        </group>
+                        <group string="Tipo de local a buscar">
+                            <field name="search_type_restaurant"/>
+                            <field name="search_type_bar"/>
+                            <field name="search_type_cafe"/>
+                            <field name="search_type_fastfood"/>
+                        </group>
+                    </details>
                     <group string="Notas de la búsqueda">
                         <field name="notes" nolabel="1"/>
                     </group>
@@ -75,6 +90,8 @@
                                     <field name="internal_notes"/>
                                     <field name="etiqueta"/>
                                     <field name="quote_amount"/>
+                                    <field name="quote_price_pp"/>
+                                    <field name="quote_client_price_per_person"/>
                                     <field name="quote_days_pending"/>
                                     <field name="quote_is_stale"/>
                                     <field name="partner_restaurant_rating"/>
@@ -86,6 +103,8 @@
                                     <field name="data_proposal_summary"/>
                                     <field name="quote_pending_confirmation"/>
                                     <field name="google_maps_url"/>
+                                    <field name="price_warning"/>
+                                    <field name="known_price_pp"/>
                                     <templates>
                                         <t t-name="card">
                                             <div class="o_restagrup_rest_card_header">
@@ -120,6 +139,9 @@
                                                     <span class="tag" t-if="record.suitable_school.raw_value">Escolar</span>
                                                     <span class="tag" t-if="record.suitable_family.raw_value">Familiar</span>
                                                 </div>
+                                                <div class="o_restagrup_rest_warning" t-if="record.price_warning.raw_value">
+                                                    💶 <t t-esc="record.price_warning.value"/>
+                                                </div>
                                                 <div class="o_restagrup_rest_warning" t-if="record.warnings_text.raw_value">
                                                     ⚠ <t t-esc="record.warnings_text.value"/>
                                                 </div>
@@ -148,24 +170,38 @@
                                                        role="button" class="btn btn-outline-secondary btn-sm">Email</a>
                                                     <button t-if="!record.partner_id.raw_value" name="action_add_as_partner" type="object"
                                                             class="btn btn-link btn-sm">Añadir como contacto</button>
+                                                    <button t-if="record.partner_id.raw_value" name="action_view_menus" type="object"
+                                                            class="btn btn-outline-secondary btn-sm" title="Menús del restaurante: coste, venta y pedir uno concreto">👁 Ver menús</button>
                                                 </div>
                                                 <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap:6px">
-                                                    <span t-attf-class="badge-etiqueta etiqueta-{{record.etiqueta.raw_value}}">
+                                                    <t t-set="step_order" t-value="['interesado', 'solicitado', 'presupuesto_recibido']"/>
+                                                    <t t-set="step_now" t-value="record.is_chosen.raw_value ? 3 : step_order.indexOf(record.etiqueta.raw_value)"/>
+                                                    <span t-if="step_now &gt;= 0" class="o_restagrup_steps" title="Etapas del restaurante en esta búsqueda">
+                                                        <t t-foreach="['Interesado', 'Pedido', 'Recibido', 'Elegido']" t-as="step_label" t-key="step_label_index">
+                                                            <span t-attf-class="o_restagrup_step {{step_label_index &lt;= step_now ? 'done' : ''}} {{step_label_index == step_now ? 'current' : ''}}"
+                                                                  t-esc="step_label"/>
+                                                        </t>
+                                                    </span>
+                                                    <span t-else="" t-attf-class="badge-etiqueta etiqueta-{{record.etiqueta.raw_value}}">
                                                         <t t-esc="record.etiqueta.value"/>
                                                     </span>
                                                     <span class="o_restagrup_quote_amount"
-                                                          t-if="record.quote_amount.raw_value and !record.quote_pending_confirmation.raw_value">
-                                                        💶 <t t-esc="record.quote_amount.value"/> €
+                                                          t-if="record.quote_price_pp.raw_value and !record.quote_pending_confirmation.raw_value"
+                                                          title="Precio por persona a la agencia, con nuestra comisión. Debajo, lo que cobra el restaurante.">
+                                                        💶 <t t-esc="record.quote_client_price_per_person.value"/> €/pers.
+                                                        <small class="o_restagrup_quote_cost d-block text-muted">coste <t t-esc="record.quote_price_pp.value"/> €/pers.</small>
                                                     </span>
                                                     <span class="o_restagrup_quote_pending" t-if="record.quote_pending_confirmation.raw_value"
-                                                          title="La IA propuso este importe a partir de la respuesta del restaurante. Confírmalo para poder elegirlo.">
-                                                        💶 <t t-esc="record.quote_amount.value"/> € · propuesto por IA, sin confirmar
+                                                          title="La IA propuso este precio a partir de la respuesta del restaurante. Confírmalo para poder elegirlo.">
+                                                        💶 <t t-esc="record.quote_client_price_per_person.value"/> €/pers. · propuesto por IA, sin confirmar
+                                                        <small class="o_restagrup_quote_cost d-block text-muted">coste <t t-esc="record.quote_price_pp.value"/> €/pers.</small>
                                                     </span>
                                                     <span class="o_restagrup_stale_badge" t-if="record.quote_is_stale.raw_value">
                                                         ⚠ <t t-esc="record.quote_days_pending.raw_value"/> días sin respuesta
                                                     </span>
                                                     <div class="o_restagrup_etiqueta_btn_row">
-                                                        <button name="action_mark_interesado" type="object" class="btn btn-outline-secondary">Interesado</button>
+                                                        <button t-if="!['solicitado', 'presupuesto_recibido'].includes(record.etiqueta.raw_value)"
+                                                                name="action_mark_interesado" type="object" class="btn btn-outline-secondary">Interesado</button>
                                                         <button name="action_mark_descartado" type="object" class="btn btn-outline-secondary">Descartar</button>
                                                         <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido' and record.etiqueta.raw_value != 'solicitado' and !record.warnings_text.raw_value"
                                                                 name="action_request_quote" type="object" class="btn btn-outline-primary">Pedir presupuesto</button>
@@ -177,7 +213,7 @@
                                                         <button t-if="record.quote_pending_confirmation.raw_value"
                                                                 name="action_register_quote" type="object" class="btn btn-primary">Confirmar presupuesto</button>
                                                         <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido'"
-                                                                name="action_open_quote_form" type="object" class="btn btn-outline-primary">Registrar presupuesto</button>
+                                                                name="action_open_quote_form" type="object" class="btn btn-outline-primary">Pegar respuesta</button>
                                                         <button t-if="record.etiqueta.raw_value == 'solicitado' or record.etiqueta.raw_value == 'presupuesto_recibido'"
                                                                 name="action_view_conversation" type="object" class="btn btn-outline-secondary">Ver conversación</button>
                                                         <button name="action_toggle_chosen" type="object" class="btn btn-outline-success">
@@ -199,9 +235,9 @@
                                     <field name="quote_pending_confirmation" column_invisible="True"/>
                                     <field name="name" string="Restaurante"/>
                                     <field name="etiqueta" string="Estado" widget="badge"/>
-                                    <field name="quote_amount" string="Restaurante (€)"/>
-                                    <field name="quote_client_price" string="Cliente (€)"/>
-                                    <field name="quote_client_price_per_person" string="Cliente (€/pers.)"/>
+                                    <field name="quote_client_price_per_person" string="Agencia (€/pers.)"/>
+                                    <field name="quote_price_pp" string="Restaurante (€/pers.)"/>
+                                    <field name="quote_amount" string="Total grupo (€)" optional="hide"/>
                                     <field name="menu_id" string="Menú"/>
                                     <field name="quote_received_date" string="Recibido"/>
                                     <field name="quote_notes"/>
@@ -231,13 +267,16 @@
                 <group>
                     <field name="name" readonly="1"/>
                 </group>
-                <group string="Extraer de la respuesta del restaurante (opcional)">
-                    <field name="quote_raw_text" nolabel="1" placeholder="Pega aquí el email o mensaje del restaurante..."/>
-                    <button name="action_extract_quote_from_text" type="object"
-                            string="Extraer con IA" class="btn-secondary"/>
+                <group string="1. Pega la respuesta del restaurante">
+                    <field name="quote_raw_text" nolabel="1" colspan="2"
+                           placeholder="Pega aquí el correo o el menú tal cual lo manda el restaurante (con el precio por persona)..."/>
+                    <button name="action_extract_quote_from_text" type="object" icon="fa-magic"
+                            string="Leer con IA: precio y menú" class="btn-primary"/>
                 </group>
-                <group>
-                    <field name="quote_amount"/>
+                <group string="2. Revisa y registra (lo rellena la IA; puedes corregirlo)">
+                    <field name="quote_price_pp" string="Precio por persona del restaurante (€)"/>
+                    <field name="quote_client_price_per_person" string="Precio a la agencia por persona (€)"/>
+                    <field name="quote_amount" string="Total del grupo (€)" readonly="1"/>
                     <field name="partner_id" invisible="1"/>
                     <field name="menu_id" invisible="not partner_id" options="{'no_create': True}"/>
                     <field name="quote_notes"/>
@@ -282,7 +321,7 @@
               action="action_restaurant_search" sequence="20"/>
     <menuitem id="menu_restagrup_cancel_reasons" name="Motivos de cancelación" parent="menu_restagrup_root"
               action="restagrup_core.action_restagrup_cancel_reason" sequence="91"/>
-    <menuitem id="menu_restagrup_event_types" name="Tipos de evento" parent="menu_restagrup_root"
+    <menuitem id="menu_restagrup_event_types" name="Tipos de servicio" parent="menu_restagrup_root"
               action="restagrup_core.action_restagrup_event_type" sequence="90"/>
     <menuitem id="menu_restagrup_price_baselines" name="Baremos de precio estimado" parent="menu_restagrup_root"
               action="restagrup_core.action_restagrup_price_baseline" sequence="92"/>

@@ -25,6 +25,8 @@
         'views/firewall_views.xml',
         'views/sale_order_views.xml',
         'views/sale_margin_templates.xml',
+        'views/sale_quote_report.xml',
+        'views/pending_mail_views.xml',
         'views/purchase_order_views.xml',
         'views/restaurant_search_views.xml',
         'views/res_partner_views.xml',

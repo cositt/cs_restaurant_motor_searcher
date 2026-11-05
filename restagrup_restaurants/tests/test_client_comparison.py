@@ -40,10 +40,12 @@ class TestClientComparison(TransactionCase):
         # 1000 € + 20 % = 1200 € para 40 personas
         self.assertEqual(line.quote_client_price_per_person, 30.0)
 
-    def test_price_per_person_is_zero_without_pax(self):
+    def test_price_per_person_does_not_depend_on_pax(self):
+        """El precio se registra por persona (ticket 2026-11-04): sin comensales sigue siendo el mismo."""
         self.search.min_capacity = 0
         line = self._line(self._restaurant('Casa A'))
-        self.assertEqual(line.quote_client_price_per_person, 0.0)
+        line.quote_price_pp = 25.0
+        self.assertAlmostEqual(line.quote_client_price_per_person, 30.0)
 
     def test_rows_only_include_confirmed_quotes(self):
         confirmed = self._line(self._restaurant('Confirmado'))

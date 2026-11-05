@@ -97,7 +97,7 @@ class TestMailTemplates(TransactionCase):
         line = self._line()
         line.action_request_quote()
         message = self._emails(line)
-        self.assertEqual(message.subject, 'Disponibilidad 14/03/2027')
+        self.assertTrue(message.subject.startswith('Disponibilidad 14/03/2027'), 'el localizador se añade detrás')
         self.assertIn('Texto propio para Mesón Rondeño', message.body)
 
     # --- automático por tipo ---

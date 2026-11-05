@@ -4,3 +4,4 @@ from . import test_incoming_classification
 from . import test_ai_activity
 from . import test_incoming_matching
 from . import test_event_estimate
+from . import test_group_and_agency

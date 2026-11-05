@@ -13,3 +13,8 @@ from . import test_bulk_quote
 from . import test_mail_templates
 from . import test_menu_from_reply
 from . import test_guia_prod_findings
+from . import test_quote_per_person
+from . import test_search_screen_conchita
+from . import test_menu_dishes_ai
+from . import test_budget_sort
+from . import test_menu_pick

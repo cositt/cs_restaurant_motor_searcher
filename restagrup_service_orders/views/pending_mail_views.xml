@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- La agencia del grupo, solo para el equipo: no va en el correo al restaurante. -->
+    <record id="view_restagrup_pending_mail_list_agency" model="ir.ui.view">
+        <field name="name">restagrup.pending.mail.list.agency</field>
+        <field name="model">restagrup.pending.mail</field>
+        <field name="inherit_id" ref="restagrup_restaurants.view_restagrup_pending_mail_list"/>
+        <field name="arch" type="xml">
+            <field name="group_id" position="after">
+                <field name="agency_name"/>
+            </field>
+        </field>
+    </record>
+</odoo>

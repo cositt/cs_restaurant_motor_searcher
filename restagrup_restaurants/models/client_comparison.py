@@ -7,7 +7,7 @@ class RestaurantSearchLineComparison(models.Model):
     _inherit = 'restagrup.restaurant.search.line'
 
     menu_id = fields.Many2one(
-        'restagrup.restaurant.menu', string='Menú ofrecido', copy=False, ondelete='set null',
+        'restagrup.restaurant.menu', string='Menú', copy=False, ondelete='set null',
         domain="[('partner_id', '=', partner_id)]",
         help='Menú del restaurante que acompaña a este presupuesto en la comparativa para el cliente.',
     )
@@ -17,12 +17,14 @@ class RestaurantSearchLineComparison(models.Model):
         help='Precio al cliente (presupuesto + margen) dividido entre los comensales de la búsqueda.',
     )
 
-    @api.depends('quote_amount', 'search_id.min_capacity')
+    @api.depends('quote_price_pp', 'partner_id.restaurant_margin_custom', 'partner_id.restaurant_margin_percent')
     def _compute_quote_client_price_per_person(self):
+        """Precio por persona del restaurante + nuestra comisión: lo que se ofrece a la agencia."""
+        pricing = self.env['restagrup.pricing']
         for line in self:
-            pax = line.search_id.min_capacity
             line.quote_client_price_per_person = (
-                round(line.quote_client_price / pax, 2) if pax and line.quote_client_price else 0.0
+                round(pricing.apply_margin(line.quote_price_pp, partner=line.partner_id), 2)
+                if line.quote_price_pp else 0.0
             )
 
     @api.constrains('menu_id', 'partner_id')

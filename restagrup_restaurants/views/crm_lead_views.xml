@@ -18,7 +18,7 @@
                             class="btn-secondary"/>
                 </div>
                 <div class="mb-2" invisible="not restagrup_event_ids">
-                    <button name="action_search_all_events" type="object" string="🍽 Buscar para todos los eventos"
+                    <button name="action_search_all_events" type="object" string="🍽 Buscar para todos los servicios"
                             class="btn-secondary"/>
                 </div>
             </xpath>

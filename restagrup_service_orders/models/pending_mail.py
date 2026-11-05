@@ -19,6 +19,10 @@ class RestagrupPendingMail(models.Model):
         'sale.order', string='Presupuesto', ondelete='cascade', readonly=True, index=True,
     )
 
+    agency_name = fields.Char(
+        related='group_id.restagrup_agency_name', string='Agencia',
+        help='Para el equipo: la agencia del grupo. No va en el correo al restaurante.')
+
     @api.depends('lead_id', 'request_lead_id', 'sale_order_id.opportunity_id')
     def _compute_group_id(self):
         super()._compute_group_id()

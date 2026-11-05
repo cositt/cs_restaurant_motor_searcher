@@ -5,11 +5,11 @@
         <field name="model">crm.lead</field>
         <field name="inherit_id" ref="crm.crm_lead_view_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//notebook" position="inside">
-                <page name="restagrup_events" string="Eventos">
+            <xpath expr="//notebook/page[1]" position="before">
+                <page name="restagrup_events" string="Servicios">
                     <div class="alert alert-info" role="alert"
                          invisible="restagrup_extraction_state != 'done' or not restagrup_event_ids">
-                        Eventos propuestos por la IA a partir del email -- revísalos antes de buscar restaurantes.
+                        Servicios propuestos por la IA a partir del email -- revísalos antes de buscar restaurantes.
                     </div>
                     <field name="restagrup_event_ids" nolabel="1">
                         <list editable="bottom">

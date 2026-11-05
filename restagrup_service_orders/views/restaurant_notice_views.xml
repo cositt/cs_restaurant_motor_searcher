@@ -238,8 +238,8 @@
         <field name="view_mode">list,form</field>
         <field name="domain">['|', ('restagrup_event_ids', '!=', False), ('restagrup_restaurant_search_ids', '!=', False)]</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">Todavía no hay grupos con eventos ni búsquedas</p>
-            <p>Aquí aparecen los grupos con su resumen: eventos, restaurantes elegidos, presupuestado y confirmaciones.</p>
+            <p class="o_view_nocontent_smiling_face">Todavía no hay grupos con servicios ni búsquedas</p>
+            <p>Aquí aparecen los grupos con su resumen: servicios, restaurantes elegidos, presupuestado y confirmaciones.</p>
         </field>
     </record>
     <record id="action_restagrup_clients_list" model="ir.actions.act_window.view">

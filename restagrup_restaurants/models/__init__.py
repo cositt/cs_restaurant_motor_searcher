@@ -13,3 +13,6 @@ from . import client_comparison
 from . import pending_mail_approx
 from . import restaurant_search_bulk_quote
 from . import restaurant_menu_ai
+from . import restaurant_menu_dishes
+from . import search_budget
+from . import search_menu_pick

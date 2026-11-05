@@ -11,6 +11,10 @@ class RestaurantSearch(models.Model):
         help='Presupuesto de venta generado a partir del restaurante elegido y su'
              ' presupuesto registrado.',
     )
+    agency_name = fields.Char(
+        related='lead_id.restagrup_agency_name', string='Agencia',
+        help='La agencia que pide el grupo (el «Grupo» es la referencia del propio grupo).',
+    )
     pipeline_stage = fields.Selection(
         selection_add=[('sale_created', 'Presupuesto de venta creado')],
         ondelete={'sale_created': 'set default'},
@@ -89,15 +93,15 @@ class RestaurantSearch(models.Model):
         self._link_sale_order(order, line, created)
         return order
 
-    def _quote_figures(self, quote_amount):
-        """(cantidad, coste por unidad) de la línea de venta a partir de lo que cotizó el restaurante: una
-        unidad por comensal y el coste por persona (importe / comensales). Sin comensales o sin importe,
-        una sola línea global. El coste por unidad se guarda a céntimos, así que si el importe no es
-        divisible entre los comensales el total puede desviarse unos céntimos."""
+    def _quote_figures(self, line):
+        """(cantidad, coste por unidad) de la línea de venta: una unidad por comensal al precio por persona
+        del restaurante, tal cual (Restagrup trabaja por precio de menú, nunca se divide un total). Sin
+        comensales, una sola línea con el total."""
         self.ensure_one()
         pax = int(self.min_capacity or 0)
-        qty = pax if pax > 0 and quote_amount else 1
-        return qty, quote_amount / qty
+        if pax > 0 and line.quote_price_pp:
+            return pax, line.quote_price_pp
+        return 1, line.quote_amount
 
     def _menu_description(self, line):
         """Menú elegido para la línea de venta: nombre y platos, nunca el precio del restaurante."""
@@ -112,7 +116,7 @@ class RestaurantSearch(models.Model):
             'pax': self.min_capacity or '?',
         }
         event_label = self._event_label()
-        qty, unit_cost = self._quote_figures(line.quote_amount)
+        qty, unit_cost = self._quote_figures(line)
         order, created = self._add_lines_to_group_order([(0, 0, dict(
             self._event_line_vals(),
             product_id=product.id,

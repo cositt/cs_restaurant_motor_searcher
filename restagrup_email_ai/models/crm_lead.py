@@ -19,9 +19,12 @@ agencia, p. ej. 35 si dice «unos 35 € por persona»; null si no lo dice) y "n
 requisitos como alergias, o null). Si una fecha no indica el año, usa la próxima vez que
 ocurra a partir de hoy. Si no se pide ningún servicio, "eventos" es una lista vacía.
 Además: "ciudad" (string o null), "num_pax" (entero o null) y "fecha_servicio" (string
-YYYY-MM-DD o null) del primer evento, "tipo_grupo" (string corto:
-corporativo/escolar/familiar/otro, o null) y "agencia" (nombre de la agencia o empresa que hace la
-petición, tal como firma el correo; null si no aparece o escribe un particular).
+YYYY-MM-DD o null) del primer evento, "tipo_grupo" (uno de: adulto, escolar, deportivo, senior,
+corporativo, familiar, otro; o null), "referencia_grupo" (el nombre propio del grupo si lo dice, p. ej.
+«Colegio Teresianas» o «Club Rugby Atlético»; null si no lo dice), "agencia" (nombre de la agencia o empresa
+que hace la petición, tal como firma el correo; null si no aparece o escribe un particular) y "firma" (objeto
+con los datos de la firma de quien escribe: "nombre" (la persona), "telefono", "direccion", "codigo_postal",
+"ciudad" y "web"; cada uno string o null; null si no hay firma).
 Si un dato no aparece claramente en el texto, pon null -- nunca lo inventes."""
 
 MAX_EVENTS = 20
@@ -56,7 +59,7 @@ class CrmLead(models.Model):
     )
     restagrup_extraction_provider = fields.Char(string='Proveedor IA usado', copy=False)
     restagrup_event_ids = fields.One2many(
-        'restagrup.lead.event', 'lead_id', string='Eventos',
+        'restagrup.lead.event', 'lead_id', string='Servicios',
         help='Cada comida, cena, etc. que pide el grupo, en su ciudad y fecha. La IA los propone como'
              ' borrador a partir del email; una persona los revisa.',
     )
@@ -99,7 +102,8 @@ class CrmLead(models.Model):
             'restagrup_extraction_state': 'done',
             'restagrup_extraction_provider': provider,
         })
-        self._restagrup_set_agency(data.get('agencia'))
+        self._restagrup_set_group_title(data.get('referencia_grupo'), data.get('tipo_grupo'))
+        self._restagrup_set_agency(data.get('agencia'), data.get('firma'))
         if event_vals:
             self.env['restagrup.lead.event'].create([dict(vals, lead_id=self.id) for vals in event_vals])
         self.message_post(body=_(
@@ -228,14 +232,6 @@ class CrmLead(models.Model):
         return hours + minutes / 60.0
 
     # --- agencia: la empresa que pide; quien escribe es su contacto ---
-
-    def _restagrup_set_agency(self, name):
-        self.ensure_one()
-        name = name.strip() if isinstance(name, str) else ''
-        if not name:
-            return
-        self.partner_name = name
-        self._restagrup_link_agency()
 
     def _restagrup_link_agency(self):
         """Cuelga el contacto del lead de su agencia (existente o nueva). Un contacto que ya es empresa o que ya

@@ -4,3 +4,4 @@ from . import test_event_type
 from . import test_ai_log
 from . import test_price_baseline
 from . import test_partner_lang
+from . import test_button_colors

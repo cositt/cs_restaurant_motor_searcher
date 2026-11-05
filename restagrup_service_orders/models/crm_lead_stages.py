@@ -32,6 +32,10 @@ class CrmLead(models.Model):
     restagrup_first_service_date = fields.Date(
         string='Fecha 1º servicio', compute='_compute_restagrup_first_service', store=True,
     )
+    restagrup_first_service_label = fields.Char(
+        string='Primer servicio', compute='_compute_restagrup_first_service_label',
+        help='Fecha y hora del primer servicio (06/11/2027 21:00): de un vistazo se ve si es comida o cena.',
+    )
     restagrup_first_service_city = fields.Char(string='Población 1º servicio', compute='_compute_restagrup_first_service')
     restagrup_total_pax = fields.Integer(string='Nº comensales', compute='_compute_restagrup_first_service')
     restagrup_assignee_label = fields.Char(
@@ -49,7 +53,8 @@ class CrmLead(models.Model):
         for lead in self:
             sender_name, sender_email = parse_contact_from_email(lead.email_from) if lead.email_from else ('', '')
             lead.restagrup_agency_name = (
-                lead.partner_id.name or lead.partner_name or lead.contact_name or sender_name or sender_email or False)
+                lead.partner_id.commercial_partner_id.name or lead.partner_name or lead.contact_name or sender_name
+                or sender_email or False)
 
     # --- numeración ---
 
@@ -87,6 +92,29 @@ class CrmLead(models.Model):
                 lead.restagrup_first_service_date = lead.restagrup_service_date
                 lead.restagrup_first_service_city = lead.restagrup_city
                 lead.restagrup_total_pax = lead.restagrup_pax
+
+    @api.depends('restagrup_event_ids.event_date', 'restagrup_event_ids.event_time', 'restagrup_service_date')
+    def _compute_restagrup_first_service_label(self):
+        for lead in self:
+            events = lead.restagrup_event_ids.filtered('event_date').sorted(lambda e: (e.event_date, e.event_time, e.id))
+            day = events[:1].event_date or lead.restagrup_service_date
+            if not day:
+                lead.restagrup_first_service_label = False
+                continue
+            label = day.strftime('%d/%m/%Y')
+            hour = events[:1].event_time if events else 0.0
+            if hour:
+                hours, minutes = divmod(round(hour * 60), 60)
+                label += ' %02d:%02d' % (hours, minutes)
+            lead.restagrup_first_service_label = label
+
+    def _restagrup_locator(self):
+        """Localizador del grupo en los correos: siempre el número de la petición (PET…), el que conoce el
+        equipo y el que lleva el presupuesto de venta."""
+        if len(self) != 1 or not self.restagrup_doc_seq:
+            return False
+        created = self.create_date or fields.Datetime.now()
+        return 'PET%s-%s' % (created.strftime('%Y%m'), self.restagrup_doc_seq)
 
     # --- etapas ---
 

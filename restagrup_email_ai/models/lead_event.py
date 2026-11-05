@@ -8,7 +8,7 @@ ESTIMATE_TRIGGERS = ('event_type_id', 'event_date', 'city', 'audience')
 
 class RestagrupLeadEvent(models.Model):
     _name = 'restagrup.lead.event'
-    _description = 'Evento de un grupo (una comida, una cena… en una ciudad y una fecha)'
+    _description = 'Servicio de un grupo (una comida, una cena… en una ciudad y una fecha)'
     _order = 'event_date, sequence, id'
 
     lead_id = fields.Many2one(
@@ -18,7 +18,7 @@ class RestagrupLeadEvent(models.Model):
     city = fields.Char(string='Ciudad')
     event_date = fields.Date(string='Fecha')
     event_time = fields.Float(string='Hora', help='Hora del servicio (p. ej. 14:00). Pasa al presupuesto de venta.')
-    event_type_id = fields.Many2one('restagrup.event.type', string='Tipo', ondelete='restrict')
+    event_type_id = fields.Many2one('restagrup.event.type', string='Tipo de servicio', ondelete='restrict')
     pax = fields.Integer(string='Comensales')
     notes = fields.Text(string='Notas')
     audience = fields.Selection(AUDIENCE_SELECTION, string='Público', default='adults')
@@ -36,7 +36,7 @@ class RestagrupLeadEvent(models.Model):
         string='Estado', default='draft', required=True, copy=False,
         help='Borrador: lo propuso la IA o se escribió a mano y aún no se han buscado restaurantes.',
     )
-    display_name = fields.Char(compute='_compute_display_name', string='Evento')
+    display_name = fields.Char(compute='_compute_display_name', string='Servicio')
 
     @api.depends('city', 'event_date', 'event_type_id', 'pax')
     def _compute_display_name(self):
