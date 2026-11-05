@@ -222,3 +222,13 @@
     padding: 4px 8px;
     margin: 4px 0;
 }
+
+/* Etapas del restaurante en la búsqueda: Interesado → Pedido → Recibido → Elegido */
+.o_restagrup_steps { display: inline-flex; gap: 2px; font-size: 11px; }
+.o_restagrup_step { padding: 1px 6px; border-radius: 10px; background: #eceff1; color: #90a4ae; }
+.o_restagrup_step.done { background: #c8e6c9; color: #2e7d32; }
+.o_restagrup_step.current { background: #2e7d32; color: #fff; font-weight: 600; }
+
+/* Bloque plegable «Filtros» del buscador */
+.o_restagrup_filters > summary { cursor: pointer; font-weight: 600; color: #455a64; padding: 4px 0; }
+.o_restagrup_filters[open] > summary { margin-bottom: 6px; }

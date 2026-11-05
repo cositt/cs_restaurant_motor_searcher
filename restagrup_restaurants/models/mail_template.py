@@ -48,6 +48,17 @@ class RestagrupMailTemplate(models.Model):
                 raise ValidationError(_('«%s» lo manda una persona con un botón: no puede salir solo.') % template.name)
 
     @api.model
+    def _with_locator(self, subject, body, locator):
+        """Asunto y texto con el localizador del grupo, sin repetirlo si la plantilla ya lo pone."""
+        if not locator:
+            return subject, body
+        if locator not in (subject or ''):
+            subject = '%s — %s' % (subject, locator) if subject else locator
+        if locator not in (body or ''):
+            body = _('Ref.: %s') % locator + ('\n\n' + body if body else '')
+        return subject, body
+
+    @api.model
     def _get(self, code):
         return self.sudo().search([('code', '=', code)], limit=1)
 

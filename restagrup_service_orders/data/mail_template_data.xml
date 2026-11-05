@@ -61,6 +61,31 @@ Adjuntamos la hoja en PDF. Por favor, confirmadnos la reserva respondiendo a est
 Gracias!
 {firma}</field>
         </record>
+
+        <record id="mail_template_agency_fiscal_request" model="restagrup.mail.template">
+            <field name="code">agency_fiscal_request</field>
+            <field name="name">Datos fiscales de la agencia</field>
+            <field name="recipient">agency</field>
+            <field name="sequence">55</field>
+            <field name="note">Al firmar la agencia el presupuesto, si a su ficha le falta el CIF o la razón social. Una vez por agencia.</field>
+            <field name="can_auto_send" eval="True"/>
+            <field name="placeholders">{agencia} {datos} {faltan} {firma} {localizador}</field>
+            <field name="subject">Datos de facturación de {agencia} — {localizador}</field>
+            <field name="body">Hola,
+
+Para poder emitir la factura de vuestra reserva necesitamos completar los datos de facturación de {agencia}. Esto es lo que tenemos:
+
+{datos}
+
+Nos faltaría:
+
+{faltan}
+
+¿Nos lo podéis indicar respondiendo a este correo? Si algo de lo que tenemos no es correcto, decídnoslo también.
+
+Gracias,
+{firma}</field>
+        </record>
     </data>
 
     <function model="restagrup.mail.template" name="_import_legacy_texts"/>

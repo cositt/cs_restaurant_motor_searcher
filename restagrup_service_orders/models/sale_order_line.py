@@ -22,7 +22,7 @@ class SaleOrderLine(models.Model):
         string='Comida/Cena',
     )
     service_event_type_id = fields.Many2one(
-        'restagrup.event.type', string='Tipo de evento', ondelete='restrict',
+        'restagrup.event.type', string='Tipo de servicio', ondelete='restrict',
         help='Desayuno, comida, cena… Sustituye al antiguo "Comida/Cena" (service_meal, que se conserva'
              ' en la base de datos sin uso).',
     )

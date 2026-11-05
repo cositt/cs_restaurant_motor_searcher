@@ -1,0 +1,54 @@
+/* Botones al estilo del CRM de Restagrup (PPT de Conchita 2026-11-04):
+   verde = avanzar, azul = guardar, rojo = rechazar. El «Guardar» (la nube) pasa a ser un botón con texto. */
+:root {
+    --restagrup-advance: #2e7d32;
+    --restagrup-advance-hover: #1b5e20;
+    --restagrup-save: #1565c0;
+    --restagrup-save-hover: #0d47a1;
+    --restagrup-reject: #c62828;
+}
+
+/* Guardar: azul, con texto, bien visible junto al título del registro */
+.o_form_status_indicator .o_form_button_save {
+    background-color: var(--restagrup-save) !important;
+    border-color: var(--restagrup-save) !important;
+    color: #fff !important;
+    padding: 4px 12px !important;
+    border-radius: 4px;
+    font-weight: 600;
+}
+.o_form_status_indicator .o_form_button_save:hover {
+    background-color: var(--restagrup-save-hover) !important;
+}
+.o_form_status_indicator .o_form_button_save::after {
+    content: " Guardar";
+}
+
+/* Avanzar: el botón principal de cada pantalla, en verde */
+.o_form_view .o_statusbar_buttons .btn-primary,
+.o_form_view .o_restagrup_send_btn {
+    background-color: var(--restagrup-advance);
+    border-color: var(--restagrup-advance);
+    color: #fff;
+}
+.o_form_view .o_statusbar_buttons .btn-primary:hover,
+.o_form_view .o_restagrup_send_btn:hover {
+    background-color: var(--restagrup-advance-hover);
+    border-color: var(--restagrup-advance-hover);
+}
+
+/* Rechazar, cancelar, descartar: en rojo */
+.o_form_view .o_statusbar_buttons button[name="action_cancel"],
+.o_form_view .o_statusbar_buttons button[name="action_discard"],
+.o_form_view .o_statusbar_buttons button[name="action_set_lost"],
+.o_form_view button[name="action_mark_descartado"] {
+    color: var(--restagrup-reject);
+    border-color: var(--restagrup-reject);
+}
+.o_form_view .o_statusbar_buttons button[name="action_cancel"]:hover,
+.o_form_view .o_statusbar_buttons button[name="action_discard"]:hover,
+.o_form_view .o_statusbar_buttons button[name="action_set_lost"]:hover,
+.o_form_view button[name="action_mark_descartado"]:hover {
+    background-color: var(--restagrup-reject);
+    color: #fff;
+}

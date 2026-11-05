@@ -12,3 +12,5 @@ from . import test_agency_payment
 from . import test_restaurant_payment
 from . import test_restaurant_invoice
 from . import test_guia_prod_findings
+from . import test_staff_preview
+from . import test_lead_proposal

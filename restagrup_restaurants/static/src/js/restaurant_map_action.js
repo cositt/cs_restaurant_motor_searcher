@@ -6,7 +6,7 @@ import { Component, onMounted, useRef } from "@odoo/owl";
 
 const LINE_MODEL = "restagrup.restaurant.search.line";
 const LINE_FIELDS = [
-    "name", "latitude", "longitude", "etiqueta", "quote_amount", "address",
+    "name", "latitude", "longitude", "etiqueta", "quote_client_price_per_person", "address",
     "is_chosen", "partner_id", "rating", "review_count", "price_label",
 ];
 
@@ -120,10 +120,10 @@ export class RestaurantMapAction extends Component {
         badge.textContent = ETIQUETA_LABELS[line.etiqueta] || line.etiqueta;
         root.appendChild(badge);
 
-        if (line.quote_amount) {
+        if (line.quote_client_price_per_person) {
             const amount = document.createElement("span");
             amount.className = "o_restagrup_quote_amount";
-            amount.textContent = ` 💶 ${line.quote_amount} €`;
+            amount.textContent = ` 💶 ${line.quote_client_price_per_person.toFixed(2)} €/pers.`;
             root.appendChild(amount);
         }
 
@@ -136,7 +136,7 @@ export class RestaurantMapAction extends Component {
         if (line.etiqueta !== "presupuesto_recibido") {
             const quoteLabel = line.etiqueta === "solicitado" ? _t("Reenviar petición") : _t("Pedir presupuesto");
             this._addActionButton(actions, quoteLabel, line, "action_request_quote");
-            this._addActionButton(actions, _t("Registrar presupuesto"), line, "action_open_quote_form");
+            this._addActionButton(actions, _t("Pegar respuesta"), line, "action_open_quote_form");
         }
         this._addActionButton(
             actions, line.is_chosen ? _t("Quitar elegido") : _t("Elegir"), line, "action_toggle_chosen",

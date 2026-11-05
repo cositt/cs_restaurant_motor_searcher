@@ -10,7 +10,7 @@
         No aporta funcionalidad visible por sí solo.
     ''',
     'author': 'Cositt Technology',
-    'depends': ['base', 'mail'],
+    'depends': ['base', 'mail', 'web'],
     'data': [
         'security/ir.model.access.csv',
         'data/event_type_data.xml',
@@ -22,6 +22,11 @@
         'views/cancel_reason_views.xml',
         'views/price_baseline_views.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'restagrup_core/static/src/css/restagrup_buttons.css',
+        ],
+    },
     'installable': True,
     'application': False,
     'auto_install': False,

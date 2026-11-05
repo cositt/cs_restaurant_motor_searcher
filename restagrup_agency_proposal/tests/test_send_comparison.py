@@ -88,11 +88,11 @@ class TestSendComparison(TransactionCase):
         self._wizard().action_send()
         self.assertEqual(self.lead.stage_id, self.env.ref('restagrup_service_orders.stage_expediente'))
 
-    def test_show_restaurants_switch_sits_next_to_the_send_button(self):
-        """El interruptor «Mostrar restaurantes» va en la cabecera, junto a «Enviar comparativa al cliente»."""
+    def test_show_restaurants_switch_is_in_the_proposal_sent_from_the_petition(self):
+        """«Mostrar restaurantes» se decide al enviar la propuesta desde la petición (PPT de Conchita 2026-11-04):
+        en el buscador ya no hay envíos al cliente ni ese interruptor."""
         from lxml import etree
         arch = etree.fromstring(self.env['restagrup.restaurant.search'].get_view(view_type='form')['arch'])
-        switches = arch.xpath("//header//field[@name='restaurant_visible']")
-        self.assertEqual(len(switches), 1)
-        self.assertEqual(switches[0].get('widget'), 'boolean_toggle')
-        self.assertEqual(len(arch.xpath("//field[@name='restaurant_visible']")), 1, 'Solo un sitio para cambiarlo.')
+        self.assertFalse(arch.xpath("//header//field[@name='restaurant_visible']"))
+        wizard = self.env.ref('restagrup_agency_proposal.view_lead_proposal_wizard_form').arch
+        self.assertIn('name="show_restaurants"', wizard)

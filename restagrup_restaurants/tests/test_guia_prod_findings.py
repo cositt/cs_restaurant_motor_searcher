@@ -39,12 +39,12 @@ class TestGuiaProdFindings(TransactionCase):
     def test_reply_without_amount_does_not_claim_an_amount(self):
         self._reply(None)
         log = self._log()
-        self.assertNotIn('importe extraído', log)
-        self.assertIn('sin importe', log)
+        self.assertNotIn('precio extraído', log)
+        self.assertIn('sin un precio único', log)
 
     def test_reply_with_amount_still_says_so(self):
         self._reply(640.0)
-        self.assertIn('importe extraído', self._log())
+        self.assertIn('precio extraído', self._log())
 
     # --- 13: el aviso de creación del pendiente en español ---
 

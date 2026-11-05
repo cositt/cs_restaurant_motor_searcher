@@ -26,7 +26,7 @@
                 <field name="restagrup_margin_amount" optional="show"/>
             </xpath>
             <xpath expr="//field[@name='payment_term_id']" position="after">
-                <field name="restagrup_show_margin" widget="boolean_toggle"/>
+                <field name="restagrup_show_margin" widget="boolean_toggle" invisible="1"/>
             </xpath>
             <xpath expr="//group[@name='sale_total']" position="inside">
                 <field name="restagrup_cost_total" invisible="not restagrup_margin_total"/>
@@ -38,6 +38,15 @@
                     <field name="restagrup_is_additional" invisible="1"/>
                     Presupuesto adicional del grupo: el primero es
                     <field name="restagrup_first_order_id" readonly="1" nolabel="1" class="oe_inline"/>.
+                </div>
+            </xpath>
+            <xpath expr="//button[@id='quotation_send_primary']" position="attributes">
+                <attribute name="string">Enviar presupuesto a la agencia</attribute>
+                <attribute name="class">btn-primary o_restagrup_send_btn</attribute>
+            </xpath>
+            <xpath expr="//div[@name='button_box']" position="before">
+                <div class="alert alert-info o_restagrup_next_step mb-2" role="status" invisible="not restagrup_next_step">
+                    <i class="fa fa-arrow-right me-1"/> <field name="restagrup_next_step" readonly="1" nolabel="1" class="d-inline"/>
                 </div>
             </xpath>
             <xpath expr="//div[@name='button_box']" position="inside">

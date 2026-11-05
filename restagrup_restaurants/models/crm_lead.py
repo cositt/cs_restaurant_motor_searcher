@@ -21,6 +21,10 @@ claves sueltas "ciudad", "fecha" y "pax". Si un dato no aparece claramente, pon 
 class CrmLead(models.Model):
     _inherit = 'crm.lead'
 
+    def _restagrup_locator(self):
+        """Localizador del grupo para los correos (PET…). Lo da el módulo de presupuestos; aquí, ninguno."""
+        return False
+
     restagrup_restaurant_search_ids = fields.One2many(
         'restagrup.restaurant.search', 'lead_id', string='Búsquedas de restaurantes',
     )

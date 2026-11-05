@@ -123,13 +123,11 @@ class TestMarginTracking(TransactionCase):
     def test_pdf_hides_margin_by_default(self):
         self.assertNotIn(MARGIN_NOTE, self._pdf_html(self._order()))
 
-    def test_pdf_shows_margin_note_when_switch_is_on(self):
+    def test_pdf_never_shows_the_margin_note(self):
+        """Conchita pidió quitar «Mostrar margen» (2026-11-04): el PDF de Restagrup nunca lo enseña."""
         order = self._order(qty=42)
         order.restagrup_show_margin = True
-        html = self._pdf_html(order)
-        self.assertIn(MARGIN_NOTE, html)
-        self.assertIn('20', html)
-        self.assertIn('210', html)
+        self.assertNotIn(MARGIN_NOTE, self._pdf_html(order))
 
     def test_pdf_never_shows_the_restaurant_cost(self):
         order = self._order(qty=42)

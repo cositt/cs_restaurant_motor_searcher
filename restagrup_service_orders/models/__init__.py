@@ -23,3 +23,7 @@ from . import sale_order_agency
 from . import pending_mail
 from . import sale_order_changes
 from . import mail_thread
+from . import sale_order_numbering
+from . import sale_quote_report
+from . import sale_order_next_step
+from . import agency_fiscal

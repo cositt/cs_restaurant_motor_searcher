@@ -57,6 +57,22 @@ class RestagrupPendingMail(models.Model):
     approved_date = fields.Datetime(string='Fecha de aprobación', readonly=True)
     error_message = fields.Char(string='Error', readonly=True)
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        mails = super().create(vals_list)
+        for mail in mails:
+            mail._restagrup_add_locator()
+        return mails
+
+    def _restagrup_add_locator(self):
+        """Todo correo de la cola lleva el localizador del grupo en el asunto y en el texto (nunca la agencia:
+        esa se ve en la columna «Agencia» de la cola)."""
+        self.ensure_one()
+        subject, body = self.env['restagrup.mail.template']._with_locator(
+            self.subject, self.body, self.group_id._restagrup_locator())
+        if (subject, body) != (self.subject, self.body):
+            self.write({'subject': subject, 'body': body})
+
     @api.depends('lead_id', 'request_lead_id')
     def _compute_group_id(self):
         for mail in self:

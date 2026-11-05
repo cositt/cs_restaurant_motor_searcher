@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Propuesta conjunta desde la petición (PPT de Conchita 2026-11-04, urgente 4). -->
+    <record id="view_lead_proposal_wizard_form" model="ir.ui.view">
+        <field name="name">restagrup.lead.proposal.wizard.form</field>
+        <field name="model">restagrup.lead.proposal.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Enviar propuesta a la agencia">
+                <group>
+                    <field name="lead_id" invisible="1"/>
+                    <field name="email_to"/>
+                    <field name="subject"/>
+                    <field name="include_portal_link"/>
+                    <field name="show_restaurants"/>
+                </group>
+                <field name="body" nolabel="1"/>
+                <p class="text-muted small">
+                    Va un PDF con todos los servicios y, si se marca, un enlace donde la agencia elige un restaurante
+                    por servicio. Antes de enviar verás un resumen para revisarlo.
+                </p>
+                <footer>
+                    <button name="action_send" type="object" string="Enviar" class="btn-primary"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="crm_lead_view_form_proposal" model="ir.ui.view">
+        <field name="name">crm.lead.form.restagrup.proposal</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <field name="restagrup_proposal_ready" invisible="1"/>
+                <field name="restagrup_quote_ready" invisible="1"/>
+                <button name="action_open_proposal_wizard" type="object" string="Enviar propuesta a la agencia"
+                        class="btn-primary" invisible="not restagrup_proposal_ready"/>
+                <button name="action_create_joint_quote" type="object" string="Crear presupuesto"
+                        class="btn-primary" invisible="not restagrup_quote_ready"/>
+            </xpath>
+            <xpath expr="//page[@name='restagrup_events']" position="after">
+                <page name="restagrup_proposal" string="Propuesta" invisible="not restagrup_proposal_ready">
+                    <div class="alert alert-info mb-2" role="status">
+                        Los restaurantes con presupuesto de cada servicio. Elige uno por servicio (o deja que la agencia
+                        elija con el enlace) y pulsa «Crear presupuesto».
+                    </div>
+                    <field name="restagrup_proposal_line_ids" nolabel="1" readonly="1">
+                        <list create="0" delete="0" default_group_by="search_id">
+                            <field name="search_id" column_invisible="1"/>
+                            <field name="is_chosen" column_invisible="1"/>
+                            <field name="name" string="Restaurante" decoration-bf="is_chosen"/>
+                            <field name="menu_id"/>
+                            <field name="quote_client_price_per_person" string="Agencia (€/pers.)"/>
+                            <field name="quote_price_pp" string="Restaurante (€/pers.)" optional="show"/>
+                            <field name="quote_notes" optional="hide"/>
+                            <button name="action_toggle_chosen" type="object" string="Elegir" icon="fa-check"
+                                    class="btn-link" invisible="is_chosen"/>
+                            <button name="action_toggle_chosen" type="object" string="Quitar elegido" icon="fa-star"
+                                    class="btn-link text-success" invisible="not is_chosen"/>
+                        </list>
+                    </field>
+                </page>
+                <page name="restagrup_menus" string="Menús" invisible="not restagrup_candidate_menu_ids">
+                    <field name="restagrup_candidate_menu_ids" nolabel="1" readonly="1">
+                        <list create="0" delete="0" default_group_by="partner_id">
+                            <field name="partner_id" column_invisible="1"/>
+                            <field name="currency_id" column_invisible="1"/>
+                            <field name="name"/>
+                            <field name="menu_type" optional="show"/>
+                            <field name="cost_price" string="Coste (€/pers.)"/>
+                            <field name="sale_price" string="Venta (€/pers.)"/>
+                            <field name="dishes_missing" string="Platos sin completar" optional="show"/>
+                            <field name="description" optional="hide"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

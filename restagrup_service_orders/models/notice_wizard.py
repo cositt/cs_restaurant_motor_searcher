@@ -71,7 +71,7 @@ class RestaurantNoticeWizardLine(models.TransientModel):
     wizard_id = fields.Many2one('restagrup.restaurant.notice.wizard', required=True, ondelete='cascade')
     selected = fields.Boolean(string='Avisar', default=True)
     restaurant_id = fields.Many2one('res.partner', string='Restaurante', required=True)
-    event_label = fields.Char(string='Evento')
+    event_label = fields.Char(string='Servicio')
     search_line_id = fields.Many2one('restagrup.restaurant.search.line', string='Resultado de búsqueda')
     po_id = fields.Many2one('purchase.order', string='Hoja de servicio')
     has_email = fields.Boolean(string='Tiene email', compute='_compute_has_email')

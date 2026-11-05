@@ -9,8 +9,8 @@
             <field name="sequence">10</field>
             <field name="note">Botón «Pedir presupuesto» de la búsqueda. Lo manda una persona: no pasa por la cola.</field>
             <field name="can_auto_send" eval="False"/>
-            <field name="placeholders">{restaurante} {grupo} {fecha} {servicio} {hora} {ciudad} {pax} {menu} {notas} {empresa} {firma}</field>
-            <field name="subject">Consulta de disponibilidad — {fecha} {servicio}, {pax} pax</field>
+            <field name="placeholders">{restaurante} {grupo} {fecha} {servicio} {hora} {ciudad} {pax} {menu} {notas} {empresa} {firma} {localizador}</field>
+            <field name="subject">Presupuesto para grupos — {localizador} — {ciudad} {fecha}</field>
             <field name="body">Buenos días,
 
 Consulto disponibilidad para este grupo:
@@ -34,7 +34,7 @@ Gracias!
             <field name="sequence">20</field>
             <field name="note">Cada día: consultas de disponibilidad sin respuesta tras 3 días. Una sola vez por restaurante.</field>
             <field name="can_auto_send" eval="True"/>
-            <field name="placeholders">{restaurante} {grupo} {fecha} {servicio} {ciudad} {pax} {empresa} {firma}</field>
+            <field name="placeholders">{restaurante} {grupo} {fecha} {servicio} {ciudad} {pax} {empresa} {firma} {localizador}</field>
             <field name="subject">Recordatorio: consulta de disponibilidad — {ciudad}, {pax} pax</field>
             <field name="body">Buenos días,
 
@@ -92,7 +92,7 @@ Gracias!
             <field name="sequence">25</field>
             <field name="note">Cuando el restaurante manda su menú sin precio por persona, sin bebidas o sin postre. Una vez por restaurante.</field>
             <field name="can_auto_send" eval="True"/>
-            <field name="placeholders">{restaurante} {grupo} {fecha} {servicio} {ciudad} {pax} {faltan} {empresa} {firma}</field>
+            <field name="placeholders">{restaurante} {grupo} {fecha} {servicio} {ciudad} {pax} {faltan} {empresa} {firma} {localizador}</field>
             <field name="subject">Datos que faltan de vuestro presupuesto — {grupo}</field>
             <field name="body">Buenos días,
 

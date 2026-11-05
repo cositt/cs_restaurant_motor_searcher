@@ -20,3 +20,7 @@ from . import test_final_data
 from . import test_review_points
 from . import test_lead_assignment
 from . import test_guia_prod_findings
+from . import test_quote_format
+from . import test_conchita_screens
+from . import test_mail_locator
+from . import test_agency_fiscal_data

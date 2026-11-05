@@ -12,7 +12,7 @@ class RestagrupRestaurantNotice(models.Model):
 
     lead_id = fields.Many2one('crm.lead', string='Grupo / Cliente', required=True, ondelete='cascade', index=True)
     restaurant_id = fields.Many2one('res.partner', string='Restaurante', required=True)
-    event_label = fields.Char(string='Evento')
+    event_label = fields.Char(string='Servicio')
     subject = fields.Char(string='Asunto')
     body = fields.Html(string='Texto', sanitize=False)
     sent_date = fields.Datetime(string='Enviado', default=fields.Datetime.now)
