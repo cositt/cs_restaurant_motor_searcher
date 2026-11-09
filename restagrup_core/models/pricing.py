@@ -4,6 +4,8 @@ from odoo.tools.misc import formatLang
 
 MARGIN_PARAM = 'restagrup.default_margin_percent'
 DEFAULT_MARGIN_PERCENT = 20.0
+FOREIGN_MARGIN_PARAM = 'restagrup.foreign_margin_percent'
+DEFAULT_FOREIGN_MARGIN_PERCENT = 25.0  # restaurantes de fuera de España, cobren en la moneda que cobren
 TEAM_LANG = 'es_ES'  # idioma de los textos internos (chatter, avisos), corra quien corra el proceso
 
 
@@ -14,14 +16,23 @@ class RestagrupPricing(models.AbstractModel):
     _description = 'Cálculo del precio al cliente (precio del restaurante + margen)'
 
     @api.model
-    def margin_percent(self):
-        raw = self.env['ir.config_parameter'].sudo().get_param(MARGIN_PARAM)
+    def _percent_param(self, param, default):
+        raw = self.env['ir.config_parameter'].sudo().get_param(param)
         if raw in (False, None, ''):
-            return DEFAULT_MARGIN_PERCENT
+            return default
         try:
             return float(raw)
         except ValueError:
-            return DEFAULT_MARGIN_PERCENT
+            return default
+
+    @api.model
+    def margin_percent(self):
+        return self._percent_param(MARGIN_PARAM, DEFAULT_MARGIN_PERCENT)
+
+    @api.model
+    def foreign_margin_percent(self):
+        """Margen de los restaurantes de fuera de España (25 % por defecto, como en el CRM de Restagrup)."""
+        return self._percent_param(FOREIGN_MARGIN_PARAM, DEFAULT_FOREIGN_MARGIN_PERCENT)
 
     @api.model
     def apply_margin(self, restaurant_price, percent=None):

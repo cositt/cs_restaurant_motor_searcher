@@ -15,6 +15,12 @@
                 <button name="action_close_file" type="object" string="Cerrar expediente" class="btn-primary"
                         invisible="restagrup_stage_key != 'expediente'"
                         confirm="¿Cerrar el expediente? Hazlo cuando el servicio se haya prestado."/>
+                <!-- En el expediente se habla de servicios y de cancelar, no de presupuestos (notas 05/11) -->
+                <button name="action_restagrup_add_service" type="object" string="Añadir servicio"
+                        class="btn-secondary" invisible="restagrup_stage_key != 'expediente'"/>
+                <button name="%(crm.crm_lead_lost_action)d" type="action" string="Cancelar"
+                        title="Cancelar el expediente (pide el motivo)"
+                        invisible="restagrup_stage_key != 'expediente' or won_status != 'pending' or not active"/>
             </xpath>
             <!-- Su flujo no es un embudo de ventas: fuera «Ganado», ingresos/probabilidad, prioridad y cierre previsto -->
             <xpath expr="//header/button[@name='action_set_won_rainbowman']" position="attributes">
@@ -22,6 +28,7 @@
             </xpath>
             <xpath expr="//header/button[@data-hotkey='l']" position="attributes">
                 <attribute name="string">Rechazar presupuesto</attribute>
+                <attribute name="invisible" add="restagrup_stage_key in ('expediente', 'cerrado')" separator=" or "/>
             </xpath>
             <xpath expr="//h2[.//field[@name='expected_revenue']]" position="attributes">
                 <attribute name="invisible">1</attribute>
@@ -36,10 +43,43 @@
                 <div class="text-muted mb-1" invisible="not restagrup_doc_number">
                     Documento <field name="restagrup_doc_number" class="oe_inline fw-bold"/>
                 </div>
+                <div class="mb-1" invisible="not restagrup_chosen_summary">
+                    <i class="fa fa-cutlery me-1" title="Restaurantes elegidos"/>
+                    <field name="restagrup_chosen_summary" class="oe_inline fw-bold" readonly="1"/>
+                </div>
                 <div class="mb-1" invisible="user_id">
                     <span class="badge text-bg-danger">Pendiente de asignación</span>
                 </div>
             </xpath>
+        </field>
+    </record>
+
+    <!-- Formulario de «Añadir servicio» (se abre en ventana desde el expediente) -->
+    <record id="view_lead_event_add_form" model="ir.ui.view">
+        <field name="name">restagrup.lead.event.add.form</field>
+        <field name="model">restagrup.lead.event</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <form string="Servicio">
+                <field name="lead_id" invisible="1"/>
+                <group>
+                    <group>
+                        <field name="event_date" required="1"/>
+                        <field name="event_time" widget="float_time"/>
+                        <field name="event_type_id" options="{'no_create': True}"/>
+                    </group>
+                    <group>
+                        <field name="city" required="1"/>
+                        <field name="pax"/>
+                        <field name="budget_pp"/>
+                    </group>
+                </group>
+                <field name="notes" placeholder="Notas del servicio (intolerancias, horario, guía…)"/>
+                <footer>
+                    <button string="Añadir servicio" special="save" class="btn-primary"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
         </field>
     </record>
 

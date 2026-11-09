@@ -7,15 +7,21 @@
             <tr><td style="color: #555; padding: 2px 0;">DOCUMENTO Nº</td><td t-out="doc.name"/></tr>
             <tr><td style="color: #555; padding: 2px 0;">GRUP. REF</td>
                 <td t-out="doc.client_order_ref or doc.opportunity_id.name or ''"/></tr>
-            <tr><td style="color: #555; padding: 2px 0;">AGENCIA</td><td t-out="doc.partner_id.commercial_partner_id.name"/></tr>
+            <!-- Como los PDF de su CRM: la agencia con su teléfono, y la persona que lleva el grupo con el suyo -->
+            <t t-set="agency" t-value="doc.partner_id.commercial_partner_id"/>
+            <tr><td style="color: #555; padding: 2px 0;">AGENCIA</td><td t-out="agency.name"/></tr>
             <tr><td style="color: #555; padding: 2px 0;">TELÉFONO</td>
-                <td t-out="doc.partner_id.phone or ''"/></tr>
-            <tr><td style="color: #555; padding: 2px 0;">NOMBRE</td><td t-out="doc.partner_id.name"/></tr>
+                <td t-out="agency.phone or doc.partner_id.phone or ''"/></tr>
+            <tr><td style="color: #555; padding: 2px 0;">NOMBRE</td>
+                <td t-out="doc.partner_id.name if doc.partner_id != agency else ''"/></tr>
+            <tr><td style="color: #555; padding: 2px 0;">CONTACTO</td>
+                <td t-out="(doc.partner_id.phone or doc.partner_id.email or '') if doc.partner_id != agency else (agency.email or '')"/></tr>
             <tr><td style="color: #555; padding: 2px 0;">AGENTE RESTAGRUP</td><td t-out="doc.user_id.name or ''"/></tr>
         </table>
     </template>
 
     <template id="booking_menu_block">
+        <div t-if="svc.get('voucher')" style="margin-top: 4px;">AV / voucher: <strong t-out="svc['voucher']"/></div>
         <div t-if="svc['menu_name']" style="font-weight: bold; margin-top: 8px;" t-out="svc['menu_name']"/>
         <div t-if="svc['menu_text']" style="white-space: pre-line;" t-out="svc['menu_text']"/>
     </template>
@@ -54,8 +60,9 @@
                     Puede enviarnos el justificante de pago a <t t-out="doc.company_id.email or ''"/><br/>
                     <t t-out="doc.restagrup_bank_text()"/><br/>Gracias.</p>
                 <p>NOTA: El número final de comensales habrá de ser facilitado en el plazo máximo límite de
-                    <t t-out="doc.restagrup_final_pax_hours()"/> horas laborables antes del servicio. Esa cifra será la que se tenga en cuenta a efectos de facturación,
-                    salvo en el caso de que hayan asistido un número mayor de comensales.</p>
+                    <t t-out="doc.restagrup_final_pax_hours()"/> horas antes del servicio. Esa cifra será la que se tenga en cuenta a efectos de facturación,
+                    salvo en el caso de que hayan asistido un número mayor de comensales. Superado ese plazo, se aplicará el 100 % de
+                    los gastos de gestión.</p>
             </div>
         </t>
     </template>
@@ -104,6 +111,7 @@
                         <t t-call="restagrup_agency_proposal.booking_menu_block"/>
                         <div style="margin-top: 8px;">
                             <strong>Precio: <span t-out="svc['cost_unit']" t-options='{"widget": "monetary", "display_currency": currency}'/> IVA INCLUIDO</strong><br/>
+                            <t t-if="svc.get('cost_unit_fx')">En su moneda: <t t-out="svc['cost_unit_fx']"/> <t t-out="svc['fx_code']"/> por persona<br/></t>
                             Total comensales: <t t-out="svc['paying']"/><t t-if="svc['gratuities']"> + <t t-out="svc['gratuities']"/> gratuidades</t>.<br/>
                             <t t-out="svc['menu_name'] or 'Menú'"/>
                             <span t-out="svc['cost_unit']" t-options='{"widget": "monetary", "display_currency": currency}'/>
@@ -120,6 +128,7 @@
                     Total importe de reserva:
                     <span t-out="grand_total" t-options='{"widget": "monetary", "display_currency": currency}'/> IVA INCLUIDO
                 </p>
+                <p t-out="doc.restagrup_restaurant_bank_text()"/>
                 <p>Por normativa vigente desde 2017, y según el nuevo sistema de Facturación SII por la Agencia Tributaria,
                     las facturas emitidas deben ser originales. Hacienda cruzará información de las facturas emitidas y
                     recibidas entre ambas partes por lo que es importante que se cumpla dicha normativa.</p>

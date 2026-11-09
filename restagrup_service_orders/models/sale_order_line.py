@@ -50,6 +50,40 @@ class SaleOrderLine(models.Model):
         help='Importe de la línea sin impuestos menos el coste del restaurante.',
     )
 
+    # Restaurantes en otra moneda: el cambio del día de la reserva, para avisar si la moneda se mueve.
+    restagrup_fx_currency_code = fields.Char(
+        string='Moneda del restaurante', compute='_compute_restagrup_fx', store=True, readonly=False,
+        precompute=True, copy=False)
+    restagrup_fx_rate = fields.Float(
+        string='Cambio de la reserva (€ por unidad)', digits=(16, 6), compute='_compute_restagrup_fx', store=True,
+        readonly=False, precompute=True, copy=False,
+        help='Euros que valía 1 unidad de la moneda del restaurante cuando se hizo la línea. El coste en su moneda'
+             ' es el coste en euros entre este cambio.')
+
+    @api.depends('restaurant_id', 'product_id')
+    def _compute_restagrup_fx(self):
+        exchange = self.env['restagrup.exchange']
+        for line in self:
+            restaurant = line.product_id.restaurant_id or line.restaurant_id
+            code = restaurant.restaurant_currency_code
+            if not code or code == self.env.company.currency_id.name:
+                line.restagrup_fx_currency_code = False
+                line.restagrup_fx_rate = 0.0
+                continue
+            line.restagrup_fx_currency_code = code
+            line.restagrup_fx_rate = exchange.eur_per_unit(exchange.currency_by_code(code))
+
+    def _restagrup_fx_current_cost(self):
+        """Coste unitario en euros con el cambio de hoy (el mismo coste en su moneda). Sin cambio, el de la reserva."""
+        self.ensure_one()
+        if not (self.restagrup_fx_currency_code and self.restagrup_fx_rate):
+            return self.restagrup_unit_cost
+        exchange = self.env['restagrup.exchange']
+        today = exchange.eur_per_unit(exchange.currency_by_code(self.restagrup_fx_currency_code))
+        if not today:
+            return self.restagrup_unit_cost
+        return self.restagrup_unit_cost / self.restagrup_fx_rate * today
+
     @api.depends('product_id', 'restagrup_search_line_id')
     def _compute_restagrup_cost(self):
         pricing = self.env['restagrup.pricing']

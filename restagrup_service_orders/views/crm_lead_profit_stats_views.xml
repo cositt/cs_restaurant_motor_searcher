@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Beneficio arriba en el presupuesto y el expediente (notas de Conchita 05/11) -->
+    <record id="crm_lead_view_form_profit_bar" model="ir.ui.view">
+        <field name="name">crm.lead.form.restagrup.profit.bar</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/notebook" position="before">
+                <div name="restagrup_profit_bar" class="d-flex flex-wrap gap-4 align-items-center border rounded p-2 mb-2"
+                     invisible="not restagrup_total_agency">
+                    <field name="restagrup_currency_id" invisible="1"/>
+                    <field name="restagrup_has_fx" invisible="1"/>
+                    <div>Total agencia <field name="restagrup_total_agency" class="oe_inline fw-bold" readonly="1"/></div>
+                    <div>Total restaurantes <field name="restagrup_total_restaurants" class="oe_inline fw-bold" readonly="1"/></div>
+                    <div>Comisión <field name="restagrup_total_commission" class="oe_inline fw-bold text-success" readonly="1"/></div>
+                    <div invisible="not restagrup_has_fx"
+                         title="Beneficio de la reserva frente al de hoy con el cambio del Banco Central Europeo">
+                        <i class="fa fa-exchange me-1"/>Reserva <field name="restagrup_fx_booked_profit" class="oe_inline" readonly="1"/>
+                        · Hoy <field name="restagrup_fx_current_profit" class="oe_inline" readonly="1"/>
+                        · <field name="restagrup_fx_delta" class="oe_inline fw-bold" readonly="1"
+                                 decoration-success="restagrup_fx_delta &gt;= 0" decoration-danger="restagrup_fx_delta &lt; 0"/>
+                        <button name="action_restagrup_refresh_fx" type="object" string="Actualizar cambio"
+                                icon="fa-refresh" class="btn-link btn-sm p-0 ms-2"/>
+                    </div>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Estadísticas: tiempos y media de cambios, por comercial, destino y agencia (Conchita 05/11 y 09/11) -->
+    <record id="view_restagrup_statistics_pivot" model="ir.ui.view">
+        <field name="name">crm.lead.restagrup.statistics.pivot</field>
+        <field name="model">crm.lead</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <pivot string="Estadísticas" sample="1">
+                <field name="user_id" type="row"/>
+                <field name="create_date" interval="month" type="col"/>
+                <field name="restagrup_hours_to_quote" type="measure"/>
+                <field name="restagrup_hours_to_file" type="measure"/>
+                <field name="restagrup_hours_to_close" type="measure"/>
+                <field name="restagrup_quote_changes" type="measure"/>
+                <field name="restagrup_proposals_sent" type="measure"/>
+                <field name="restagrup_proformas_sent" type="measure"/>
+                <field name="id" type="measure" string="Grupos"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_restagrup_statistics_graph" model="ir.ui.view">
+        <field name="name">crm.lead.restagrup.statistics.graph</field>
+        <field name="model">crm.lead</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <graph string="Estadísticas" type="bar" sample="1">
+                <field name="user_id"/>
+                <field name="restagrup_hours_to_quote" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_restagrup_statistics_search" model="ir.ui.view">
+        <field name="name">crm.lead.restagrup.statistics.search</field>
+        <field name="model">crm.lead</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <search string="Estadísticas">
+                <field name="user_id"/>
+                <field name="restagrup_destination"/>
+                <field name="restagrup_agency_id"/>
+                <filter name="closed" string="Expedientes cerrados" domain="[('restagrup_close_date', '!=', False)]"/>
+                <separator/>
+                <filter name="group_user" string="Comercial" context="{'group_by': 'user_id'}"/>
+                <filter name="group_destination" string="Destino" context="{'group_by': 'restagrup_destination'}"/>
+                <filter name="group_agency" string="Agencia" context="{'group_by': 'restagrup_agency_id'}"/>
+                <filter name="group_month" string="Mes de la petición" context="{'group_by': 'create_date:month'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_restagrup_statistics" model="ir.actions.act_window">
+        <field name="name">Estadísticas</field>
+        <field name="res_model">crm.lead</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="domain">[('restagrup_quote_date', '!=', False)]</field>
+        <field name="context">{'active_test': False}</field>
+        <field name="search_view_id" ref="view_restagrup_statistics_search"/>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('view_restagrup_statistics_pivot')}),
+            (0, 0, {'view_mode': 'graph', 'view_id': ref('view_restagrup_statistics_graph')}),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_crm_lead_restagrup_list')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aún no hay grupos con presupuesto</p>
+            <p>Horas medias desde que entra la petición hasta que se envía el presupuesto, hasta que la agencia
+                confirma y hasta que se cierra el expediente, y la media de cambios (presupuestos y proformas
+                reenviados). Agrupa por comercial, destino, agencia o mes.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_restagrup_statistics" name="Estadísticas" parent="restagrup_restaurants.menu_restagrup_root"
+              action="action_restagrup_statistics" sequence="95"/>
+</odoo>

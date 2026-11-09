@@ -21,7 +21,7 @@ class CrmLead(models.Model):
     restagrup_doc_seq = fields.Integer(string='Nº de documento', copy=False, index=True, readonly=True)
     restagrup_doc_number = fields.Char(
         string='Documento', compute='_compute_restagrup_doc_number', store=True, index=True,
-        help='PET/PRE/EXP + año y mes de creación + número. El número no cambia en toda la vida del grupo;'
+        help='PET/PRE/EXP/TER + año y mes de creación + número. El número no cambia en toda la vida del grupo;'
              ' el prefijo sí, según la fase.',
     )
     restagrup_stage_key = fields.Selection(related='stage_id.restagrup_stage_key', string='Fase')
@@ -153,6 +153,23 @@ class CrmLead(models.Model):
     def action_close_file(self):
         self._restagrup_require_stage(('expediente',), _('Cerrar expediente'))
         return self._restagrup_gated('close_file', '_restagrup_do_close_file')
+
+    def action_restagrup_add_service(self):
+        """«Añadir servicio» del expediente: otro día o comida del mismo grupo, como su «+ Añadir Servicios»."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Añadir servicio'),
+            'res_model': 'restagrup.lead.event',
+            'view_mode': 'form',
+            'views': [(self.env.ref('restagrup_service_orders.view_lead_event_add_form').id, 'form')],
+            'target': 'new',
+            'context': {
+                'default_lead_id': self.id,
+                'default_pax': self.restagrup_event_ids[-1:].pax or 0,
+                'default_audience': self.restagrup_event_ids[-1:].audience or 'adults',
+            },
+        }
 
     def _restagrup_do_pass_to_quote(self):
         self._restagrup_move_to('presupuesto')

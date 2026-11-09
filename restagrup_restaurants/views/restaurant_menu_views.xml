@@ -20,6 +20,10 @@
                     <div class="alert alert-warning" role="alert" invisible="not ai_pending_review">
                         Creado por la IA desde la respuesta del restaurante: revisa platos y precio y pulsa «Revisado».
                     </div>
+                    <div class="alert alert-warning" role="alert" invisible="not is_foreign_currency or exchange_rate">
+                        El restaurante cobra en otra moneda: pulsa «Convertir a euros» para tener el coste en euros y el
+                        precio de venta (cambio del día del Banco Central Europeo).
+                    </div>
                     <div class="alert alert-info" role="alert" invisible="not similar_menu_id">
                         Ya había uno parecido: <field name="similar_menu_id" class="oe_inline"/>. No se ha tocado.
                     </div>
@@ -30,8 +34,19 @@
                             <field name="partner_id"/>
                             <field name="menu_type"/>
                             <field name="season" options="{'enable_formatting': false}"/>
-                            <field name="currency_id" invisible="1"/>
+                            <field name="company_currency_id" invisible="1"/>
+                            <field name="is_foreign_currency" invisible="1"/>
+                            <field name="currency_id" options="{'no_create': True, 'no_open': True}"
+                                   context="{'active_test': False}"/>
                             <field name="cost_price"/>
+                            <label for="exchange_rate" invisible="not is_foreign_currency"/>
+                            <div class="d-flex align-items-center gap-2" invisible="not is_foreign_currency">
+                                <field name="exchange_rate" class="oe_inline" readonly="1"/>
+                                <span class="text-muted" invisible="not rate_date">(<field name="rate_date" class="oe_inline" readonly="1"/>)</span>
+                                <button name="action_convert_to_eur" type="object" string="Convertir a euros"
+                                        icon="fa-exchange" class="btn-secondary btn-sm"/>
+                            </div>
+                            <field name="cost_price_eur" invisible="not is_foreign_currency"/>
                             <label for="sale_price"/>
                             <div class="d-flex align-items-center gap-2">
                                 <field name="sale_price" class="oe_inline"/>
@@ -89,6 +104,7 @@
                 <field name="dishes_missing" widget="boolean_toggle" string="Platos sin completar" optional="show"
                        readonly="1" invisible="not dishes_missing"/>
                 <field name="currency_id" column_invisible="1"/>
+                <field name="company_currency_id" column_invisible="1"/>
                 <field name="season" options="{'enable_formatting': false}"/>
                 <field name="menu_type" optional="show"/>
                 <field name="cost_price"/>
@@ -112,7 +128,8 @@
                 <field name="menu_type"/>
                 <field name="season" options="{'enable_formatting': false}"/>
                 <field name="currency_id" column_invisible="1"/>
-                <field name="cost_price" string="Coste (€/pers.)"/>
+                <field name="company_currency_id" column_invisible="1"/>
+                <field name="cost_price" string="Coste (pers., su moneda)"/>
                 <field name="sale_price" string="Venta (€/pers.)"/>
                 <field name="min_pax" optional="show"/>
                 <field name="max_pax" optional="show"/>
@@ -176,6 +193,7 @@
                             <field name="name"/>
                             <field name="ai_pending_review" column_invisible="1"/>
                             <field name="currency_id" column_invisible="1"/>
+                            <field name="company_currency_id" column_invisible="1"/>
                             <field name="menu_type"/>
                             <field name="cost_price"/>
                             <field name="sale_price"/>

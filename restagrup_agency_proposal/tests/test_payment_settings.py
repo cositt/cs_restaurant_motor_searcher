@@ -46,7 +46,17 @@ class TestPaymentSettings(TransactionCase):
         self.assertEqual(
             [settings.value(k) for k in ('payment_request_days', 'payment_alert_hours', 'restaurant_payment_hours',
                                          'final_pax_hours', 'invoice_days')],
-            [7, 72, 48, 48, 7])
+            [7, 72, 48, 72, 7])
+
+    def test_upgrade_moves_the_old_48_hours_to_72(self):
+        self._set('final_pax_hours', '48')
+        self.env[SETTINGS]._restagrup_upgrade_final_pax_hours()
+        self.assertEqual(self.env[SETTINGS].value('final_pax_hours'), 72)
+
+    def test_upgrade_keeps_a_value_chosen_by_restagrup(self):
+        self._set('final_pax_hours', '24')
+        self.env[SETTINGS]._restagrup_upgrade_final_pax_hours()
+        self.assertEqual(self.env[SETTINGS].value('final_pax_hours'), 24)
 
     def test_values_can_be_changed(self):
         self._set('payment_request_days', '10')
@@ -91,8 +101,8 @@ class TestPaymentSettings(TransactionCase):
         self._set('final_pax_hours', '24')
         html = self.env['ir.actions.report']._render_qweb_html(
             'restagrup_agency_proposal.report_booking_confirmation', self.order.ids)[0]
-        self.assertIn('24 horas laborables', _text(html))
-        self.assertNotIn('48 horas laborables', _text(html))
+        self.assertIn('24 horas antes del servicio', _text(html))
+        self.assertNotIn('72 horas', _text(html))
 
     # --- lista de pagos pendientes ---
 

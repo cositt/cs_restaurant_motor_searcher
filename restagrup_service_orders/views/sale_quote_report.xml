@@ -44,9 +44,10 @@
             </div>
 
             <div style="border-top:1px solid #000; padding-top:8px; margin-top:12px;">
-                <p><u>NOTA</u>: El número final de comensales habrá de ser facilitado en el plazo máximo límite de 48 horas
-                    laborables antes del servicio. Esa cifra será la que se tenga en cuenta a efectos de facturación, salvo en el
-                    caso que hayan asistido un número mayor de comensales.</p>
+                <p><u>NOTA</u>: El número final de comensales habrá de ser facilitado en el plazo máximo límite de
+                    <t t-out="doc.restagrup_final_pax_hours()"/> horas antes del servicio. Esa cifra será la que se tenga en cuenta
+                    a efectos de facturación, salvo en el caso de que hayan asistido un número mayor de comensales. Superado ese
+                    plazo, se aplicará el 100 % de los gastos de gestión.</p>
                 <p>Este presupuesto está sujeto a disponibilidad del restaurante.</p>
                 <p t-if="doc.validity_date">Válido hasta el <span t-out="doc.validity_date.strftime('%d/%m/%Y')"/>.</p>
             </div>

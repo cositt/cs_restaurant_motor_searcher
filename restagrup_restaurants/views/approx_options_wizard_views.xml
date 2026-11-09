@@ -20,8 +20,11 @@
                         <field name="show_restaurants"/>
                     </group>
                 </group>
-                <button name="action_refresh" type="object" string="Actualizar lista" icon="fa-refresh"
-                        class="btn-secondary mb-2"/>
+                <div class="d-flex gap-2 mb-2">
+                    <field name="search_text" placeholder="Buscar restaurante, menú o zona…" class="flex-grow-1"/>
+                    <button name="action_refresh" type="object" string="Buscar / actualizar" icon="fa-search"
+                            class="btn-secondary"/>
+                </div>
                 <field name="line_ids" nolabel="1">
                     <list editable="bottom" create="0" delete="0">
                         <field name="selected" widget="boolean_toggle"/>

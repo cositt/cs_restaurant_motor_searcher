@@ -18,3 +18,4 @@ from . import test_search_screen_conchita
 from . import test_menu_dishes_ai
 from . import test_budget_sort
 from . import test_menu_pick
+from . import test_reunion_0511_restaurants

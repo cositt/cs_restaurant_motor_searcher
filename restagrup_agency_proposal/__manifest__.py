@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Restagrup - Propuesta a agencias',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.1.0',
     'category': 'Custom',
     'summary': 'PDF de propuesta de restaurantes para la agencia, con link de portal',
     'description': '''

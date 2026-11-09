@@ -10,5 +10,14 @@
             <field name="interval_type">days</field>
             <field name="active" eval="True"/>
         </record>
+        <record id="ir_cron_refresh_exchange_rates" model="ir.cron">
+            <field name="name">Restagrup: cambio de moneda del BCE</field>
+            <field name="model_id" ref="model_restagrup_exchange"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_refresh_rates()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+        </record>
     </data>
 </odoo>

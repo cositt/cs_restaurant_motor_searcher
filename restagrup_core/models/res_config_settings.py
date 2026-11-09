@@ -78,9 +78,17 @@ class ResConfigSettings(models.TransientModel):
              ' El equipo puede ajustar el precio a mano en la línea antes de enviarla.',
     )
 
+    restagrup_foreign_margin_percent = fields.Float(
+        string='Margen fuera de España (%)', default=25.0,
+        help='Margen de los restaurantes cuyo país no es España (por defecto 25 %), aunque cobren en euros.'
+             ' Un restaurante con margen propio en su ficha usa el suyo.',
+    )
+
     def get_values(self):
         res = super().get_values()
-        res['restagrup_default_margin_percent'] = self.env['restagrup.pricing'].margin_percent()
+        pricing = self.env['restagrup.pricing']
+        res['restagrup_default_margin_percent'] = pricing.margin_percent()
+        res['restagrup_foreign_margin_percent'] = pricing.foreign_margin_percent()
         return res
 
     def set_values(self):
@@ -89,4 +97,7 @@ class ResConfigSettings(models.TransientModel):
         # a aplicarse el 20 % por defecto, así que nadie podría poner "sin margen".
         self.env['ir.config_parameter'].sudo().set_param(
             'restagrup.default_margin_percent', repr(float(self.restagrup_default_margin_percent)),
+        )
+        self.env['ir.config_parameter'].sudo().set_param(
+            'restagrup.foreign_margin_percent', repr(float(self.restagrup_foreign_margin_percent)),
         )

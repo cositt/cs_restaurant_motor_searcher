@@ -3,6 +3,9 @@
 con el restaurante, el menú y el precio neto por persona (como el que enviaban desde su CRM)."""
 from odoo import models
 
+FINAL_PAX_HOURS_PARAM = 'restagrup.final_pax_hours'
+FINAL_PAX_HOURS_DEFAULT = 72  # Conchita 2026-11-09: cambios de comensales hasta 72 h antes del servicio
+
 
 def _hour_text(hour):
     if not hour:
@@ -26,9 +29,23 @@ class SaleOrderQuoteReport(models.Model):
             ('AGENCIA', agency.name or ''),
             ('TELÉFONO', agency.phone or contact.phone or ''),
             ('NOMBRE', contact.name if contact != agency else (lead.contact_name or '')),
-            ('CONTACTO', contact.email or agency.email or ''),
+            ('CONTACTO', self._restagrup_contact_text(contact, agency)),
             ('AGENTE RESTAGRUP', self.user_id.name or ''),
         ]
+
+    @staticmethod
+    def _restagrup_contact_text(contact, agency):
+        """Teléfono y correo de la persona que lleva el grupo (como en su CRM); si no hay persona, los de la agencia."""
+        email = contact.email or agency.email or ''
+        return ' · '.join(part for part in (contact.phone, email) if part)
+
+    def restagrup_final_pax_hours(self):
+        """Horas antes del servicio para cambiar el nº de comensales (Ajustes → Restagrup)."""
+        raw = self.env['ir.config_parameter'].sudo().get_param(FINAL_PAX_HOURS_PARAM)
+        try:
+            return int(raw) if raw else FINAL_PAX_HOURS_DEFAULT
+        except ValueError:
+            return FINAL_PAX_HOURS_DEFAULT
 
     def _restagrup_quote_services(self):
         """Un bloque por línea de servicio, por fecha y hora."""

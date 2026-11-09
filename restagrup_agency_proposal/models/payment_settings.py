@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models
 
+from odoo.addons.restagrup_service_orders.models.sale_quote_report import FINAL_PAX_HOURS_DEFAULT
+
 INT_DEFAULTS = {
     'payment_request_days': 7,       # días antes del primer servicio para pedir el pago a la agencia
     'payment_alert_hours': 72,       # horas antes: administración avisa si no hay pago
     'restaurant_payment_hours': 48,  # horas antes: se paga a los restaurantes
-    'final_pax_hours': 48,           # horas laborables antes: plazo para dar los comensales finales
+    'final_pax_hours': FINAL_PAX_HOURS_DEFAULT,  # horas antes: plazo para cambiar el nº de comensales
     'invoice_days': 7,               # días máximos tras el último servicio para facturar
 }
 
@@ -25,6 +27,14 @@ class RestagrupPaymentSettings(models.AbstractModel):
         except ValueError:
             return INT_DEFAULTS[key]
 
+    @api.model
+    def _restagrup_upgrade_final_pax_hours(self):
+        """El plazo de comensales pasó de 48 h laborables a 72 h (Conchita 2026-11-09). Si quedó guardado el 48
+        de serie al guardar Ajustes, se sube; si RestaGrup puso otro valor, se respeta."""
+        params = self.env['ir.config_parameter'].sudo()
+        if params.get_param('restagrup.final_pax_hours') == '48':
+            params.set_param('restagrup.final_pax_hours', str(FINAL_PAX_HOURS_DEFAULT))
+
 
 class ResConfigSettings(models.TransientModel):
     _inherit = 'res.config.settings'
@@ -32,7 +42,7 @@ class ResConfigSettings(models.TransientModel):
     restagrup_payment_request_days = fields.Integer(string='Pedir el pago (días antes del servicio)')
     restagrup_payment_alert_hours = fields.Integer(string='Avisar si no hay pago (horas antes)')
     restagrup_restaurant_payment_hours = fields.Integer(string='Pagar a los restaurantes (horas antes)')
-    restagrup_final_pax_hours = fields.Integer(string='Comensales finales (horas laborables antes)')
+    restagrup_final_pax_hours = fields.Integer(string='Cambios de comensales (horas antes)')
     restagrup_invoice_days = fields.Integer(string='Facturar (días máx. tras el último servicio)')
 
     @api.model
