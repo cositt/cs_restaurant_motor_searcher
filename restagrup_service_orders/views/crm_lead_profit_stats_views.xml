@@ -43,7 +43,6 @@
                 <field name="restagrup_quote_changes" type="measure"/>
                 <field name="restagrup_proposals_sent" type="measure"/>
                 <field name="restagrup_proformas_sent" type="measure"/>
-                <field name="id" type="measure" string="Grupos"/>
             </pivot>
         </field>
     </record>

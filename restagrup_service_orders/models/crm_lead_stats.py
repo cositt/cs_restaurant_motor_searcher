@@ -10,14 +10,17 @@ por destino y por agencia.
 Cuenta la primera vez que se entra en cada fase: volver atrás y adelante no la reinicia.
 """
 from odoo import api, fields, models
+from odoo.tools import SQL
 
 SECONDS_PER_HOUR = 3600.0
+HOURS_FIELDS = ('restagrup_hours_to_quote', 'restagrup_hours_to_file', 'restagrup_hours_to_close')
 STAGE_DATE_FIELDS = {
     'presupuesto': 'restagrup_quote_date', 'expediente': 'restagrup_file_date', 'cerrado': 'restagrup_close_date',
 }
 
 
 def _hours_between(start, end):
+    """Horas entre dos fechas; 0 si falta alguna (la media no cuenta esos ceros, ver `_read_group_select`)."""
     return (end - start).total_seconds() / SECONDS_PER_HOUR if start and end else 0.0
 
 
@@ -67,6 +70,14 @@ class CrmLeadStats(models.Model):
     def _compute_restagrup_destination(self):
         for lead in self:
             lead.restagrup_destination = lead.restagrup_first_service_city or False
+
+    def _read_group_select(self, aggregate_spec, query):
+        """Media de horas solo de los grupos que han llegado a esa fase: un grupo sin terminar (0 h) no la baja."""
+        fname, _sep, func = aggregate_spec.partition(':')
+        if func == 'avg' and fname in HOURS_FIELDS:
+            self.check_field_access_rights('read', [fname])
+            return SQL('AVG(NULLIF(%s, 0))', self._field_to_sql(self._table, fname, query))
+        return super()._read_group_select(aggregate_spec, query)
 
     def _restagrup_note_proposal_sent(self):
         for lead in self:

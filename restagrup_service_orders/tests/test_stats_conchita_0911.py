@@ -3,6 +3,7 @@
 - Tiempo hasta el presupuesto (petición → propuesta enviada) y hasta el cierre del expediente.
 - Por comercial, por destino y por agencia.
 - Cambios: veces que se envía a la agencia un presupuesto o una proforma, después del primero de cada uno."""
+import re
 from datetime import timedelta
 
 from odoo.tests.common import TransactionCase, tagged
@@ -105,3 +106,25 @@ class TestStatsConchita0911(TransactionCase):
                                'search')['arch']
         for field in ('user_id', 'restagrup_destination', 'restagrup_agency_id'):
             self.assertIn('name="%s"' % field, search)
+
+    def test_every_pivot_measure_has_an_aggregate(self):
+        """Una medida sin agregado rompe la pantalla en el navegador («No aggregate function…»)."""
+        Lead = self.env['crm.lead']
+        arch = Lead.get_view(self.env.ref('restagrup_service_orders.view_restagrup_statistics_pivot').id,
+                             'pivot')['arch']
+        measures = re.findall(r'<field name="([a-z_]+)"[^>]*type="measure"', arch)
+        self.assertTrue(measures)
+        for name in measures:
+            self.assertTrue(Lead._fields[name].aggregator, '%s no tiene agregado' % name)
+
+    def test_unfinished_groups_do_not_lower_the_average(self):
+        """Un grupo sin cerrar no cuenta como 0 horas: se queda vacío y la media lo ignora."""
+        done = self._lead(name='Grupo cerrado')
+        done.write({'restagrup_close_date': done.create_date + timedelta(hours=100)})
+        open_lead = self._lead(name='Grupo abierto')
+        self.assertFalse(open_lead.restagrup_hours_to_close)
+        self.assertFalse(open_lead.restagrup_hours_to_quote)
+        self.env.flush_all()
+        [(avg,)] = self.env['crm.lead']._read_group(
+            [('id', 'in', (done | open_lead).ids)], [], ['restagrup_hours_to_close:avg'])
+        self.assertAlmostEqual(avg, 100.0)
