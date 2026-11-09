@@ -8,6 +8,8 @@ from markupsafe import Markup
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
+from .payment_dates import restaurant_payment_due_date
+
 
 VOUCHER_REPORT = 'restagrup_agency_proposal.report_booking_voucher'
 
@@ -138,14 +140,12 @@ class SaleOrder(models.Model):
         settings = self.env['restagrup.payment.settings']
         request = timedelta(days=settings.value('payment_request_days'))
         alert = timedelta(hours=settings.value('payment_alert_hours'))
-        restaurant = timedelta(hours=settings.value('restaurant_payment_hours'))
+        restaurant_hours = settings.value('restaurant_payment_hours')
         invoice = timedelta(days=settings.value('invoice_days'))
         for order in self:
             first, last = order.restagrup_first_service_date, order.restagrup_last_service_date
             order.restagrup_payment_request_date = first - request if first else False
             order.restagrup_payment_alert_date = first - alert if first else False
-            order.restagrup_restaurant_payment_date = first - restaurant if first else False
+            order.restagrup_restaurant_payment_date = restaurant_payment_due_date(first, restaurant_hours)
             order.restagrup_invoice_deadline = last + invoice if last else False
 
-    def restagrup_final_pax_hours(self):
-        return self.env['restagrup.payment.settings'].value('final_pax_hours')

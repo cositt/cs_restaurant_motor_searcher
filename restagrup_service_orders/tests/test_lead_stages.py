@@ -25,7 +25,7 @@ class TestLeadStages(TransactionCase):
     def test_stages_follow_the_clients_flow(self):
         ordered = sorted(self.stage.values(), key=lambda s: s.sequence)
         self.assertEqual([s.name for s in ordered], ['Petición', 'Presupuesto', 'Expediente', 'Cerrado'])
-        self.assertEqual([s.restagrup_doc_prefix for s in ordered], ['PET', 'PRE', 'EXP', 'EXP'])
+        self.assertEqual([s.restagrup_doc_prefix for s in ordered], ['PET', 'PRE', 'EXP', 'TER'])
         self.assertTrue(self.stage['cerrado'].is_won)
 
     def test_new_lead_starts_as_peticion(self):
@@ -56,7 +56,7 @@ class TestLeadStages(TransactionCase):
         lead.action_pass_to_file()
         self.assertEqual(lead.restagrup_doc_number, 'EXP%s-%s' % (month, seq))
         lead.action_close_file()
-        self.assertEqual(lead.restagrup_doc_number, 'EXP%s-%s' % (month, seq))
+        self.assertEqual(lead.restagrup_doc_number, 'TER%s-%s' % (month, seq))
 
     def test_copy_gets_its_own_number(self):
         lead = self._lead()

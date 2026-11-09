@@ -11,11 +11,28 @@
                 <field name="partner_id" string="Restaurante"/>
                 <field name="restagrup_sale_order_id"/>
                 <field name="restagrup_service_date"/>
+                <field name="restagrup_payment_due_date"/>
+                <field name="restagrup_payment_terms"/>
                 <field name="amount_total" sum="Total"/>
+                <field name="restagrup_deposit_paid_amount" optional="show"/>
+                <field name="restagrup_amount_to_pay" sum="Queda por pagar"/>
                 <field name="restagrup_has_bank"/>
                 <field name="restagrup_bank_request_date" optional="show"/>
                 <field name="restagrup_payment_due"/>
             </list>
+        </field>
+    </record>
+
+    <!-- Condición de pago en la ficha del restaurante (respuesta de Conchita 2026-11-09) -->
+    <record id="view_partner_form_restaurant_payment_terms" model="ir.ui.view">
+        <field name="name">res.partner.form.restagrup.payment.terms</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="restagrup_restaurants.view_partner_form_restaurant"/>
+        <field name="arch" type="xml">
+            <field name="restaurant_iban" position="after">
+                <field name="restagrup_payment_terms"/>
+                <field name="restagrup_deposit_percent" invisible="restagrup_payment_terms != 'deposit'"/>
+            </field>
         </field>
     </record>
 

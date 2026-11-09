@@ -13,6 +13,8 @@ class ApproxOptionsWizard(models.TransientModel):
     pax = fields.Integer(string='Comensales', help='Deja fuera los restaurantes y menús sin capacidad para el grupo.')
     season = fields.Integer(string='Temporada', default=lambda self: fields.Date.context_today(self).year)
     show_restaurants = fields.Boolean(string='Mostrar restaurantes', default=True)
+    search_text = fields.Char(
+        string='Buscar', help='Parte del nombre del restaurante, del menú o de la zona (sin distinguir mayúsculas).')
     line_ids = fields.One2many('restagrup.approx.options.wizard.line', 'wizard_id', string='Menús')
 
     def _create_for(self, pending):
@@ -33,6 +35,10 @@ class ApproxOptionsWizard(models.TransientModel):
         domain = [('season', '=', self.season), ('partner_id.is_restaurant', '=', True)]
         if self.city:
             domain.append(('partner_id.city', '=ilike', self.city.strip()))
+        text = (self.search_text or '').strip()
+        if text:
+            domain += ['|', '|', ('name', 'ilike', text), ('partner_id.name', 'ilike', text),
+                       ('partner_id.restaurant_zone', 'ilike', text)]
         menus = self.env['restagrup.restaurant.menu'].search(domain)
         if self.pax:
             menus = menus.filtered(lambda m: (
@@ -80,5 +86,5 @@ class ApproxOptionsWizardLine(models.TransientModel):
     city = fields.Char(related='menu_id.partner_id.city', string='Ciudad')
     capacity = fields.Integer(related='menu_id.partner_id.restaurant_capacity', string='Aforo')
     menu_type = fields.Selection(related='menu_id.menu_type')
-    currency_id = fields.Many2one(related='menu_id.currency_id')
+    currency_id = fields.Many2one(related='menu_id.company_currency_id')
     price_per_person = fields.Monetary(related='menu_id.sale_price', string='Precio por persona', store=True)

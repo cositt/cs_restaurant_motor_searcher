@@ -17,6 +17,17 @@ class SaleOrderLine(models.Model):
              ' en los documentos se muestra «pagan + gratuidades».',
     )
 
+    restagrup_voucher = fields.Char(
+        string='AV / voucher / localizador', copy=False,
+        help='La referencia de la agencia para este servicio. Sale en la confirmación, en el bono y en la factura.',
+    )
+
+    def _prepare_invoice_line(self, **optional_values):
+        values = super()._prepare_invoice_line(**optional_values)
+        if self.restagrup_voucher:
+            values['name'] = '%s\n%s' % (values.get('name') or self.name or '', _('AV: %s') % self.restagrup_voucher)
+        return values
+
     def _restagrup_service_info(self):
         """Datos de una línea de servicio tal como salen en la confirmación, el bono y la hoja del restaurante."""
         self.ensure_one()
@@ -44,6 +55,11 @@ class SaleOrderLine(models.Model):
             'service_type': self.service_event_type_id.name or '',
             'paying': paying,
             'gratuities': self.restagrup_gratuities,
+            'voucher': self.restagrup_voucher or '',
+            # Restaurante en otra moneda: su precio en lo que cobra él, con el cambio de la reserva.
+            'fx_code': self.restagrup_fx_currency_code or '',
+            'cost_unit_fx': round(self.restagrup_unit_cost / self.restagrup_fx_rate, 2) if (
+                self.restagrup_fx_currency_code and self.restagrup_fx_rate) else 0.0,
             'pax_total': paying + self.restagrup_gratuities,
             'menu_name': menu_name,
             'menu_text': menu_text,

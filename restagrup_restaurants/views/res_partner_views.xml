@@ -5,12 +5,31 @@
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
+            <!-- «Es restaurante» fuera de la pestaña: así la pestaña solo existe para restaurantes -->
+            <xpath expr="//field[@name='category_id']" position="after">
+                <field name="is_restaurant" invisible="not is_company and not is_restaurant"/>
+            </xpath>
             <xpath expr="//sheet/notebook" position="inside">
-                <page name="restaurant" string="Restaurante">
-                    <group>
-                        <field name="is_restaurant"/>
+                <page name="restaurant" string="Restaurante" invisible="not is_restaurant">
+                    <!-- Como el CRM de Restagrup: primero los datos generales, luego la información adicional -->
+                    <group name="restaurant_general" string="Datos generales" invisible="not is_restaurant">
+                        <group>
+                            <field name="restaurant_iban"/>
+                            <field name="restaurant_maps_url" widget="url"/>
+                            <field name="restaurant_zone"/>
+                            <field name="restaurant_location_type"/>
+                            <field name="restaurant_has_contract"/>
+                        </group>
+                        <group>
+                            <field name="restaurant_currency_code"/>
+                            <field name="restaurant_currency_id" invisible="1"/>
+                            <field name="restaurant_avg_carta_price"/>
+                            <field name="restaurant_min_menu_price"/>
+                            <field name="restaurant_weekend_menu_price"/>
+                            <field name="restaurant_direct_contact"/>
+                        </group>
                     </group>
-                    <group invisible="not is_restaurant">
+                    <group name="restaurant_additional" string="Información adicional" invisible="not is_restaurant">
                         <group>
                             <field name="restaurant_internal_rating"/>
                             <field name="restaurant_capacity"/>
@@ -24,8 +43,6 @@
                             <field name="restaurant_suitable_corporate"/>
                             <field name="restaurant_suitable_school"/>
                             <field name="restaurant_suitable_family"/>
-                            <field name="restaurant_direct_contact"/>
-                            <field name="restaurant_iban"/>
                         </group>
                     </group>
                     <group string="Datos de grupo" invisible="not is_restaurant">

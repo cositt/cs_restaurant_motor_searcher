@@ -199,8 +199,11 @@
         <field name="model">crm.lead</field>
         <field name="inherit_id" ref="restagrup_email_ai.crm_lead_view_form_restagrup"/>
         <field name="arch" type="xml">
+            <!-- El restaurante elegido, junto al estado: se ve sin desplazar la lista (notas de Conchita 05/11) -->
+            <xpath expr="//field[@name='restagrup_event_ids']/list/field[@name='state']" position="before">
+                <field name="chosen_restaurant_id" string="Restaurante" readonly="1"/>
+            </xpath>
             <xpath expr="//field[@name='restagrup_event_ids']/list" position="inside">
-                <field name="chosen_restaurant_id" optional="show" readonly="1"/>
                 <field name="chosen_amount" optional="show" readonly="1"/>
                 <field name="sale_order_id" optional="show" readonly="1"/>
                 <field name="sheet_state" optional="show" readonly="1"/>
@@ -255,8 +258,31 @@
         <field name="act_window_id" ref="action_restagrup_clients"/>
     </record>
 
-    <menuitem id="menu_restagrup_clients" name="Clientes" parent="restagrup_restaurants.menu_restagrup_root"
-              action="action_restagrup_clients" sequence="5"/>
+    <!-- «Clientes» pasa a «Agencias» (notas de Conchita 05/11): las fichas de agencia, justo antes de Restaurantes.
+         La lista de grupos de antes sigue disponible como acción, sin entrada de menú. -->
+    <record id="view_partner_agency_list" model="ir.ui.view">
+        <field name="name">res.partner.list.restagrup.agency</field>
+        <field name="model">res.partner</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <list string="Agencias">
+                <field name="name"/>
+                <field name="vat"/>
+                <field name="city"/>
+                <field name="email"/>
+                <field name="phone"/>
+                <field name="child_ids" string="Contactos" widget="many2many_tags" optional="hide"/>
+            </list>
+        </field>
+    </record>
+    <record id="action_restagrup_agencies" model="ir.actions.server">
+        <field name="name">Agencias</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="state">code</field>
+        <field name="code">action = model.restagrup_action_agencies()</field>
+    </record>
+    <menuitem id="menu_restagrup_agencies" name="Agencias" parent="restagrup_restaurants.menu_restagrup_root"
+              action="action_restagrup_agencies" sequence="9"/>
     <menuitem id="menu_restaurant_notices" name="Avisos enviados" parent="restagrup_restaurants.menu_restagrup_root"
               action="action_restaurant_notice" sequence="70"/>
     <menuitem id="menu_notice_templates" name="Plantillas de aviso" parent="restagrup_restaurants.menu_restagrup_root"

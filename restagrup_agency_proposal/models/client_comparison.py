@@ -126,5 +126,6 @@ class ClientComparisonWizard(models.TransientModel):
             email_add_signature=False,  # el texto ya lleva {firma}
             outgoing_email_to=email_to, attachment_ids=[attachment.id],
         )
+        lead._restagrup_note_proposal_sent()
         lead._restagrup_advance_to('presupuesto')  # enviada la propuesta, el grupo pasa a Presupuesto
         return {'type': 'ir.actions.act_window_close'}

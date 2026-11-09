@@ -234,11 +234,19 @@ class SaleOrder(models.Model):
             self._restagrup_log_on_searches(note)
             return
         self._restagrup_send_with_summary(template, self, self._restagrup_agency_summary(agency_changes or []))
+        self.opportunity_id._restagrup_note_proforma_sent()
         note = _(
             'Presupuesto actualizado enviado a la agencia (%(email)s).'
         ) % {'email': self.partner_id.email}
         self.message_post(body=note)
         self._restagrup_log_on_searches(note)
+
+    def message_post(self, **kwargs):
+        """Enviar el presupuesto a la agencia desde «Enviar» cuenta como una proforma más (estadísticas)."""
+        message = super().message_post(**kwargs)
+        if self.env.context.get('mark_so_as_sent'):
+            self.opportunity_id._restagrup_note_proforma_sent()
+        return message
 
     def action_view_restaurant_pos(self):
         self.ensure_one()

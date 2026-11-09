@@ -113,8 +113,27 @@ class TestQuoteFormat(TransactionCase):
 
     def test_pdf_has_the_guest_number_note(self):
         html = self._pdf_html(self._order())
-        self.assertIn('48 horas', html)
         self.assertIn('sujeto a disponibilidad', html)
+
+    # --- respuesta de Conchita 2026-11-09: 72 h para cambiar comensales y gastos de gestión ---
+
+    def test_pdf_guest_note_gives_72_hours_and_management_fees(self):
+        self.env['ir.config_parameter'].sudo().search([('key', '=', 'restagrup.final_pax_hours')]).unlink()
+        text = ' '.join(self._pdf_html(self._order()).split())
+        self.assertIn('72 horas antes del servicio', text)
+        self.assertIn('100 % de los gastos de gestión', text)
+        self.assertNotIn('laborables', text)
+
+    def test_pdf_guest_note_follows_the_setting(self):
+        self.env['ir.config_parameter'].sudo().set_param('restagrup.final_pax_hours', '24')
+        text = ' '.join(self._pdf_html(self._order()).split())
+        self.assertIn('24 horas antes del servicio', text)
+
+    def test_pdf_contact_row_shows_the_contact_person_phone(self):
+        self.contact.phone = '611 222 333'
+        html = self._pdf_html(self._order())
+        for text in ('Agencia Clandestina', '+34 600 000 000', 'Erika Zarandona', '611 222 333'):
+            self.assertIn(text, html)
 
     def test_pdf_does_not_show_the_group_total_as_unit_price(self):
         html = self._pdf_html(self._order())

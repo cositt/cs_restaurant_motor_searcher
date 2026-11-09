@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Restagrup - Pedidos de servicio',
-    'version': '19.0.1.4.0',
+    'version': '19.0.1.7.0',
     'category': 'Custom',
     'summary': 'Hoja de servicio por restaurante al confirmar el presupuesto, y aviso de cambios',
     'description': '''
@@ -22,6 +22,7 @@
         'data/agency_followup_data.xml',
         'data/mail_template_data.xml',
         'views/lead_stage_views.xml',
+        'views/crm_lead_profit_stats_views.xml',
         'views/firewall_views.xml',
         'views/sale_order_views.xml',
         'views/sale_margin_templates.xml',

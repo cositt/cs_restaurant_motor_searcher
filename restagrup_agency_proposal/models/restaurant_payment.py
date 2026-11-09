@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """F5: el pago a cada restaurante. Se le pide la cuenta si no la tenemos (con la proforma), a las 48 h toca pagarle
-y, hecha la transferencia, se le manda el justificante con nuestros datos fiscales."""
+y, hecha la transferencia, se le manda el justificante con nuestros datos fiscales.
+
+Respuesta de Conchita (2026-11-09): lo que toca pagar en fin de semana se paga el viernes (los grupos del lunes y
+del martes); y cada restaurante tiene su condición: 48 h antes, pago inmediato o señal (50 %) + resto 48 h antes."""
 import logging
 import re
 from datetime import timedelta
@@ -10,8 +13,11 @@ from markupsafe import Markup
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools import html2plaintext
+from odoo.tools.misc import format_amount
 
 from odoo.addons.restagrup_restaurants.models.restaurant_menu_ai import _attachment_text
+
+from .payment_dates import DEFAULT_DEPOSIT_PERCENT, PAYMENT_TERMS, restaurant_payment_due_date
 
 _logger = logging.getLogger(__name__)
 
@@ -47,6 +53,16 @@ def _masked(iban):
     return '%s **** %s' % (iban[:4], iban[-4:])
 
 
+class ResPartner(models.Model):
+    _inherit = 'res.partner'
+
+    restagrup_payment_terms = fields.Selection(
+        PAYMENT_TERMS, string='Condición de pago', default='standard', required=True,
+        help='Cuándo se le paga a este restaurante. Algunos piden pago inmediato o una señal para guardar la reserva.')
+    restagrup_deposit_percent = fields.Float(
+        string='Señal (%)', default=DEFAULT_DEPOSIT_PERCENT, help='Parte que se paga al confirmar; el resto, 48 h antes.')
+
+
 class PurchaseOrder(models.Model):
     _inherit = 'purchase.order'
 
@@ -60,6 +76,44 @@ class PurchaseOrder(models.Model):
     restagrup_payment_receipt_sent_date = fields.Datetime(
         string='Justificante enviado al restaurante', copy=False, readonly=True)
     restagrup_has_bank = fields.Boolean(string='Tenemos su cuenta', compute='_compute_restagrup_has_bank')
+    restagrup_payment_terms = fields.Selection(
+        related='partner_id.commercial_partner_id.restagrup_payment_terms', string='Condición de pago')
+    restagrup_deposit_amount = fields.Monetary(
+        string='Señal', compute='_compute_restagrup_amounts', currency_field='currency_id')
+    restagrup_deposit_paid = fields.Boolean(string='Señal pagada', copy=False, tracking=True)
+    restagrup_deposit_paid_date = fields.Datetime(string='Fecha de la señal', copy=False, readonly=True)
+    restagrup_deposit_paid_amount = fields.Monetary(
+        string='Señal pagada (importe)', copy=False, readonly=True, currency_field='currency_id')
+    restagrup_amount_to_pay = fields.Monetary(
+        string='Queda por pagar', compute='_compute_restagrup_amounts', currency_field='currency_id',
+        help='Total de la hoja menos la señal ya pagada.')
+    restagrup_payment_due_date = fields.Date(
+        string='Toca pagar el', compute='_compute_restagrup_payment_due_date',
+        help='48 h antes del servicio (en fin de semana, el viernes antes). Con pago inmediato o señal pendiente: ya.')
+
+    @api.depends('amount_total', 'partner_id.commercial_partner_id.restagrup_payment_terms',
+                 'partner_id.commercial_partner_id.restagrup_deposit_percent', 'restagrup_deposit_paid_amount',
+                 'restagrup_restaurant_paid')
+    def _compute_restagrup_amounts(self):
+        for sheet in self:
+            restaurant = sheet.partner_id.commercial_partner_id
+            sheet.restagrup_deposit_amount = (
+                sheet.amount_total * restaurant.restagrup_deposit_percent / 100.0
+                if restaurant.restagrup_payment_terms == 'deposit' else 0.0)
+            sheet.restagrup_amount_to_pay = (
+                0.0 if sheet.restagrup_restaurant_paid else sheet.amount_total - sheet.restagrup_deposit_paid_amount)
+
+    @api.depends('restagrup_service_date', 'restagrup_payment_terms', 'restagrup_deposit_paid', 'create_date')
+    def _compute_restagrup_payment_due_date(self):
+        hours = self.env['restagrup.payment.settings'].value('restaurant_payment_hours')
+        for sheet in self:
+            pay_now = (sheet.restagrup_payment_terms == 'immediate'
+                       or (sheet.restagrup_payment_terms == 'deposit' and not sheet.restagrup_deposit_paid))
+            if pay_now:
+                sheet.restagrup_payment_due_date = fields.Date.context_today(
+                    sheet, sheet.create_date or fields.Datetime.now())
+            else:
+                sheet.restagrup_payment_due_date = restaurant_payment_due_date(sheet.restagrup_service_date, hours)
 
     @api.depends('order_line.restagrup_sale_line_id.service_date')
     def _compute_restagrup_service_date(self):
@@ -72,25 +126,56 @@ class PurchaseOrder(models.Model):
         for sheet in self:
             sheet.restagrup_has_bank = bool(sheet.partner_id.commercial_partner_id.bank_ids)
 
+    # --- texto de la cuenta en la confirmación al restaurante (notas de Conchita 05/11) ---
+
+    def _restagrup_restaurant_iban(self):
+        self.ensure_one()
+        restaurant = self.partner_id.commercial_partner_id
+        number = restaurant.bank_ids[:1].acc_number or restaurant.restaurant_iban or ''
+        return re.sub(r'\s+', '', number).upper()
+
+    def _restagrup_when_we_pay_text(self, hours):
+        """Cuándo se le paga, según la condición de su ficha."""
+        restaurant = self.partner_id.commercial_partner_id
+        if restaurant.restagrup_payment_terms == 'immediate':
+            return _('a la confirmación de la reserva')
+        if restaurant.restagrup_payment_terms == 'deposit':
+            return _('con una señal del %(pct)s %% a la confirmación de la reserva y el resto con un mínimo de'
+                     ' %(hours)s h de antelación') % {'pct': '%g' % restaurant.restagrup_deposit_percent, 'hours': hours}
+        return _('con un mínimo de %s h de antelación') % hours
+
+    def restagrup_restaurant_bank_text(self):
+        """Con su cuenta: a qué cuenta se le paga y que avise si ha cambiado. Sin ella: que nos la mande."""
+        self.ensure_one()
+        hours = int(self.env['restagrup.payment.settings'].value('restaurant_payment_hours') or 48)
+        when = self._restagrup_when_we_pay_text(hours)
+        iban = self._restagrup_restaurant_iban()
+        if not iban:
+            if self.partner_id.commercial_partner_id.restagrup_payment_terms == 'standard':
+                when = _('%s h antes del servicio') % hours
+            return _('Quedamos a la espera de recibir su número de cuenta para poder realizar el pago %s.') % when
+        grouped = ' '.join(iban[i:i + 4] for i in range(0, len(iban), 4))
+        return _('El prepago se realizará %(when)s al número de cuenta %(iban)s; si ha cambiado, por favor'
+                 ' indíquenoslo.') % {'when': when, 'iban': grouped}
+
     # --- cron ---
 
     @api.model
     def _cron_restaurant_payments(self):
-        """Cron diario: dentro del plazo de pago a la agencia pide la cuenta a quien no la tenga; a las 48 h marca
-        «Toca pagar»."""
+        """Cron diario: marca «Toca pagar» el día que toca (ver `restagrup_payment_due_date`) y, dentro del plazo de
+        pago a la agencia, pide la cuenta a quien no la tenga."""
         today = fields.Date.context_today(self)
-        settings = self.env['restagrup.payment.settings']
-        due_limit = timedelta(hours=settings.value('restaurant_payment_hours'))
+        request_limit = today + timedelta(days=self.env['restagrup.payment.settings'].value('payment_request_days'))
         sheets = self.search([
             ('state', '!=', 'cancel'), ('restagrup_sale_order_id', '!=', False),
             ('restagrup_restaurant_paid', '=', False), ('restagrup_service_date', '>=', today),
-            ('restagrup_service_date', '<=', today + timedelta(days=settings.value('payment_request_days'))),
         ])
         for sheet in sheets:
-            due = today >= sheet.restagrup_service_date - due_limit
+            due = bool(sheet.restagrup_payment_due_date) and today >= sheet.restagrup_payment_due_date
             if due != sheet.restagrup_payment_due:
                 sheet.restagrup_payment_due = due
-            if sheet.restagrup_has_bank or sheet.restagrup_bank_request_date:
+            if sheet.restagrup_has_bank or sheet.restagrup_bank_request_date \
+                    or sheet.restagrup_service_date > request_limit:
                 continue
             try:
                 with self.env.cr.savepoint():
@@ -204,9 +289,33 @@ class PurchaseOrder(models.Model):
 
     # --- pagar y mandar el justificante ---
 
+    def _restagrup_money(self, amount):
+        return format_amount(self.env, amount, self.currency_id)
+
+    def action_mark_deposit_paid(self):
+        for sheet in self:
+            if sheet.restagrup_payment_terms != 'deposit' or sheet.restagrup_deposit_paid:
+                continue
+            deposit = sheet.restagrup_deposit_amount
+            sheet.write({'restagrup_deposit_paid': True, 'restagrup_deposit_paid_date': fields.Datetime.now(),
+                         'restagrup_deposit_paid_amount': deposit, 'restagrup_payment_due': False})
+            sheet.message_post(body=_('Señal pagada: %(deposit)s. Queda por pagar: %(rest)s.') % {
+                'deposit': sheet._restagrup_money(deposit), 'rest': sheet._restagrup_money(sheet.restagrup_amount_to_pay)})
+
+    def action_unmark_deposit_paid(self):
+        for sheet in self.filtered('restagrup_deposit_paid'):
+            sheet.write({'restagrup_deposit_paid': False, 'restagrup_deposit_paid_date': False,
+                         'restagrup_deposit_paid_amount': 0.0})
+            sheet.message_post(body=_('Señal desmarcada.'))
+
     def action_mark_restaurant_paid(self):
+        rests = {sheet.id: sheet.restagrup_amount_to_pay for sheet in self}
         res = super().action_mark_restaurant_paid()
         self.write({'restagrup_payment_due': False})
+        for sheet in self.filtered('restagrup_deposit_paid'):
+            sheet.message_post(body=_('Pagado el resto: %(rest)s (señal de %(deposit)s ya descontada).') % {
+                'rest': sheet._restagrup_money(rests[sheet.id]),
+                'deposit': sheet._restagrup_money(sheet.restagrup_deposit_paid_amount)})
         return res
 
     def action_send_payment_receipt(self):

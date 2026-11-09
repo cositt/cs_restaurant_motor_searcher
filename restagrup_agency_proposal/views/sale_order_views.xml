@@ -20,6 +20,7 @@
             </xpath>
             <xpath expr="//field[@name='order_line']/list/field[@name='product_uom_qty']" position="after">
                 <field name="restagrup_gratuities" optional="show"/>
+                <field name="restagrup_voucher" string="AV / voucher" optional="show"/>
             </xpath>
             <xpath expr="//field[@name='payment_term_id']" position="after">
                 <field name="restagrup_paid" readonly="1"/>

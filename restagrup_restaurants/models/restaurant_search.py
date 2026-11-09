@@ -669,7 +669,8 @@ class RestaurantSearchLine(models.Model):
         for line in self:
             line.quote_pending_confirmation = bool(line.quote_amount) and line.etiqueta == 'solicitado'
 
-    @api.depends('quote_amount', 'partner_id.restaurant_margin_custom', 'partner_id.restaurant_margin_percent')
+    @api.depends('quote_amount', 'partner_id.restaurant_margin_custom', 'partner_id.restaurant_margin_percent',
+                 'partner_id.country_id')
     def _compute_quote_client_price(self):
         pricing = self.env['restagrup.pricing']
         for line in self:

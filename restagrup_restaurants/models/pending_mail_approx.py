@@ -29,7 +29,7 @@ class RestagrupPendingMailOption(models.Model):
         text_lines = menu._render_text(with_price=False).splitlines()[1:]
         return {
             'sequence': sequence, 'partner_id': menu.partner_id.id, 'menu_id': menu.id, 'menu_name': menu.name,
-            'menu_text': '\n'.join(text_lines), 'currency_id': menu.currency_id.id,
+            'menu_text': '\n'.join(text_lines), 'currency_id': menu.company_currency_id.id,
             'price_per_person': menu.sale_price,
         }
 

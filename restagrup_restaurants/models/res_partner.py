@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models
 
+from .exchange import CURRENCY_SELECTION
+
+LOCATION_TYPE_SELECTION = [
+    ('centro', 'Centro'),
+    ('alrededores', 'Alrededores'),
+    ('carretera', 'Carretera'),
+]
+
 RESTAURANT_RATING_SELECTION = [
     ('liked', 'Nos gustó'),
     ('neutral', 'Neutral'),
@@ -43,6 +51,24 @@ class ResPartner(models.Model):
         string='Canal preferido', default='email',
     )
     restaurant_iban = fields.Char(string='Cuenta bancaria')
+    # Datos generales como en el CRM de Restagrup (notas de Conchita 05/11).
+    restaurant_maps_url = fields.Char(string='Enlace a Google Maps')
+    restaurant_zone = fields.Char(string='Zona', help='Barrio o zona de la ciudad (p. ej. «Triana», «Centro histórico»).')
+    restaurant_location_type = fields.Selection(LOCATION_TYPE_SELECTION, string='Ubicación')
+    restaurant_has_contract = fields.Boolean(string='Tiene contrato')
+    restaurant_currency_code = fields.Selection(
+        CURRENCY_SELECTION, string='Moneda', default='EUR', required=True,
+        help='En la que cobra el restaurante. Sus menús se apuntan en esta moneda y se pasan a euros con el cambio'
+             ' del Banco Central Europeo.',
+    )
+    restaurant_currency_id = fields.Many2one(
+        'res.currency', string='Moneda del restaurante', compute='_compute_restaurant_currency_id')
+    restaurant_avg_carta_price = fields.Monetary(
+        string='Precio medio carta', currency_field='restaurant_currency_id')
+    restaurant_min_menu_price = fields.Monetary(
+        string='Precio mín. menú', currency_field='restaurant_currency_id')
+    restaurant_weekend_menu_price = fields.Monetary(
+        string='Precio menú fin de semana', currency_field='restaurant_currency_id')
     restaurant_direct_contact = fields.Char(string='Contacto directo')
     restaurant_cuisine_type = fields.Char(string='Tipo de cocina')
     restaurant_price_level = fields.Selection(
@@ -107,3 +133,51 @@ class ResPartner(models.Model):
     def _onchange_is_restaurant(self):
         if self.is_restaurant and not self.company_type:
             self.company_type = 'company'
+
+
+# Ficha del restaurante (notas de Conchita 05/11): Menús lo primero, luego sus datos, y fuera lo que no usan.
+RESTAURANT_FIRST_PAGES = ('restaurant_menu_catalog', 'restaurant')
+PAGES_HIDDEN_FOR_RESTAURANTS = (
+    'sales_purchases', 'accounting', 'accounting_disabled', 'geo_location', 'internal_notes',
+    'restaurant_menus',  # «Menús de producto (avanzado)»: los menús de verdad están en «Menús»
+)
+
+
+class ResPartnerRestaurantCurrency(models.Model):
+    _inherit = 'res.partner'
+
+    @api.depends('restaurant_currency_code')
+    def _compute_restaurant_currency_id(self):
+        exchange = self.env['restagrup.exchange']
+        for partner in self:
+            partner.restaurant_currency_id = exchange.currency_by_code(partner.restaurant_currency_code or 'EUR')
+
+
+class ResPartnerRestaurantForm(models.Model):
+    _inherit = 'res.partner'
+
+    @api.model
+    def _get_view(self, view_id=None, view_type='form', **options):
+        """Se hace aquí y no con xpath porque algunas pestañas (p. ej. «Asignación de socio») las añaden
+        módulos que no son dependencia nuestra: si no están, simplemente no se tocan."""
+        arch, view = super()._get_view(view_id, view_type, **options)
+        if view_type == 'form':
+            for notebook in arch.xpath("//sheet/notebook[page[@name='restaurant_menu_catalog']]"):
+                _restaurant_pages_first(notebook)
+        return arch, view
+
+
+def _restaurant_pages_first(notebook):
+    for name in PAGES_HIDDEN_FOR_RESTAURANTS:
+        for page in notebook.xpath("./page[@name='%s']" % name):
+            current = page.get('invisible')
+            page.set('invisible', '(%s) or is_restaurant' % current if current else 'is_restaurant')
+    for name in reversed(RESTAURANT_FIRST_PAGES):
+        for page in notebook.xpath("./page[@name='%s']" % name):
+            notebook.remove(page)
+            notebook.insert(0, page)
+    # Al abrir un restaurante, la pestaña Menús; en el resto, como siempre (Contactos, la primera visible).
+    for page in notebook.xpath('./page[@autofocus]'):
+        del page.attrib['autofocus']
+    for page in notebook.xpath("./page[@name='restaurant_menu_catalog']"):
+        page.set('autofocus', 'autofocus')

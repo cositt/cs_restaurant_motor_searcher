@@ -29,16 +29,28 @@ class CrmLeadProposal(models.Model):
 
     @api.depends('restagrup_restaurant_search_ids.line_ids.etiqueta',
                  'restagrup_restaurant_search_ids.line_ids.menu_id',
-                 'restagrup_restaurant_search_ids.chosen_line_id')
+                 'restagrup_restaurant_search_ids.chosen_line_id', 'stage_id.restagrup_stage_key')
     def _compute_restagrup_proposal(self):
         Menu = self.env['restagrup.restaurant.menu']
         for lead in self:
             lines = lead.restagrup_restaurant_search_ids.line_ids
             received = lines.filtered(lambda l: l.etiqueta == 'presupuesto_recibido' and l.quote_amount)
             candidates = lines.filtered(lambda l: l.partner_id and l.etiqueta not in ('descartado', 'cancelado'))
-            lead.restagrup_proposal_line_ids = received
-            lead.restagrup_candidate_menu_ids = Menu.search([('partner_id', 'in', candidates.partner_id.ids)]) \
-                if candidates else Menu
+            if lead.restagrup_stage_key in ('expediente', 'cerrado'):
+                # En el expediente solo lo cerrado con la agencia (notas de Conchita 05/11): el restaurante elegido
+                # de cada servicio y su menú; sin menú elegido, los menús de ese restaurante.
+                chosen = lead.restagrup_restaurant_search_ids.chosen_line_id
+                received = received & chosen
+                menus = chosen.menu_id
+                without_menu = chosen.filtered(lambda l: not l.menu_id).partner_id
+                if without_menu:
+                    menus |= Menu.search([('partner_id', 'in', without_menu.ids)])
+                lead.restagrup_proposal_line_ids = received
+                lead.restagrup_candidate_menu_ids = menus
+            else:
+                lead.restagrup_proposal_line_ids = received
+                lead.restagrup_candidate_menu_ids = Menu.search([('partner_id', 'in', candidates.partner_id.ids)]) \
+                    if candidates else Menu
             lead.restagrup_proposal_ready = bool(received)
             lead.restagrup_quote_ready = any(
                 search.chosen_line_id and not search.sale_order_id for search in lead.restagrup_restaurant_search_ids)
@@ -201,5 +213,6 @@ class LeadProposalWizard(models.TransientModel):
             email_add_signature=False, outgoing_email_to=(self.email_to or '').strip(),
             attachment_ids=[attachment.id],
         )
+        lead._restagrup_note_proposal_sent()
         lead._restagrup_advance_to('presupuesto')
         return {'type': 'ir.actions.act_window_close'}

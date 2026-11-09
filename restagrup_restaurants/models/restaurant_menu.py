@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 from odoo.tools.misc import formatLang
 
 COURSES = [
@@ -36,8 +36,21 @@ class RestaurantMenu(models.Model):
     active = fields.Boolean(string='Activo', default=True)
     sequence = fields.Integer(default=10)
     currency_id = fields.Many2one(
-        'res.currency', string='Moneda', required=True,
-        default=lambda self: self.env.company.currency_id,
+        'res.currency', string='Moneda', required=True, compute='_compute_currency_id', store=True,
+        readonly=False, precompute=True, help='La del restaurante: el coste se apunta en lo que cobra él.',
+    )
+    company_currency_id = fields.Many2one(
+        'res.currency', string='Moneda de venta', compute='_compute_company_currency_id')
+    is_foreign_currency = fields.Boolean(string='Otra moneda', compute='_compute_company_currency_id')
+    exchange_rate = fields.Float(
+        string='Cambio (€ por unidad)', digits=(16, 6), copy=False,
+        help='Lo que vale en euros 1 unidad de la moneda del restaurante, con el cambio del Banco Central Europeo'
+             ' del día en que se pulsó «Convertir a euros».',
+    )
+    rate_date = fields.Date(string='Fecha del cambio', copy=False)
+    cost_price_eur = fields.Monetary(
+        string='Coste en euros', currency_field='company_currency_id', compute='_compute_cost_price_eur',
+        store=True, help='El coste pasado a euros con el cambio guardado. Sin cambio, 0: hay que convertirlo.',
     )
     partner_city = fields.Char(related='partner_id.city', string='Población')
     season = fields.Integer(
@@ -52,7 +65,7 @@ class RestaurantMenu(models.Model):
         help='Lo que cobra el restaurante por persona.',
     )
     sale_price = fields.Monetary(
-        string='Precio venta', currency_field='currency_id', compute='_compute_sale_price', store=True,
+        string='Precio venta', currency_field='company_currency_id', compute='_compute_sale_price', store=True,
         readonly=False, help='Precio por persona al cliente. Sale solo del coste y el margen del restaurante,'
                              ' pero se puede escribir el que se quiera.',
     )
@@ -79,18 +92,55 @@ class RestaurantMenu(models.Model):
             if not menu.partner_id.is_restaurant:
                 raise ValidationError(_('"%s" no está marcado como restaurante.', menu.partner_id.display_name))
 
-    @api.depends('cost_price', 'partner_id.restaurant_margin_custom', 'partner_id.restaurant_margin_percent')
+    @api.depends('partner_id.restaurant_currency_code')
+    def _compute_currency_id(self):
+        exchange = self.env['restagrup.exchange']
+        for menu in self:
+            menu.currency_id = exchange.currency_by_code(menu.partner_id.restaurant_currency_code or 'EUR')
+
+    @api.depends('currency_id')
+    def _compute_company_currency_id(self):
+        company_currency = self.env.company.currency_id
+        for menu in self:
+            menu.company_currency_id = company_currency
+            menu.is_foreign_currency = bool(menu.currency_id) and menu.currency_id != company_currency
+
+    @api.depends('cost_price', 'currency_id', 'exchange_rate')
+    def _compute_cost_price_eur(self):
+        for menu in self:
+            if menu.is_foreign_currency:
+                menu.cost_price_eur = round(menu.cost_price * menu.exchange_rate, 2)
+            else:
+                menu.cost_price_eur = menu.cost_price
+
+    @api.depends('cost_price_eur', 'partner_id.restaurant_margin_custom', 'partner_id.restaurant_margin_percent',
+                 'partner_id.country_id')
     def _compute_sale_price(self):
         pricing = self.env['restagrup.pricing']
         for menu in self:
-            menu.sale_price = round(pricing.apply_margin(menu.cost_price, partner=menu.partner_id), 2)
+            menu.sale_price = round(pricing.apply_margin(menu.cost_price_eur, partner=menu.partner_id), 2)
 
-    @api.depends('cost_price', 'sale_price')
+    @api.depends('cost_price_eur', 'sale_price')
     def _compute_profit_percent(self):
         for menu in self:
-            menu.profit_percent = (
-                round((menu.sale_price - menu.cost_price) / menu.cost_price * 100, 2) if menu.cost_price else 0.0
-            )
+            cost = menu.cost_price_eur
+            menu.profit_percent = round((menu.sale_price - cost) / cost * 100, 2) if cost else 0.0
+
+    def action_convert_to_eur(self):
+        """«Convertir a euros», como en el CRM de Restagrup: cambio del día del BCE y precio de venta con el margen."""
+        foreign = self.filtered('is_foreign_currency')
+        if not foreign:
+            return True
+        exchange = self.env['restagrup.exchange']
+        exchange.refresh_rates(foreign.currency_id)
+        today = fields.Date.context_today(self)
+        for menu in foreign:
+            rate = exchange.eur_per_unit(menu.currency_id)
+            if not rate:
+                raise UserError(_('El Banco Central Europeo no publica el cambio de %s.', menu.currency_id.name))
+            # Al cambiar el coste en euros se recalcula el precio de venta con el margen del restaurante.
+            menu.write({'exchange_rate': rate, 'rate_date': today})
+        return True
 
     @api.constrains('season')
     def _check_season(self):
@@ -111,7 +161,7 @@ class RestaurantMenu(models.Model):
                 raise ValidationError(_('El mínimo de comensales no puede superar al máximo.'))
 
     @api.depends(
-        'name', 'sale_price', 'currency_id', 'drinks_included', 'drinks_description', 'notes', 'description',
+        'name', 'sale_price', 'drinks_included', 'drinks_description', 'notes', 'description',
         'line_ids.course', 'line_ids.name', 'line_ids.allergens', 'line_ids.sequence',
     )
     def _compute_display_text(self):
@@ -134,7 +184,8 @@ class RestaurantMenu(models.Model):
         header = menu_name = self.name or ''
         if with_price and self.sale_price:
             header = _('%(name)s — %(price)s %(symbol)s por persona', name=menu_name,
-                       price=formatLang(self.env, self.sale_price, digits=2), symbol=self.currency_id.symbol or '')
+                       price=formatLang(self.env, self.sale_price, digits=2),
+                       symbol=self.company_currency_id.symbol or '')
         parts = [header]
         description = (self.description or '').strip()
         if description:

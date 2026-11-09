@@ -89,7 +89,9 @@ class TestBookingDocuments(TransactionCase):
         self.assertIn('50 + 2 gratuidades', text)
         self.assertIn('IVA INCLUIDO', text)
         self.assertIn('ES60 0049 4434 2326 1000 5925', text)
-        self.assertIn('48 horas laborables', text)
+        self.assertIn('72 horas antes del servicio', text)
+        self.assertIn('100 % de los gastos de gestión', text)
+        self.assertNotIn('laborables', text)
 
     def test_agency_confirmation_never_shows_restaurant_cost_or_margin(self):
         text = _text(self._html(CONFIRMATION, self.order))

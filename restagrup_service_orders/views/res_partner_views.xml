@@ -34,4 +34,21 @@
             </field>
         </field>
     </record>
+
+    <!-- Ficha de agencia como la de su CRM: arriba los datos de facturación; debajo, los datos adicionales. -->
+    <record id="view_partner_form_agency_data" model="ir.ui.view">
+        <field name="name">res.partner.form.restagrup.agency.data</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='vat']/../.." position="after">
+                <group name="agency_data" string="Datos adicionales de la agencia" col="4"
+                       invisible="not is_company or is_restaurant">
+                    <field name="agency_trade_name"/>
+                    <field name="ref" string="Código"/>
+                    <field name="agency_payment_mode" widget="radio" options="{'horizontal': true}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
 </odoo>

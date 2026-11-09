@@ -25,7 +25,7 @@
             <field name="sequence">4</field>
             <field name="is_won" eval="True"/>
             <field name="restagrup_stage_key">cerrado</field>
-            <field name="restagrup_doc_prefix">EXP</field>
+            <field name="restagrup_doc_prefix">TER</field>
         </record>
 
 
