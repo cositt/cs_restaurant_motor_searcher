@@ -89,6 +89,7 @@
                                     <field name="suitable_family"/>
                                     <field name="internal_notes"/>
                                     <field name="etiqueta"/>
+                                    <field name="quote_received_date"/>
                                     <field name="quote_amount"/>
                                     <field name="quote_price_pp"/>
                                     <field name="quote_client_price_per_person"/>
@@ -202,7 +203,11 @@
                                                     <div class="o_restagrup_etiqueta_btn_row">
                                                         <button t-if="!['solicitado', 'presupuesto_recibido'].includes(record.etiqueta.raw_value)"
                                                                 name="action_mark_interesado" type="object" class="btn btn-outline-secondary">Interesado</button>
-                                                        <button name="action_mark_descartado" type="object" class="btn btn-outline-secondary">Descartar</button>
+                                                        <button t-if="record.etiqueta.raw_value != 'descartado'"
+                                                                name="action_mark_descartado" type="object" class="btn btn-outline-secondary">Descartar</button>
+                                                        <button t-if="record.etiqueta.raw_value == 'descartado' and record.quote_received_date.raw_value and record.quote_price_pp.raw_value"
+                                                                name="action_recover_quote" type="object" class="btn btn-outline-primary"
+                                                                title="Vuelve con el presupuesto que ya dio, sin pedirlo otra vez">Recuperar</button>
                                                         <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido' and record.etiqueta.raw_value != 'solicitado' and !record.warnings_text.raw_value"
                                                                 name="action_request_quote" type="object" class="btn btn-outline-primary">Pedir presupuesto</button>
                                                         <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido' and record.etiqueta.raw_value != 'solicitado' and record.warnings_text.raw_value"

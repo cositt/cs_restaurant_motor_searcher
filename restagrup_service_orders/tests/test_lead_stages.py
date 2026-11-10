@@ -12,7 +12,8 @@ class TestLeadStages(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.Lead = cls.env['crm.lead'].with_context(restagrup_skip_firewall=True)  # aquí se prueban las fases, no los avisos
+        # aquí se prueban las fases, no los avisos ni el pedido que exige pasar a expediente (test_ronda_0911)
+        cls.Lead = cls.env['crm.lead'].with_context(restagrup_skip_firewall=True, restagrup_file_without_order=True)
         cls.stage = {key: cls.env.ref('%s.stage_%s' % (MOD, key)) for key in
                      ('peticion', 'presupuesto', 'expediente', 'cerrado')}
 

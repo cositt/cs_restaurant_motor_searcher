@@ -811,9 +811,27 @@ class RestaurantSearchLine(models.Model):
             line.search_id.message_post_if_exists(_('%s: marcado como interesado.') % line.name)
 
     def action_mark_descartado(self):
+        """Descartar el elegido le quita la elección (antes seguía como elegido). El presupuesto se guarda: con
+        «Recuperar» o «Elegir» vuelve sin pedirlo otra vez (ronda de ajustes 09/11)."""
         self.write({'etiqueta': 'descartado'})
         for line in self:
+            if line.search_id.chosen_line_id == line:
+                line.search_id.chosen_line_id = False
             line.search_id.message_post_if_exists(_('%s: descartado.') % line.name)
+
+    def _has_kept_quote(self):
+        """Tenía un presupuesto ya registrado (precio y fecha de recibido)."""
+        self.ensure_one()
+        return bool(self.quote_amount and self.quote_received_date)
+
+    def action_recover_quote(self):
+        """Un restaurante descartado que ya había dado presupuesto vuelve con sus mismas condiciones."""
+        for line in self:
+            if not line._has_kept_quote():
+                raise UserError(_('%s no tenía presupuesto registrado: pídeselo.') % line.name)
+            line.etiqueta = 'presupuesto_recibido'
+            line.search_id.message_post_if_exists(_('%(name)s: recuperado con su presupuesto (%(price)s).') % {
+                'name': line.name, 'price': line._quote_price_text()})
 
     def action_rate_liked(self):
         self._set_restaurant_rating('liked')
@@ -1186,6 +1204,8 @@ class RestaurantSearchLine(models.Model):
             self.search_id.chosen_line_id = False
             self.search_id.message_post_if_exists(_('Ya no es el elegido: %s.') % self.name)
             return
+        if self.etiqueta == 'descartado' and self._has_kept_quote():
+            self.action_recover_quote()
         if self.quote_pending_confirmation:
             # El importe llegó por email y lo propuso la IA, pero nadie lo ha confirmado:
             # en vez de dar error, se abre el diálogo de registro y, al confirmarlo, se elige.

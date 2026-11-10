@@ -12,3 +12,5 @@ from . import restaurant_payment
 from . import restaurant_invoice
 from . import sale_order_staff_preview
 from . import lead_proposal
+from . import lead_cancel
+from . import lead_file

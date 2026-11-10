@@ -18,6 +18,28 @@ class RestaurantSearchPortal(models.Model):
         help='Se genera solo cuando se envía la comparativa con enlace de portal.',
     )
 
+    def restagrup_report_header(self):
+        """Datos del servicio y de la agencia para la cabecera de la propuesta en PDF (ronda de ajustes 09/11):
+        antes solo salía «Sevilla · 50 personas», sin fecha, hora, tipo de servicio ni agencia."""
+        self.ensure_one()
+        lead, event = self.lead_id, self.event_id
+        agency = lead.partner_id.commercial_partner_id if lead.partner_id else lead.partner_id
+        contact = lead.partner_id if lead.partner_id and lead.partner_id != agency else False
+        hour = event.event_time or 0.0
+        return {
+            'document': lead.restagrup_doc_number or '',
+            'group': lead.name or '',
+            'agency': agency.name or lead.partner_name or '',
+            'agency_phone': agency.phone or (contact and contact.phone) or lead.phone or '',
+            'contact': (contact and contact.name) or lead.contact_name or '',
+            'agent': lead.user_id.name or '',
+            'city': self.city or event.city or '',
+            'date': event.event_date.strftime('%d/%m/%Y') if event.event_date else '',
+            'hour': '%02d:%02d' % (int(hour), round((hour % 1) * 60)) if hour else '',
+            'service': event.event_type_id.name or '',
+            'pax': event.pax or self.min_capacity or 0,
+        }
+
     def _comparison_portal_url(self):
         """Enlace público de la comparativa; crea el token la primera vez y lo reutiliza después."""
         self.ensure_one()

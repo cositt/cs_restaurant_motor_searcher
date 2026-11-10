@@ -35,6 +35,9 @@ class RestaurantSearch(models.Model):
         line = self.chosen_line_id
         if not line:
             raise UserError(_('Elige primero un restaurante con presupuesto recibido.'))
+        if line.quote_pending_confirmation:
+            # Elegido y luego se volvió a pedir presupuesto: se confirma el precio y se sigue (ronda 09/11).
+            return line._action_open_register_and_choose()
         if line.etiqueta != 'presupuesto_recibido':
             raise UserError(_('El restaurante elegido todavía no tiene presupuesto recibido.'))
         if not line.partner_id:

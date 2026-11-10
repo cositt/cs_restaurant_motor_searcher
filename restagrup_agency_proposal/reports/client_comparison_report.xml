@@ -4,10 +4,30 @@
         <t t-call="web.external_layout">
             <div class="page">
                 <t t-set="currency" t-value="doc.env.company.currency_id"/>
-                <h2>Comparativa de restaurantes</h2>
-                <p class="text-muted">
-                    <span t-if="doc.city" t-out="doc.city"/>
-                    <t t-if="doc.min_capacity"> · <span t-out="doc.min_capacity"/> personas</t>
+                <t t-set="head" t-value="doc.restagrup_report_header()"/>
+                <h2 style="color: #222; font-weight: bold;">Propuesta de restaurantes</h2>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 13px;">
+                    <tr t-if="head['document']"><td style="width: 32%; padding: 3px 0; border-bottom: 1px solid #999;">DOCUMENTO Nº</td>
+                        <td style="padding: 3px 0; border-bottom: 1px solid #999;" t-out="head['document']"/></tr>
+                    <tr t-if="head['group']"><td style="padding: 3px 0; border-bottom: 1px solid #999;">GRUPO</td>
+                        <td style="padding: 3px 0; border-bottom: 1px solid #999;" t-out="head['group']"/></tr>
+                    <tr t-if="head['agency']"><td style="padding: 3px 0; border-bottom: 1px solid #999;">AGENCIA</td>
+                        <td style="padding: 3px 0; border-bottom: 1px solid #999;" t-out="head['agency']"/></tr>
+                    <tr t-if="head['contact']"><td style="padding: 3px 0; border-bottom: 1px solid #999;">CONTACTO</td>
+                        <td style="padding: 3px 0; border-bottom: 1px solid #999;">
+                            <span t-out="head['contact']"/><t t-if="head['agency_phone']"> · <span t-out="head['agency_phone']"/></t>
+                        </td></tr>
+                    <tr t-if="head['agent']"><td style="padding: 3px 0; border-bottom: 1px solid #999;">AGENTE RESTAGRUP</td>
+                        <td style="padding: 3px 0; border-bottom: 1px solid #999;" t-out="head['agent']"/></tr>
+                </table>
+                <h3 style="color: #222; font-weight: bold; text-decoration: underline; text-align: center;">
+                    <span t-out="head['city']"/><t t-if="head['date']"> - <span t-out="head['date']"/></t>
+                    <t t-if="head['pax']"> - PAX: <span t-out="head['pax']"/></t>
+                </h3>
+                <p style="margin-bottom: 14px;">
+                    <t t-if="head['service']">Tipo de servicio: <strong t-out="head['service']"/></t>
+                    <t t-if="head['hour']"> · Hora: <strong t-out="head['hour']"/></t>
+                    <t t-if="head['pax']"> · <t t-out="'%s personas' % head['pax']"/></t>
                 </p>
                 <t t-set="rows" t-value="doc.restagrup_comparison_rows()"/>
                 <p t-if="not rows">Todavía no hay presupuestos confirmados para comparar.</p>

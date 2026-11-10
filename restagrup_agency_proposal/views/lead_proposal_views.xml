@@ -6,12 +6,16 @@
         <field name="model">restagrup.lead.proposal.wizard</field>
         <field name="arch" type="xml">
             <form string="Enviar propuesta a la agencia">
+                <div class="alert alert-warning" role="alert" invisible="not chosen_warning">
+                    <field name="chosen_warning" readonly="1" nolabel="1"/>
+                </div>
                 <group>
                     <field name="lead_id" invisible="1"/>
                     <field name="email_to"/>
                     <field name="subject"/>
                     <field name="include_portal_link"/>
                     <field name="show_restaurants"/>
+                    <field name="let_agency_choose" invisible="not chosen_warning or not include_portal_link"/>
                 </group>
                 <field name="body" nolabel="1"/>
                 <p class="text-muted small">
