@@ -3,8 +3,6 @@
 restaurante. El acceso lo da el token del enlace del correo."""
 import hmac
 
-from markupsafe import Markup
-
 from odoo import _, http
 from odoo.http import request
 
@@ -38,17 +36,7 @@ class LeadProposalPortal(http.Controller):
 
     @http.route('/propuesta/<int:lead_id>/<string:token>/elegir', type='http', auth='public', methods=['POST'],
                 csrf=False, sitemap=False)
-    def choose(self, lead_id, token, search_id=None, line_id=None, **kw):
+    def choose(self, lead_id, token, search_id=None, line_id=None, dishes=None, **kw):
         lead = self._get_lead(lead_id, token)
-        search = lead.restagrup_restaurant_search_ids.filtered(lambda s: str(s.id) == str(search_id))
-        if search and not search.chosen_line_id:
-            line = next((row['line'] for row in search.restagrup_comparison_rows()
-                         if str(row['line'].id) == str(line_id)), None)
-            if line:
-                line._choose_line()
-                lead.message_post(
-                    body=Markup('%s') % _('La agencia ha elegido «%(name)s» para %(service)s desde el enlace de la '
-                                          'propuesta.', name=line.name, service=lead._restagrup_service_label(search)),
-                    message_type='notification', subtype_xmlid='mail.mt_note',
-                )
+        lead._restagrup_portal_choose(search_id, line_id, dishes)
         return request.redirect('/propuesta/%s/%s' % (lead.id, token))

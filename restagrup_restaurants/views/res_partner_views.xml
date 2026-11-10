@@ -57,6 +57,11 @@
                             <field name="restaurant_missing_fields" readonly="1" string="Ficha incompleta · faltan"/>
                         </group>
                     </group>
+                    <div invisible="not is_restaurant" class="mb-2">
+                        <button name="action_complete_from_google" type="object" string="Completar desde Google"
+                                icon="fa-google" class="btn-secondary"
+                                help="Rellena lo que esté vacío (dirección, teléfono, web, valoración); lo escrito a mano no se toca."/>
+                    </div>
                     <group invisible="not is_restaurant">
                         <field name="restaurant_internal_notes" nolabel="1" placeholder="Notas internas del equipo..."/>
                     </group>
@@ -75,6 +80,11 @@
         <field name="model">res.partner</field>
         <field name="arch" type="xml">
             <list string="Restaurantes">
+                <header>
+                    <button name="action_data_request_campaign" type="object" string="Pedir datos que faltan"
+                            display="always" class="btn-secondary"
+                            help="A los restaurantes con los que se ha trabajado este año y con la ficha incompleta: el correo de siempre, por la cola de aprobación."/>
+                </header>
                 <field name="name"/>
                 <field name="city"/>
                 <field name="restaurant_capacity"/>

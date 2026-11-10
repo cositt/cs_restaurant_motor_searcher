@@ -133,3 +133,31 @@ class TestRonda0911Ui(TransactionCase):
             self.assertIn(needle, arch)
         for noise in ('name="property_payment_term_id"', 'name="category_id"', 'name="user_id"'):
             self.assertNotIn(noise, arch)
+
+    # --- vista por día en la propuesta ---
+
+    def test_search_name_starts_with_the_day(self):
+        lead = self.env['crm.lead'].create({'name': 'Por días'})
+        event = self.env['restagrup.lead.event'].create({
+            'lead_id': lead.id, 'city': 'Sevilla', 'pax': 40, 'event_date': '2026-12-15', 'event_time': 21.0,
+            'event_type_id': self.env.ref('restagrup_core.event_type_dinner').id})
+        search = self.env['restagrup.restaurant.search'].create({
+            'lead_id': lead.id, 'event_id': event.id, 'city': 'Sevilla', 'min_capacity': 40})
+        self.assertEqual(search.display_name, '15/12 21:00 · Cena · Sevilla · 40 pax')
+
+    def test_proposal_tab_has_the_menu_eye(self):
+        proposal = self.lead_arch.split('name="restagrup_proposal"', 1)[1].split('</page>', 1)[0]
+        self.assertIn('action_preview_menu', proposal)
+
+    def test_menu_eye_on_a_quote_opens_its_dishes(self):
+        partner = self.env['res.partner'].create({'name': 'Casa Ojo Propuesta', 'is_restaurant': True})
+        menu = self.env['restagrup.restaurant.menu'].create({
+            'name': 'Menú cena', 'partner_id': partner.id, 'cost_price': 20.0, 'description': 'Primero: crema'})
+        lead = self.env['crm.lead'].create({'name': 'Ojo'})
+        search = self.env['restagrup.restaurant.search'].create({'lead_id': lead.id, 'city': 'Sevilla'})
+        line = self.env['restagrup.restaurant.search.line'].create({
+            'search_id': search.id, 'source': 'partner', 'name': partner.name, 'partner_id': partner.id,
+            'menu_id': menu.id})
+        action = line.action_preview_menu()
+        self.assertEqual((action['res_model'], action['res_id'], action['target']),
+                         ('restagrup.restaurant.menu', menu.id, 'new'))

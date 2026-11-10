@@ -136,7 +136,7 @@ export class RestaurantMapAction extends Component {
         if (line.etiqueta !== "presupuesto_recibido") {
             const quoteLabel = line.etiqueta === "solicitado" ? _t("Reenviar petición") : _t("Pedir presupuesto");
             this._addActionButton(actions, quoteLabel, line, "action_request_quote");
-            this._addActionButton(actions, _t("Pegar respuesta"), line, "action_open_quote_form");
+            this._addActionButton(actions, _t("Registrar presupuesto"), line, "action_open_quote_form");
         }
         this._addActionButton(
             actions, line.is_chosen ? _t("Quitar elegido") : _t("Elegir"), line, "action_toggle_chosen",

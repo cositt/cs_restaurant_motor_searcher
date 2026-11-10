@@ -18,3 +18,5 @@ from . import restaurant_menu_dishes
 from . import search_budget
 from . import search_menu_pick
 from . import partner_address
+from . import catalog_quote
+from . import partner_google_fill

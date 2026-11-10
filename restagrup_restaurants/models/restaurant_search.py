@@ -184,19 +184,27 @@ class RestaurantSearch(models.Model):
         searches.lead_id._restagrup_review_extraction()
         return searches
 
-    @api.depends('city', 'zip', 'min_capacity', 'event_id.event_type_id', 'event_id.event_date')
+    @api.depends('city', 'zip', 'min_capacity', 'event_id.event_type_id', 'event_id.event_date',
+                 'event_id.event_time')
     def _compute_display_name(self):
+        """Día primero (ronda de ajustes 09/11): «15/12 21:00 · Cena · Sevilla · 40 pax», para ver la propuesta
+        por días."""
         for search in self:
             location = search.city or _('Sin ciudad')
             if search.zip:
                 location = f'{location} {search.zip}'
-            parts = [location]
+            event = search.event_id
+            parts = []
+            if event.event_date:
+                when = event.event_date.strftime('%d/%m')
+                if event.event_time:
+                    when += ' %02d:%02d' % divmod(round(event.event_time * 60), 60)
+                parts.append(when)
+            if event.event_type_id:
+                parts.append(event.event_type_id.name)
+            parts.append(location)
             if search.min_capacity:
                 parts.append(_('%s pax') % search.min_capacity)
-            if search.event_id.event_type_id:
-                parts.append(search.event_id.event_type_id.name)
-            if search.event_id.event_date:
-                parts.append(search.event_id.event_date.strftime('%d/%m'))
             search.display_name = ' · '.join(parts)
 
     @api.depends('line_ids')
