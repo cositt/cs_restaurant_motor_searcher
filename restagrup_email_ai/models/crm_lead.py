@@ -13,8 +13,10 @@ viaje envían a un restaurante-broker, en español o en inglés. Hoy es {hoy}.
 Devuelve SOLO un objeto JSON, sin texto adicional, con estas claves exactas:
 "eventos": lista con UN objeto por cada servicio pedido (cada comida, cena, desayuno... en cada
 ciudad y fecha). Cada objeto tiene: "ciudad" (string o null), "fecha" (string YYYY-MM-DD o
-null), "hora" (string HH:MM en 24 h o null), "tipo" (uno de: desayuno, aperitivo, comida, cena, coffee_break, otro; o null si el
-texto no lo dice), "pax" (entero o null), "precio_persona" (número: el presupuesto por persona en euros que indica la
+null), "hora" (string HH:MM en 24 h o null), "tipo" (uno de: desayuno, aperitivo, comida, merienda, cena, coffee_break, otro;
+o null si el texto no lo dice), "pax" (entero o null: las personas del grupo), "acompanantes" (entero: chóferes,
+conductores, guías o acompañantes que se nombran aparte y también comen, p. ej. 2 para «48 personas + chófer y guía»;
+0 si no se nombra ninguno), "precio_persona" (número: el presupuesto por persona en euros que indica la
 agencia, p. ej. 35 si dice «unos 35 € por persona»; null si no lo dice) y "notas" (string corto con
 requisitos como alergias, o null). Si una fecha no indica el año, usa la próxima vez que
 ocurra a partir de hoy. Si no se pide ningún servicio, "eventos" es una lista vacía.
@@ -33,6 +35,7 @@ EVENT_TYPE_XMLIDS = {
     'desayuno': 'restagrup_core.event_type_breakfast',
     'aperitivo': 'restagrup_core.event_type_aperitif',
     'comida': 'restagrup_core.event_type_lunch',
+    'merienda': 'restagrup_core.event_type_snack',
     'cena': 'restagrup_core.event_type_dinner',
     'coffee_break': 'restagrup_core.event_type_coffee_break',
     'otro': 'restagrup_core.event_type_other',
@@ -94,7 +97,7 @@ class CrmLead(models.Model):
         first = event_vals[0] if event_vals else {}
         self.write({
             'restagrup_city': (data.get('ciudad') or first.get('city') or '') or False,
-            'restagrup_pax': self._restagrup_safe_int(data.get('num_pax') or first.get('pax')),
+            'restagrup_pax': first.get('pax') or self._restagrup_safe_int(data.get('num_pax')),  # ya con acompañantes
             'restagrup_service_date': (
                 self._restagrup_safe_date(data.get('fecha_servicio')) or first.get('event_date') or False
             ),
@@ -190,13 +193,21 @@ class CrmLead(models.Model):
         for event in events:
             if not isinstance(event, dict):
                 continue
+            event_type_id = self._restagrup_event_type_id(event.get('tipo'))
+            pax = self._restagrup_safe_int(event.get('pax'))
+            companions = self._restagrup_safe_int(event.get('acompanantes'))
+            hour = self._restagrup_safe_hour(event.get('hora'))
+            default_hour = 0.0 if hour or not event_type_id else \
+                self.env['restagrup.event.type'].browse(event_type_id).default_time
             vals_list.append({
                 'sequence': 10 * (len(vals_list) + 1),
                 'city': (event.get('ciudad') or '') or False,
                 'event_date': self._restagrup_safe_date(event.get('fecha')),
-                'event_time': self._restagrup_safe_hour(event.get('hora')),
-                'event_type_id': self._restagrup_event_type_id(event.get('tipo')),
-                'pax': self._restagrup_safe_int(event.get('pax')),
+                'event_time': hour or default_hour,
+                'event_time_is_default': bool(default_hour),
+                'event_type_id': event_type_id,
+                # Siempre el total: «48 + chófer y guía» son 50 (ronda de ajustes 09/11).
+                'pax': pax + companions if pax else pax,
                 'budget_pp': self._restagrup_safe_price(event.get('precio_persona')),
                 'notes': (event.get('notas') or '') or False,
                 'state': 'draft',

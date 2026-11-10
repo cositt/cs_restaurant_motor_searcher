@@ -96,16 +96,16 @@ class RestaurantSearchLineData(models.Model):
     def _data_request_content(self, signer_name):
         """Asunto y texto del correo que pide al restaurante solo los datos que faltan en su ficha."""
         self.ensure_one()
-        missing = self.partner_id._restaurant_missing_labels()
+        missing = self.partner_id._restaurant_request_labels()
         values = dict(self._mail_values(signer_name), restaurante=self.name or '',
-                      faltan='\n'.join('- %s' % label for label in missing))
+                      faltan='\n'.join('* %s' % label for label in missing))
 
         def fallback():
             subject = _('Datos para trabajar con grupos — %s') % self.env.company.name
             lines = [
                 _('Hola,'), '',
                 _('Para poder proponeros grupos nos faltan estos datos de %s:') % self.name, '',
-            ] + ['- %s' % label for label in missing] + ['', _('Gracias,'), signer_name]
+            ] + ['* %s' % label for label in missing] + ['', _('Gracias,'), signer_name]
             return subject, '\n'.join(lines)
 
         return self.env['restagrup.mail.template']._compose('data_request', values, fallback)

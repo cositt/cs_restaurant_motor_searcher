@@ -46,8 +46,10 @@
                         invisible="not restagrup_quote_ready or restagrup_stage_key in ('expediente', 'cerrado')"/>
             </xpath>
             <!-- En el expediente un servicio nuevo se añade con «Añadir servicio», no con un presupuesto suelto -->
+            <!-- Fuera «Nuevo presupuesto» en todas las fases (ronda de ajustes 09/11): el presupuesto sale de
+                 «Crear presupuesto» con lo elegido, o al pasar a expediente. -->
             <xpath expr="//header/button[@name='action_sale_quotations_new']" position="attributes">
-                <attribute name="invisible" add="restagrup_stage_key in ('expediente', 'cerrado')" separator=" or "/>
+                <attribute name="invisible">1</attribute>
             </xpath>
             <xpath expr="//page[@name='restagrup_events']" position="after">
                 <page name="restagrup_proposal" string="Propuesta" invisible="not restagrup_proposal_ready">

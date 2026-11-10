@@ -16,9 +16,15 @@ RESTAURANT_RATING_SELECTION = [
 ]
 
 # Datos sin los que no se puede valorar un restaurante para un grupo (A3).
+# Lo que de verdad hace falta para trabajar con un restaurante (ronda de ajustes 09/11): aforo e idioma ya no.
 RESTAURANT_REQUIRED_FIELDS = (
-    'restaurant_capacity', 'restaurant_closed_weekday', 'restaurant_language',
-    'restaurant_group_manager', 'restaurant_group_mobile', 'restaurant_iban',
+    'restaurant_closed_weekday', 'restaurant_group_manager', 'restaurant_group_mobile', 'restaurant_iban',
+)
+# Cómo se pide cada dato en el correo al restaurante (texto de Conchita).
+RESTAURANT_REQUEST_LABELS = (
+    (('restaurant_closed_weekday',), 'Día de cierre.'),
+    (('restaurant_group_manager', 'restaurant_group_mobile'), 'Responsable de reservas de grupos y su móvil.'),
+    (('restaurant_iban',), 'Cuenta bancaria para el prepago en caso de confirmación.'),
 )
 
 
@@ -128,6 +134,11 @@ class ResPartner(models.Model):
         booleano no distingue «no hay» de «sin rellenar»."""
         self.ensure_one()
         return [self._fields[name].string for name in RESTAURANT_REQUIRED_FIELDS if not self[name]]
+
+    def _restaurant_request_labels(self):
+        """Los datos que faltan, redactados para el correo que se los pide al restaurante."""
+        self.ensure_one()
+        return [label for names, label in RESTAURANT_REQUEST_LABELS if any(not self[name] for name in names)]
 
     @api.onchange('is_restaurant')
     def _onchange_is_restaurant(self):

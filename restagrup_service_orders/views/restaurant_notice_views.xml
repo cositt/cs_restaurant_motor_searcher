@@ -271,6 +271,7 @@
                 <field name="city"/>
                 <field name="email"/>
                 <field name="phone"/>
+                <field name="restagrup_origin_id" optional="show"/>
                 <field name="child_ids" string="Contactos" widget="many2many_tags" optional="hide"/>
             </list>
         </field>

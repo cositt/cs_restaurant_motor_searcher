@@ -81,6 +81,7 @@
                 <field name="restaurant_bus_parking"/>
                 <field name="restaurant_cuisine_type"/>
                 <field name="phone"/>
+                <field name="email"/>
             </list>
         </field>
     </record>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Restagrup - Restaurantes',
-    'version': '19.0.1.3.0',
+    'version': '19.0.1.4.0',
     'category': 'Custom',
     'summary': 'Ficha de restaurante y buscador (aforo, parking, Google Places, ranking)',
     'description': '''

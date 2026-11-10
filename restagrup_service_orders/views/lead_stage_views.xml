@@ -26,6 +26,10 @@
             <xpath expr="//header/button[@name='action_set_won_rainbowman']" position="attributes">
                 <attribute name="invisible">1</attribute>
             </xpath>
+            <!-- Orden de Conchita (09/11): 1 Pasar a presupuesto, 2 Pasar a expediente, 3 Rechazar presupuesto -->
+            <xpath expr="//header/button[@name='action_pass_to_file']" position="after">
+                <xpath expr="//header/button[@data-hotkey='l']" position="move"/>
+            </xpath>
             <xpath expr="//header/button[@data-hotkey='l']" position="attributes">
                 <attribute name="string">Rechazar presupuesto</attribute>
                 <attribute name="invisible" add="restagrup_stage_key in ('expediente', 'cerrado')" separator=" or "/>

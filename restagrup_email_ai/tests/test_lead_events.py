@@ -145,7 +145,8 @@ class TestLeadEvents(TransactionCase):
             {'ciudad': 'Sevilla', 'fecha': None, 'hora': 'a mediodía', 'tipo': 'comida', 'pax': 10, 'notas': None},
             {'ciudad': 'Sevilla', 'fecha': None, 'hora': '25:00', 'tipo': 'comida', 'pax': 10, 'notas': None},
         ]}
-        self.assertEqual(self._extract(data).restagrup_event_ids.mapped('event_time'), [13.5, 0.0, 0.0])
+        # Hora ilegible: la de base de la comida (13:30, ronda de ajustes 09/11).
+        self.assertEqual(self._extract(data).restagrup_event_ids.mapped('event_time'), [13.5, 13.5, 13.5])
 
     def test_prompt_asks_for_the_hour_and_the_agency(self):
         lead = self.env['crm.lead'].create({'name': 'Prompt'})

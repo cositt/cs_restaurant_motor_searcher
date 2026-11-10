@@ -168,6 +168,15 @@ class RestaurantMenu(models.Model):
         for menu in self:
             menu.display_text = menu._render_text()
 
+    def action_preview_dishes(self):
+        """El «ojo»: nombre, precio y platos del menú en una ventana, sin salir de la lista."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window', 'name': self.name, 'res_model': self._name, 'res_id': self.id,
+            'view_mode': 'form', 'target': 'new',
+            'views': [(self.env.ref('restagrup_restaurants.view_restaurant_menu_preview_form').id, 'form')],
+        }
+
     def _render_text_for_restaurant(self):
         """Texto del menú para escribir al propio restaurante: con su precio (el de coste), nunca el nuestro."""
         self.ensure_one()

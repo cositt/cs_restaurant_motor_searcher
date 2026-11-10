@@ -60,9 +60,10 @@ class TestRestaurantDataSheet(TransactionCase):
     def test_empty_restaurant_is_incomplete_and_lists_missing_fields(self):
         partner = self.Partner.create({'name': 'Casa Vacía', 'is_restaurant': True})
         self.assertTrue(partner.restaurant_is_incomplete)
-        for label in ('Aforo (grupos)', 'Día de cierre', 'Idioma', 'Responsable de grupos', 'Móvil del responsable',
-                      'Cuenta bancaria'):
+        for label in ('Día de cierre', 'Responsable de grupos', 'Móvil del responsable', 'Cuenta bancaria'):
             self.assertIn(label, partner.restaurant_missing_fields)
+        # Ronda de ajustes 09/11: aforo e idioma ya no hacen falta para trabajar con el restaurante.
+        self.assertNotIn('Idioma', partner.restaurant_missing_fields)
 
     def test_complete_restaurant_has_nothing_missing(self):
         partner = self.Partner.create(self._complete_vals())
@@ -81,7 +82,7 @@ class TestRestaurantDataSheet(TransactionCase):
         partner = self.Partner.create({'name': 'Casa Vacía 2', 'is_restaurant': True, 'email': 'v@example.com'})
         line = self._line(partner)
         self.assertTrue(line.partner_incomplete)
-        self.assertIn('Idioma', line.missing_fields_text)
+        self.assertIn('Cuenta bancaria', line.missing_fields_text)
 
     def test_google_line_without_partner_is_not_flagged_incomplete(self):
         line = self.Line.create({'search_id': self.search.id, 'source': 'google', 'name': 'Google Bar'})
@@ -139,7 +140,7 @@ class TestRestaurantDataSheet(TransactionCase):
         self.assertEqual(mail.state, 'pending')
         self.assertEqual(mail.recipient_email, 'parcial@example.com')
         self.assertIn('Día de cierre', mail.body)
-        self.assertIn('Responsable de grupos', mail.body)
+        self.assertIn('Responsable de reservas de grupos', mail.body)
         self.assertNotIn('Idioma', mail.body)
         self.assertFalse(line.message_ids.filtered(lambda m: m.message_type == 'email'))
 

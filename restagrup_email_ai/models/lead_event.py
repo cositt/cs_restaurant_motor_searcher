@@ -18,6 +18,10 @@ class RestagrupLeadEvent(models.Model):
     city = fields.Char(string='Ciudad')
     event_date = fields.Date(string='Fecha')
     event_time = fields.Float(string='Hora', help='Hora del servicio (p. ej. 14:00). Pasa al presupuesto de venta.')
+    event_time_is_default = fields.Boolean(
+        string='Hora de base', copy=False,
+        help='La hora la puso el sistema por el tipo de servicio (el correo no la decía): si la agencia la da, '
+             'se sustituye.')
     event_type_id = fields.Many2one('restagrup.event.type', string='Tipo de servicio', ondelete='restrict')
     pax = fields.Integer(string='Comensales')
     notes = fields.Text(string='Notas')
@@ -37,6 +41,14 @@ class RestagrupLeadEvent(models.Model):
         help='Borrador: lo propuso la IA o se escribió a mano y aún no se han buscado restaurantes.',
     )
     display_name = fields.Char(compute='_compute_display_name', string='Servicio')
+
+    @api.onchange('event_type_id')
+    def _onchange_event_type_default_time(self):
+        """Al elegir el tipo a mano, su hora de base si aún no hay hora (comida 13:30, cena 21:00…)."""
+        for event in self:
+            if event.event_type_id and (not event.event_time or event.event_time_is_default):
+                event.event_time = event.event_type_id.default_time
+                event.event_time_is_default = bool(event.event_time)
 
     @api.depends('city', 'event_date', 'event_type_id', 'pax')
     def _compute_display_name(self):
@@ -67,6 +79,9 @@ class RestagrupLeadEvent(models.Model):
         return events
 
     def write(self, vals):
+        # Una hora escrita a mano ya no es la de base (ronda de ajustes 09/11).
+        if 'event_time' in vals and 'event_time_is_default' not in vals:
+            vals = dict(vals, event_time_is_default=False)
         if 'budget_pp' in vals:
             if vals['budget_pp']:
                 vals = {**vals, 'budget_is_estimate': False}
