@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Canales de captación de agencias (ronda de ajustes 09/11). Se pueden añadir más en Configuración. -->
+    <record id="agency_origin_ruben" model="restagrup.agency.origin"><field name="name">Rubén</field><field name="sequence">10</field></record>
+    <record id="agency_origin_ma" model="restagrup.agency.origin"><field name="name">MA</field><field name="sequence">20</field></record>
+    <record id="agency_origin_erika" model="restagrup.agency.origin"><field name="name">Erika</field><field name="sequence">30</field></record>
+    <record id="agency_origin_amelia" model="restagrup.agency.origin"><field name="name">Amelia</field><field name="sequence">40</field></record>
+    <record id="agency_origin_instagram" model="restagrup.agency.origin"><field name="name">Instagram</field><field name="sequence">50</field></record>
+    <record id="agency_origin_web" model="restagrup.agency.origin"><field name="name">Web</field><field name="sequence">60</field></record>
+</odoo>

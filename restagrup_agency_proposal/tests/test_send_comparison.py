@@ -84,7 +84,7 @@ class TestSendComparison(TransactionCase):
         self.assertEqual(self.lead.stage_id, stage)
 
     def test_sending_again_does_not_move_a_group_that_is_already_further(self):
-        self.lead.with_context(restagrup_skip_firewall=True).action_pass_to_file()
+        self.lead.with_context(restagrup_skip_firewall=True, restagrup_file_without_order=True).action_pass_to_file()
         self._wizard().action_send()
         self.assertEqual(self.lead.stage_id, self.env.ref('restagrup_service_orders.stage_expediente'))
 

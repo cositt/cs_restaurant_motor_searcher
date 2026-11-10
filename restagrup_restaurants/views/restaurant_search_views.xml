@@ -89,11 +89,14 @@
                                     <field name="suitable_family"/>
                                     <field name="internal_notes"/>
                                     <field name="etiqueta"/>
+                                    <field name="quote_received_date"/>
                                     <field name="quote_amount"/>
                                     <field name="quote_price_pp"/>
                                     <field name="quote_client_price_per_person"/>
                                     <field name="quote_days_pending"/>
                                     <field name="quote_is_stale"/>
+                                    <field name="quote_availability_pending"/>
+                                    <field name="partner_menu_count"/>
                                     <field name="partner_restaurant_rating"/>
                                     <field name="is_chosen"/>
                                     <field name="partner_incomplete"/>
@@ -196,13 +199,19 @@
                                                         💶 <t t-esc="record.quote_client_price_per_person.value"/> €/pers. · propuesto por IA, sin confirmar
                                                         <small class="o_restagrup_quote_cost d-block text-muted">coste <t t-esc="record.quote_price_pp.value"/> €/pers.</small>
                                                     </span>
+                                                    <span class="badge text-bg-warning" t-if="record.quote_availability_pending.raw_value"
+                                                          title="Presupuesto con el precio del catálogo: el restaurante aún no ha confirmado que tenga sitio">Disponibilidad sin confirmar</span>
                                                     <span class="o_restagrup_stale_badge" t-if="record.quote_is_stale.raw_value">
                                                         ⚠ <t t-esc="record.quote_days_pending.raw_value"/> días sin respuesta
                                                     </span>
                                                     <div class="o_restagrup_etiqueta_btn_row">
                                                         <button t-if="!['solicitado', 'presupuesto_recibido'].includes(record.etiqueta.raw_value)"
                                                                 name="action_mark_interesado" type="object" class="btn btn-outline-secondary">Interesado</button>
-                                                        <button name="action_mark_descartado" type="object" class="btn btn-outline-secondary">Descartar</button>
+                                                        <button t-if="record.etiqueta.raw_value != 'descartado'"
+                                                                name="action_mark_descartado" type="object" class="btn btn-outline-secondary">Descartar</button>
+                                                        <button t-if="record.etiqueta.raw_value == 'descartado' and record.quote_received_date.raw_value and record.quote_price_pp.raw_value"
+                                                                name="action_recover_quote" type="object" class="btn btn-outline-primary"
+                                                                title="Vuelve con el presupuesto que ya dio, sin pedirlo otra vez">Recuperar</button>
                                                         <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido' and record.etiqueta.raw_value != 'solicitado' and !record.warnings_text.raw_value"
                                                                 name="action_request_quote" type="object" class="btn btn-outline-primary">Pedir presupuesto</button>
                                                         <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido' and record.etiqueta.raw_value != 'solicitado' and record.warnings_text.raw_value"
@@ -213,7 +222,13 @@
                                                         <button t-if="record.quote_pending_confirmation.raw_value"
                                                                 name="action_register_quote" type="object" class="btn btn-primary">Confirmar presupuesto</button>
                                                         <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido'"
-                                                                name="action_open_quote_form" type="object" class="btn btn-outline-primary">Pegar respuesta</button>
+                                                                name="action_open_quote_form" type="object" class="btn btn-outline-primary"
+                                                                title="Por correo, WhatsApp o teléfono: pega su respuesta o escribe el precio">Registrar presupuesto</button>
+                                                        <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido' and record.partner_menu_count.raw_value"
+                                                                name="action_quote_from_catalog" type="object" class="btn btn-outline-primary"
+                                                                title="Presupuesto con el menú de su ficha, sin esperar a que conteste (disponibilidad sin confirmar)">Precio de catálogo</button>
+                                                        <button t-if="record.quote_availability_pending.raw_value"
+                                                                name="action_confirm_availability" type="object" class="btn btn-outline-success">Disponibilidad OK</button>
                                                         <button t-if="record.etiqueta.raw_value == 'solicitado' or record.etiqueta.raw_value == 'presupuesto_recibido'"
                                                                 name="action_view_conversation" type="object" class="btn btn-outline-secondary">Ver conversación</button>
                                                         <button name="action_toggle_chosen" type="object" class="btn btn-outline-success">
@@ -267,7 +282,13 @@
                 <group>
                     <field name="name" readonly="1"/>
                 </group>
-                <group string="1. Pega la respuesta del restaurante">
+                <div class="alert alert-info" role="status" invisible="context.get('restagrup_from_catalog')">
+                    ¿Te lo dio por WhatsApp o por teléfono? Escribe directamente el precio por persona en el paso 2.
+                </div>
+                <div class="alert alert-warning" role="status" invisible="not context.get('restagrup_from_catalog')">
+                    Elige el menú de su ficha: su precio será el presupuesto (disponibilidad sin confirmar).
+                </div>
+                <group string="1. Pega la respuesta del restaurante" invisible="context.get('restagrup_from_catalog')">
                     <field name="quote_raw_text" nolabel="1" colspan="2"
                            placeholder="Pega aquí el correo o el menú tal cual lo manda el restaurante (con el precio por persona)..."/>
                     <button name="action_extract_quote_from_text" type="object" icon="fa-magic"

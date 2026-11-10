@@ -17,3 +17,7 @@ from . import test_lead_proposal
 from . import test_reunion_0511
 from . import test_reunion_0511_medio
 from . import test_restaurant_payment_terms
+from . import test_ronda_0911
+from . import test_ronda_0911_ui
+from . import test_ronda_0911_file
+from . import test_ronda_0911_conversation

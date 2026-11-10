@@ -6,12 +6,16 @@
         <field name="model">restagrup.lead.proposal.wizard</field>
         <field name="arch" type="xml">
             <form string="Enviar propuesta a la agencia">
+                <div class="alert alert-warning" role="alert" invisible="not chosen_warning">
+                    <field name="chosen_warning" readonly="1" nolabel="1"/>
+                </div>
                 <group>
                     <field name="lead_id" invisible="1"/>
                     <field name="email_to"/>
                     <field name="subject"/>
                     <field name="include_portal_link"/>
                     <field name="show_restaurants"/>
+                    <field name="let_agency_choose" invisible="not chosen_warning or not include_portal_link"/>
                 </group>
                 <field name="body" nolabel="1"/>
                 <p class="text-muted small">
@@ -42,8 +46,10 @@
                         invisible="not restagrup_quote_ready or restagrup_stage_key in ('expediente', 'cerrado')"/>
             </xpath>
             <!-- En el expediente un servicio nuevo se añade con «Añadir servicio», no con un presupuesto suelto -->
+            <!-- Fuera «Nuevo presupuesto» en todas las fases (ronda de ajustes 09/11): el presupuesto sale de
+                 «Crear presupuesto» con lo elegido, o al pasar a expediente. -->
             <xpath expr="//header/button[@name='action_sale_quotations_new']" position="attributes">
-                <attribute name="invisible" add="restagrup_stage_key in ('expediente', 'cerrado')" separator=" or "/>
+                <attribute name="invisible">1</attribute>
             </xpath>
             <xpath expr="//page[@name='restagrup_events']" position="after">
                 <page name="restagrup_proposal" string="Propuesta" invisible="not restagrup_proposal_ready">
@@ -63,9 +69,12 @@
                             <field name="name" string="Restaurante" decoration-bf="is_chosen"
                                    decoration-success="is_chosen"/>
                             <field name="menu_id"/>
+                            <button name="action_preview_menu" type="object" icon="fa-eye" title="Ver los platos"
+                                    class="btn-link" invisible="not menu_id"/>
                             <field name="quote_client_price_per_person" string="Agencia (€/pers.)"/>
                             <field name="quote_price_pp" string="Restaurante (€/pers.)" optional="show"/>
                             <field name="quote_notes" optional="hide"/>
+                            <field name="agency_choice_notes" string="Pidió la agencia" optional="show"/>
                             <button name="action_toggle_chosen" type="object" string="Elegir" icon="fa-check"
                                     class="btn-link"
                                     invisible="is_chosen or parent.restagrup_stage_key in ('expediente', 'cerrado')"/>
@@ -74,6 +83,17 @@
                                     invisible="not is_chosen or parent.restagrup_stage_key in ('expediente', 'cerrado')"/>
                         </list>
                     </field>
+                </page>
+                <page name="restagrup_conversation" string="Conversación">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge" style="background:#2f6fb3">Agencia</span>
+                        <span class="badge" style="background:#c46a12">Restaurante</span>
+                        <span class="badge" style="background:#2e8b57">RestaGrup</span>
+                        <span class="ms-auto">Ver:</span>
+                        <field name="restagrup_conversation_filter" widget="radio" options="{'horizontal': true}"
+                               nolabel="1"/>
+                    </div>
+                    <field name="restagrup_conversation_html" nolabel="1" readonly="1"/>
                 </page>
                 <page name="restagrup_menus" string="Menús" invisible="not restagrup_candidate_menu_ids">
                     <div class="alert alert-success mb-2" role="status"
@@ -94,6 +114,30 @@
                         </list>
                     </field>
                 </page>
+            </xpath>
+        </field>
+    </record>
+
+
+    <!-- Expediente con sus documentos a mano (ronda de ajustes 09/11) -->
+    <record id="crm_lead_view_form_file_documents" model="ir.ui.view">
+        <field name="name">crm.lead.form.restagrup.file.documents</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_send_agency_confirmation" type="object" string="Enviar confirmación a la agencia"
+                        class="btn-primary" invisible="restagrup_stage_key != 'expediente'"
+                        help="Correo a la agencia con la confirmación en PDF: la reserva queda confirmada y se le pide el menú, el contacto del guía y las intolerancias."/>
+                <button name="action_send_restaurant_confirmations" type="object"
+                        string="Enviar confirmación a restaurantes" class="btn-secondary"
+                        invisible="restagrup_stage_key != 'expediente'"/>
+                <button name="action_download_agency_confirmation" type="object" string="Conf. agencia"
+                        icon="fa-download" class="btn-secondary" invisible="restagrup_stage_key not in ('expediente', 'cerrado')"/>
+                <button name="action_download_restaurant_confirmation" type="object" string="Conf. restaurante"
+                        icon="fa-download" class="btn-secondary" invisible="restagrup_stage_key not in ('expediente', 'cerrado')"/>
+                <button name="action_download_voucher" type="object" string="Bono agencia"
+                        icon="fa-download" class="btn-secondary" invisible="restagrup_stage_key not in ('expediente', 'cerrado')"/>
             </xpath>
         </field>
     </record>

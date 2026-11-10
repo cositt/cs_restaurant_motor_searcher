@@ -31,6 +31,8 @@
         'views/purchase_order_views.xml',
         'views/restaurant_search_views.xml',
         'views/res_partner_views.xml',
+        'views/agency_form_views.xml',
+        'data/agency_origin_data.xml',
         'views/product_template_views.xml',
         'views/menu_selection_wizard_views.xml',
         'views/restaurant_notice_views.xml',

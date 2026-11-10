@@ -109,4 +109,4 @@ class TestSearchScreenConchita(TransactionCase):
 
     def test_card_button_says_paste_reply(self):
         card = self._form_arch().split('<t t-name="card">')[1]
-        self.assertIn('Pegar respuesta', card)
+        self.assertIn("Registrar presupuesto", card)

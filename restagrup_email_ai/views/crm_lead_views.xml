@@ -13,9 +13,13 @@
                     </div>
                     <field name="restagrup_event_ids" nolabel="1">
                         <list editable="bottom">
+                            <control>
+                                <create string="Añadir un servicio"/>
+                            </control>
                             <field name="sequence" widget="handle"/>
                             <field name="event_date"/>
                             <field name="event_time" widget="float_time"/>
+                            <field name="event_time_is_default" column_invisible="1"/>
                             <field name="event_type_id" options="{'no_create': True}"/>
                             <field name="city"/>
                             <field name="pax"/>

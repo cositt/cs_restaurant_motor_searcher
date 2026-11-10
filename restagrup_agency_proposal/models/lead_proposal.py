@@ -110,7 +110,9 @@ class CrmLeadProposal(models.Model):
             raise UserError(_('Elige antes un restaurante para cada servicio. Falta en: %s.') % '; '.join(
                 self._restagrup_service_label(search) for search in missing))
         for search in searches.filtered(lambda s: not s.sale_order_id):
-            search.action_create_sale_order()
+            result = search.action_create_sale_order()
+            if isinstance(result, dict) and result.get('res_model') not in (None, 'sale.order'):
+                return result  # falta un paso (confirmar el precio o elegir el menú): se abre y se sigue luego
         order = searches.sale_order_id.filtered(lambda o: o.state != 'cancel')[:1]
         return {
             'type': 'ir.actions.act_window', 'res_model': 'sale.order', 'res_id': order.id,
@@ -133,6 +135,20 @@ class LeadProposalWizard(models.TransientModel):
     show_restaurants = fields.Boolean(
         string='Mostrar los restaurantes', default=True,
         help='Si no se marca, la agencia ve «Opción 1», «Opción 2»… con su menú y su precio, sin el nombre.')
+
+    chosen_warning = fields.Char(string='Ya elegido', compute='_compute_chosen_warning')
+    let_agency_choose = fields.Boolean(
+        string='Que elija la agencia', default=True,
+        help='Ya hay restaurante elegido aquí. Marcado, se quita esa elección al enviar y la agencia elige desde '
+             'el enlace; sin marcar, el enlace le muestra lo ya elegido y no podrá cambiarlo.')
+
+    @api.depends('lead_id')
+    def _compute_chosen_warning(self):
+        for wizard in self:
+            chosen = wizard.lead_id.restagrup_restaurant_search_ids.chosen_line_id
+            wizard.chosen_warning = _(
+                'Ya has elegido %s. Si la agencia tiene que elegir con el enlace, deja marcado «Que elija la agencia».'
+            ) % ', '.join(chosen.mapped('name')) if chosen else False
 
     @api.model
     def default_get(self, fields_list):
@@ -197,6 +213,11 @@ class LeadProposalWizard(models.TransientModel):
         lead = self.lead_id
         searches = lead._restagrup_proposal_searches()
         searches.write({'restaurant_visible': self.show_restaurants})
+        if self.include_portal_link and self.let_agency_choose:
+            chosen = searches.filtered(lambda s: s.chosen_line_id and not s.sale_order_id)
+            if chosen:
+                chosen.write({'chosen_line_id': False})
+                lead.message_post(body=_('Elección quitada al enviar la propuesta: elige la agencia desde el enlace.'))
         pdf, _kind = self.env['ir.actions.report']._render_qweb_pdf(REPORT, searches.ids)
         attachment = self.env['ir.attachment'].create({
             'name': _('Propuesta de restaurantes.pdf'), 'raw': pdf, 'mimetype': 'application/pdf',

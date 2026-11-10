@@ -53,15 +53,15 @@ Gracias!
             <field name="can_auto_send" eval="True"/>
             <field name="placeholders">{restaurante} {faltan} {empresa} {firma}</field>
             <field name="subject">Datos para trabajar con grupos — {empresa}</field>
-            <field name="body">Buenos días,
+            <field name="body">Hola {restaurante},
 
-Para poder proponeros grupos nos faltan estos datos de {restaurante}:
+Para poder contar con vosotros en las próximas solicitudes de grupos, nos faltaría completar vuestra ficha con estos datos:
 
 {faltan}
 
-Quedamos a la espera,
-Gracias!
-{firma}</field>
+¡Muchas gracias por vuestra colaboración!
+Un saludo,
+Equipo RestaGrup</field>
         </record>
 
         <record id="mail_template_lead_data_request" model="restagrup.mail.template">

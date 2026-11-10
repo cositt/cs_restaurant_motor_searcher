@@ -47,6 +47,7 @@
                     <field name="agency_trade_name"/>
                     <field name="ref" string="Código"/>
                     <field name="agency_payment_mode" widget="radio" options="{'horizontal': true}"/>
+                    <field name="restagrup_origin_id" options="{'no_create_edit': True}"/>
                 </group>
             </xpath>
         </field>

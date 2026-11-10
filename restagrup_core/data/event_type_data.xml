@@ -2,6 +2,7 @@
 <odoo noupdate="1">
     <record id="event_type_breakfast" model="restagrup.event.type">
         <field name="name">Desayuno</field>
+        <field name="default_time">9.0</field>
         <field name="sequence">10</field>
     </record>
     <record id="event_type_aperitif" model="restagrup.event.type">
@@ -10,10 +11,12 @@
     </record>
     <record id="event_type_lunch" model="restagrup.event.type">
         <field name="name">Comida</field>
+        <field name="default_time">13.5</field>
         <field name="sequence">30</field>
     </record>
     <record id="event_type_dinner" model="restagrup.event.type">
         <field name="name">Cena</field>
+        <field name="default_time">21.0</field>
         <field name="sequence">40</field>
     </record>
     <record id="event_type_coffee_break" model="restagrup.event.type">
@@ -23,5 +26,10 @@
     <record id="event_type_other" model="restagrup.event.type">
         <field name="name">Otro</field>
         <field name="sequence">90</field>
+    </record>
+    <record id="event_type_snack" model="restagrup.event.type">
+        <field name="name">Merienda</field>
+        <field name="sequence">35</field>
+        <field name="default_time">17.0</field>
     </record>
 </odoo>

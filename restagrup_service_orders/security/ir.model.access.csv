@@ -10,3 +10,5 @@ access_restagrup_restaurant_change_wizard,restagrup.restaurant.change.wizard,mod
 access_restagrup_firewall_check_user,restagrup.firewall.check user,model_restagrup_firewall_check,base.group_user,1,0,0,0
 access_restagrup_firewall_check_manager,restagrup.firewall.check manager,model_restagrup_firewall_check,base.group_system,1,1,1,1
 access_restagrup_firewall_wizard,restagrup.firewall.wizard,model_restagrup_firewall_wizard,base.group_user,1,1,1,1
+access_restagrup_agency_origin_user,restagrup.agency.origin.user,model_restagrup_agency_origin,base.group_user,1,0,0,0
+access_restagrup_agency_origin_manager,restagrup.agency.origin.manager,model_restagrup_agency_origin,sales_team.group_sale_manager,1,1,1,1

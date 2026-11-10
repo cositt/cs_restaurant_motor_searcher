@@ -184,19 +184,27 @@ class RestaurantSearch(models.Model):
         searches.lead_id._restagrup_review_extraction()
         return searches
 
-    @api.depends('city', 'zip', 'min_capacity', 'event_id.event_type_id', 'event_id.event_date')
+    @api.depends('city', 'zip', 'min_capacity', 'event_id.event_type_id', 'event_id.event_date',
+                 'event_id.event_time')
     def _compute_display_name(self):
+        """Día primero (ronda de ajustes 09/11): «15/12 21:00 · Cena · Sevilla · 40 pax», para ver la propuesta
+        por días."""
         for search in self:
             location = search.city or _('Sin ciudad')
             if search.zip:
                 location = f'{location} {search.zip}'
-            parts = [location]
+            event = search.event_id
+            parts = []
+            if event.event_date:
+                when = event.event_date.strftime('%d/%m')
+                if event.event_time:
+                    when += ' %02d:%02d' % divmod(round(event.event_time * 60), 60)
+                parts.append(when)
+            if event.event_type_id:
+                parts.append(event.event_type_id.name)
+            parts.append(location)
             if search.min_capacity:
                 parts.append(_('%s pax') % search.min_capacity)
-            if search.event_id.event_type_id:
-                parts.append(search.event_id.event_type_id.name)
-            if search.event_id.event_date:
-                parts.append(search.event_id.event_date.strftime('%d/%m'))
             search.display_name = ' · '.join(parts)
 
     @api.depends('line_ids')
@@ -811,9 +819,27 @@ class RestaurantSearchLine(models.Model):
             line.search_id.message_post_if_exists(_('%s: marcado como interesado.') % line.name)
 
     def action_mark_descartado(self):
+        """Descartar el elegido le quita la elección (antes seguía como elegido). El presupuesto se guarda: con
+        «Recuperar» o «Elegir» vuelve sin pedirlo otra vez (ronda de ajustes 09/11)."""
         self.write({'etiqueta': 'descartado'})
         for line in self:
+            if line.search_id.chosen_line_id == line:
+                line.search_id.chosen_line_id = False
             line.search_id.message_post_if_exists(_('%s: descartado.') % line.name)
+
+    def _has_kept_quote(self):
+        """Tenía un presupuesto ya registrado (precio y fecha de recibido)."""
+        self.ensure_one()
+        return bool(self.quote_amount and self.quote_received_date)
+
+    def action_recover_quote(self):
+        """Un restaurante descartado que ya había dado presupuesto vuelve con sus mismas condiciones."""
+        for line in self:
+            if not line._has_kept_quote():
+                raise UserError(_('%s no tenía presupuesto registrado: pídeselo.') % line.name)
+            line.etiqueta = 'presupuesto_recibido'
+            line.search_id.message_post_if_exists(_('%(name)s: recuperado con su presupuesto (%(price)s).') % {
+                'name': line.name, 'price': line._quote_price_text()})
 
     def action_rate_liked(self):
         self._set_restaurant_rating('liked')
@@ -1186,6 +1212,8 @@ class RestaurantSearchLine(models.Model):
             self.search_id.chosen_line_id = False
             self.search_id.message_post_if_exists(_('Ya no es el elegido: %s.') % self.name)
             return
+        if self.etiqueta == 'descartado' and self._has_kept_quote():
+            self.action_recover_quote()
         if self.quote_pending_confirmation:
             # El importe llegó por email y lo propuso la IA, pero nadie lo ha confirmado:
             # en vez de dar error, se abre el diálogo de registro y, al confirmarlo, se elige.

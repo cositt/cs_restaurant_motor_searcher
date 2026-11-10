@@ -165,8 +165,9 @@ class CrmLead(models.Model):
                 vals['event_date'] = self._restagrup_safe_date(item['fecha'])
             if not event.pax and self._restagrup_safe_int(item.get('pax')) > 0:
                 vals['pax'] = self._restagrup_safe_int(item['pax'])
-            if not event.event_time and self._restagrup_safe_hour(item.get('hora')):
+            if (not event.event_time or event.event_time_is_default) and self._restagrup_safe_hour(item.get('hora')):
                 vals['event_time'] = self._restagrup_safe_hour(item['hora'])
+                vals['event_time_is_default'] = False
             if vals:
                 event.write(vals)
         if not own:  # sin servicios: valen los datos sueltos

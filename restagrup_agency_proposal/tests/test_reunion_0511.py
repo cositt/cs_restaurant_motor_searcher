@@ -103,7 +103,7 @@ class TestReunion0511(TransactionCase):
 
     def test_new_quote_becomes_add_service_in_the_file(self):
         new_quote = _button(self.lead_arch, name='action_sale_quotations_new')
-        self.assertIn('expediente', new_quote)
+        self.assertIn('invisible="1"', new_quote)  # ronda 09/11: fuera en todas las fases
         add = _button(self.lead_arch, name='action_restagrup_add_service')
         self.assertIn('string="Añadir servicio"', add)
         self.assertIn("restagrup_stage_key != 'expediente'", add)

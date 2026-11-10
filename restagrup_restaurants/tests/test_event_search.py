@@ -82,7 +82,7 @@ class TestEventSearch(TransactionCase):
     def test_search_name_includes_event_type_and_date(self):
         event = self._event()
         self._search_for(event)
-        self.assertEqual(event.search_ids.display_name, 'Málaga · 42 pax · Cena · 15/11')
+        self.assertEqual(event.search_ids.display_name, '15/11 · Cena · Málaga · 42 pax')
 
     def test_search_name_without_event_is_unchanged(self):
         search = self.env['restagrup.restaurant.search'].create({

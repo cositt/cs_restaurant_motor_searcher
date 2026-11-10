@@ -7,6 +7,9 @@ class ResPartner(models.Model):
 
     # Ficha de agencia como la del CRM de Restagrup (notas de Conchita 05/11): datos adicionales.
     agency_trade_name = fields.Char(string='Nombre comercial')
+    restagrup_origin_id = fields.Many2one(
+        'restagrup.agency.origin', string='Origen', ondelete='restrict', tracking=True,
+        help='Canal por el que llegó la agencia: campaña de teléfono de un comercial, la web, Instagram…')
     agency_payment_mode = fields.Selection(
         [('prepago', 'Prepago'), ('credito', 'Crédito')], string='Forma de pago', default='prepago',
         help='Prepago: paga antes del servicio para recibir el bono. Crédito: se le factura después.',
@@ -42,9 +45,21 @@ class ResPartner(models.Model):
             'name': _('Agencias'),
             'res_model': 'res.partner',
             'view_mode': 'list,form',
-            'views': [(self.env.ref('restagrup_service_orders.view_partner_agency_list').id, 'list'), (False, 'form')],
+            'views': [(self.env.ref('restagrup_service_orders.view_partner_agency_list').id, 'list'),
+                      (self.env.ref('restagrup_service_orders.view_partner_agency_form').id, 'form')],
             'domain': [('is_company', '=', True), ('is_restaurant', '=', False), ('id', 'not in', own.ids)],
             'context': {'default_is_company': True, 'default_company_type': 'company'},
             'help': _('<p class="o_view_nocontent_smiling_face">Todavía no hay agencias</p>'
                       '<p>Aquí están las agencias con sus datos de facturación y sus contactos.</p>'),
         }
+
+
+class RestagrupAgencyOrigin(models.Model):
+    """Canal de captación de una agencia (ronda de ajustes 09/11): Rubén, MA, Erika, Amelia, Instagram, Web…"""
+    _name = 'restagrup.agency.origin'
+    _description = 'Origen de la agencia'
+    _order = 'sequence, name'
+
+    name = fields.Char(string='Origen', required=True)
+    sequence = fields.Integer(default=10)
+    active = fields.Boolean(default=True)

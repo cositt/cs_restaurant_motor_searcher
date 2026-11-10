@@ -94,6 +94,7 @@
                         .menu { border-top: 1px solid #eee; padding: 12px 16px; white-space: pre-line; }
                         .notes { padding: 0 16px 12px; color: #666; font-size: 14px; }
                         .choose { border-top: 1px solid #eee; padding: 12px 16px; text-align: right; }
+                        .choose textarea { width: 100%; box-sizing: border-box; margin-bottom: 8px; font: inherit; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; }
                         button { background: #2e7d32; color: #fff; border: 0; border-radius: 6px; padding: 10px 18px; font-size: 15px; cursor: pointer; }
                         .banner { background: #e8f5e9; border: 1px solid #2e7d32; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
                     </style>
@@ -133,6 +134,8 @@
                                       t-attf-action="/propuesta/#{lead.id}/#{token}/elegir">
                                     <input type="hidden" name="search_id" t-att-value="section['search'].id"/>
                                     <input type="hidden" name="line_id" t-att-value="row['line'].id"/>
+                                    <textarea name="dishes" rows="2" maxlength="2000"
+                                              placeholder="Opcional: platos elegidos, alergias, intolerancias u otras observaciones"></textarea>
                                     <button type="submit">Elijo este</button>
                                 </form>
                             </div>
