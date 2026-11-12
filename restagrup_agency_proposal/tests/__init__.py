@@ -21,3 +21,5 @@ from . import test_ronda_0911
 from . import test_ronda_0911_ui
 from . import test_ronda_0911_file
 from . import test_ronda_0911_conversation
+from . import test_ronda_1111
+from . import test_ronda_1111_invoice

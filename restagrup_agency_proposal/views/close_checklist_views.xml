@@ -126,4 +126,20 @@
             </xpath>
         </field>
     </record>
+
+    <!-- Ronda 11/11: casilla «Pagado» en el expediente, junto a los totales (como en su CRM) -->
+    <record id="crm_lead_view_form_paid_toggle" model="ir.ui.view">
+        <field name="name">crm.lead.form.restagrup.paid.toggle</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="restagrup_service_orders.crm_lead_view_form_profit_bar"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='restagrup_profit_bar']" position="inside">
+                <div invisible="restagrup_stage_key not in ('expediente', 'cerrado')"
+                     title="La agencia ha pagado (marca como pagados los pedidos del grupo)">
+                    <field name="restagrup_paid" widget="boolean_toggle" class="oe_inline"/>
+                    <span class="fw-bold">Pagado</span>
+                </div>
+            </xpath>
+        </field>
+    </record>
 </odoo>

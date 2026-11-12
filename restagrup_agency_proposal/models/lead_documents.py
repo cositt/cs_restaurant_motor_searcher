@@ -68,11 +68,21 @@ class SaleOrderAgencyConfirmation(models.Model):
 class CrmLeadDocuments(models.Model):
     _inherit = 'crm.lead'
 
+    def _restagrup_heal_missing_order(self):
+        """Si pasó a expediente sin pedido (antes de la ronda del 09/11) y ya tiene restaurante elegido, el pedido
+        se crea ahora (ronda de ajustes 11/11: el grupo de Rubén). Devuelve la acción del paso que falte (confirmar
+        un precio, elegir menú) o None."""
+        self.ensure_one()
+        if self.restagrup_stage_key != 'expediente' or self._restagrup_live_orders():
+            return None
+        return self._restagrup_prepare_order_for_file()
+
     def _restagrup_file_orders(self):
         self.ensure_one()
         orders = self._restagrup_live_orders()
         if not orders:
-            raise UserError(_('Este grupo aún no tiene pedido: pásalo a expediente con el restaurante elegido.'))
+            raise UserError(_('Este grupo aún no tiene pedido: elige el restaurante de cada servicio y'
+                              ' pásalo a expediente.'))
         return orders
 
     def _restagrup_file_sheets(self):
@@ -82,6 +92,9 @@ class CrmLeadDocuments(models.Model):
         return sheets.with_env(self.env)
 
     def action_send_agency_confirmation(self):
+        pending = self._restagrup_heal_missing_order()
+        if pending:
+            return pending
         for order in self._restagrup_file_orders():
             result = order.action_send_confirmation_agency()
             if isinstance(result, dict):
@@ -89,19 +102,31 @@ class CrmLeadDocuments(models.Model):
         return True
 
     def action_download_agency_confirmation(self):
+        pending = self._restagrup_heal_missing_order()
+        if pending:
+            return pending
         orders = self._restagrup_file_orders()
         return self.env.ref(AGENCY_REPORT).report_action(orders)
 
     def action_download_restaurant_confirmation(self):
+        pending = self._restagrup_heal_missing_order()
+        if pending:
+            return pending
         return self.env.ref(RESTAURANT_REPORT).report_action(self._restagrup_file_sheets())
 
     def action_download_voucher(self):
+        pending = self._restagrup_heal_missing_order()
+        if pending:
+            return pending
         orders = self._restagrup_file_orders()
         for order in orders:
             order._restagrup_check_paid()
         return self.env.ref('restagrup_agency_proposal.action_report_booking_voucher').report_action(orders)
 
     def action_send_restaurant_confirmations(self):
+        pending = self._restagrup_heal_missing_order()
+        if pending:
+            return pending
         for sheet in self._restagrup_file_sheets():
             result = sheet.action_send_confirmation_restaurant()
             if isinstance(result, dict):

@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import re
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 from odoo.tools.misc import formatLang
@@ -21,6 +23,10 @@ MENU_TYPES = [
 ]
 COURSE_LABELS = dict(COURSES)
 COURSE_ORDER = {key: index for index, (key, _label) in enumerate(COURSES)}
+# Lo que un menú en texto libre incluye siempre (pan, bebidas, café…), no lo que se elige.
+INCLUDED_PATTERN = re.compile(
+    r'\b(pan|panes|bebidas?|agua|vinos?|refrescos?|cervezas?|caf[eé]s?|infusi[oó]n(es)?|chupitos?|cava)\b',
+    re.IGNORECASE)
 
 
 class RestaurantMenu(models.Model):
@@ -185,6 +191,22 @@ class RestaurantMenu(models.Model):
             text += '\n' + _('Precio %(price)s %(symbol)s', price=formatLang(self.env, self.cost_price, digits=2),
                                symbol=self.currency_id.symbol or '')
         return text
+
+    def _always_included(self):
+        """Lo que el menú lleva siempre, elija lo que elija la agencia: pan, bebidas, café… (ronda 11/11: la proforma
+        con los platos elegidos no debe perderlo). Con platos detallados: los de tipo Bebida y Otro y el texto de
+        bebidas. Con el menú en texto libre: las líneas que hablan de pan, bebidas o café."""
+        self.ensure_one()
+        description = (self.description or '').strip()
+        if description:
+            return [line.strip() for line in description.splitlines()
+                    if line.strip() and INCLUDED_PATTERN.search(line)]
+        items = ['- %s' % line.name for line in self.line_ids.sorted(
+            lambda l: (COURSE_ORDER.get(l.course, len(COURSE_ORDER)), l.sequence, l.id))
+            if line.course in ('bebida', 'otro')]
+        if self.drinks_description or self.drinks_included:
+            items.append(_('Bebidas: %s', self.drinks_description or _('incluidas')))
+        return items
 
     def _render_text(self, with_price=True):
         """Texto plano del menú. Lleva el precio de VENTA (nunca el coste del restaurante). `with_price=False`

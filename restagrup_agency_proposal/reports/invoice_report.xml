@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Factura a la agencia como la de su CRM (ronda de ajustes 11/11). La llama account.report_invoice con `o`
+         a través de account.move._get_name_invoice_report(). -->
+    <template id="report_invoice_restagrup">
+        <t t-call="web.basic_layout">
+            <t t-set="company" t-value="o.company_id"/>
+            <t t-set="legal_name" t-value="o.restagrup_legal_name(company)"/>
+            <t t-set="currency" t-value="o.currency_id"/>
+            <t t-set="agency" t-value="o.partner_id.commercial_partner_id"/>
+            <div class="page" style="font-family: Arial, sans-serif; font-size: 12px; color: #222;">
+                <table style="width: 100%; border-bottom: 1px solid #999; margin-bottom: 18px;">
+                    <tr>
+                        <td style="width: 140px; vertical-align: top; padding-bottom: 8px;">
+                            <img t-if="company.logo" t-att-src="image_data_uri(company.logo)" style="max-height: 80px; max-width: 130px;" alt="Logo"/>
+                        </td>
+                        <td style="vertical-align: top; padding-bottom: 8px;">
+                            <div t-out="legal_name"/>
+                            <div t-if="company.street" t-out="company.street"/>
+                            <div t-if="company.street2" t-out="company.street2"/>
+                            <div><t t-out="company.zip or ''"/> <t t-out="company.city or ''"/></div>
+                            <div t-if="company.vat" t-out="company.vat"/>
+                        </td>
+                    </tr>
+                </table>
+
+                <table style="width: 100%; background: #f3f3f3; margin-bottom: 18px;">
+                    <tr>
+                        <td style="width: 58%; vertical-align: top; padding: 12px;">
+                            <div style="margin-bottom: 8px;">Datos agencia</div>
+                            <div t-out="agency.name"/>
+                            <div t-if="agency.street" t-out="agency.street"/>
+                            <div t-if="agency.street2" t-out="agency.street2"/>
+                            <div t-if="agency.zip or agency.city"><t t-out="agency.zip or ''"/> <t t-out="agency.city or ''"/></div>
+                            <div t-if="agency.country_id" t-out="agency.country_id.name"/>
+                            <div t-if="agency.vat" t-out="agency.vat"/>
+                        </td>
+                        <td style="vertical-align: top; padding: 12px;">
+                            <div style="margin-bottom: 8px;">Detalles factura</div>
+                            <div><t t-if="o.move_type == 'out_refund'">Factura rectificativa</t><t t-else="">Factura</t> Nº: <t t-out="o.name"/></div>
+                            <div t-if="o.invoice_date">Fecha: <t t-out="o.invoice_date.strftime('%d-%m-%Y')"/></div>
+                            <div t-if="o.invoice_origin">Expediente: <t t-out="o.invoice_origin"/></div>
+                            <div t-if="o.restagrup_group_ref()">Grupo: <t t-out="o.restagrup_group_ref()"/></div>
+                        </td>
+                    </tr>
+                </table>
+
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #999;">
+                            <th style="text-align: left; padding: 6px 4px;">Fecha servicio</th>
+                            <th style="text-align: left; padding: 6px 4px;">Descripción</th>
+                            <th style="text-align: right; padding: 6px 4px;">Precio Menú</th>
+                            <th style="text-align: right; padding: 6px 4px;">PAX</th>
+                            <th style="text-align: right; padding: 6px 4px;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="o.restagrup_invoice_rows()" t-as="row">
+                            <td style="padding: 10px 4px; vertical-align: top;" t-out="row['date']"/>
+                            <td style="padding: 10px 4px; vertical-align: top; white-space: pre-line;" t-out="row['name']"/>
+                            <td style="padding: 10px 4px; vertical-align: top; text-align: right;"
+                                t-out="row['price']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                            <td style="padding: 10px 4px; vertical-align: top; text-align: right;" t-out="row['pax']"/>
+                            <td style="padding: 10px 4px; vertical-align: top; text-align: right;"
+                                t-out="row['total']" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table style="width: 100%; border-top: 2px solid #999; margin-top: 40px;">
+                    <tr><td/><td style="width: 120px; text-align: right; padding: 4px; font-weight: bold;">Subtotal</td>
+                        <td style="width: 110px; text-align: right; padding: 4px;" t-out="o.amount_untaxed"
+                            t-options='{"widget": "monetary", "display_currency": currency}'/></tr>
+                    <tr t-foreach="o.restagrup_tax_rows()" t-as="tax">
+                        <td/><td style="text-align: right; padding: 4px; font-weight: bold;" t-out="tax[0]"/>
+                        <td style="text-align: right; padding: 4px;" t-out="tax[1]"
+                            t-options='{"widget": "monetary", "display_currency": currency}'/></tr>
+                    <tr><td/><td style="text-align: right; padding: 4px; font-weight: bold;">Total</td>
+                        <td style="text-align: right; padding: 4px; font-weight: bold;" t-out="o.amount_total"
+                            t-options='{"widget": "monetary", "display_currency": currency}'/></tr>
+                </table>
+            </div>
+            <div class="footer" style="font-family: Arial, sans-serif; font-size: 10px; text-align: center; border-top: 2px solid #999; padding-top: 6px; color: #444;">
+                <div><t t-out="legal_name"/><t t-if="company.vat"> - <t t-out="company.vat"/></t></div>
+                <div><t t-out="company.street or ''"/><t t-if="company.zip or company.city"> - <t t-out="company.zip or ''"/> <t t-out="company.city or ''"/></t></div>
+                <div><t t-out="(company.website or '').replace('https://', '').replace('http://', '')"/><t t-if="company.website and company.email"> | </t><t t-out="company.email or ''"/></div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Como hacen las localizaciones (l10n_ar…): una rama más en el reparto de account.report_invoice -->
+    <template id="report_invoice_restagrup_dispatch" inherit_id="account.report_invoice">
+        <xpath expr="//t[@t-call='account.report_invoice_document']" position="after">
+            <t t-elif="o._get_name_invoice_report() == 'restagrup_agency_proposal.report_invoice_restagrup'"
+               t-call="restagrup_agency_proposal.report_invoice_restagrup" t-lang="lang"/>
+        </xpath>
+    </template>
+</odoo>
