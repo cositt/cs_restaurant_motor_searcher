@@ -46,10 +46,13 @@ class CrmLeadAgencyNotesToOrder(models.Model):
     _inherit = 'crm.lead'
 
     def action_create_joint_quote(self):
-        """Lo que escribió la agencia al elegir pasa a «Observaciones» del pedido (salen en las confirmaciones)."""
+        """Lo que escribió la agencia al elegir pasa a «Observaciones» del pedido (salen en las confirmaciones).
+        Ronda 11/11: si eligió del menú del catálogo, eso ya sale en el servicio como «Platos elegidos» y no se
+        repite en las observaciones."""
         result = super().action_create_joint_quote()
         for lead in self:
-            chosen = lead.restagrup_restaurant_search_ids.chosen_line_id.filtered('agency_choice_notes')
+            chosen = lead.restagrup_restaurant_search_ids.chosen_line_id.filtered(
+                lambda line: line.agency_choice_notes and not line.menu_id)
             orders = lead._restagrup_live_orders().filtered(lambda order: not order.restagrup_observations)
             if chosen and orders:
                 orders.restagrup_observations = '\n'.join(

@@ -17,6 +17,10 @@
                         <div class="row"><label class="col-6" for="restagrup_invoice_days"/><field name="restagrup_invoice_days" class="col-2"/></div>
                     </div>
                 </setting>
+                <setting id="restagrup_legal_name"
+                         help="Factura a las agencias: razón social que sale arriba y en el pie, con la dirección, el NIF, la web y el correo de la compañía.">
+                    <field name="restagrup_legal_name" placeholder="p. ej. Inversiones y Promociones Aracil, SL"/>
+                </setting>
             </xpath>
         </field>
     </record>

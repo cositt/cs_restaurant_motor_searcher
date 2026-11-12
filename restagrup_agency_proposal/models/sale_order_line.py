@@ -39,7 +39,12 @@ class SaleOrderLine(models.Model):
         address = ', '.join(part for part in (
             restaurant.street, restaurant.city, ('(%s)' % restaurant.state_id.name) if restaurant.state_id else '',
         ) if part)
-        if menu:
+        chosen = (search_line.agency_choice_notes or '').strip()
+        if menu and chosen:
+            # Ronda 11/11: con platos elegidos, solo lo elegido y lo que el menú incluye siempre (pan, bebidas…).
+            menu_name = menu.name
+            menu_text = '\n'.join([_('Platos elegidos:'), chosen] + menu._always_included())
+        elif menu:
             menu_name = menu.name
             menu_text = '\n'.join(menu._render_text(with_price=False).splitlines()[1:])
         else:

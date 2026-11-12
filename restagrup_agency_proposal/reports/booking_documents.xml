@@ -7,16 +7,23 @@
             <tr><td style="color: #555; padding: 2px 0;">DOCUMENTO Nº</td><td t-out="doc.name"/></tr>
             <tr><td style="color: #555; padding: 2px 0;">GRUP. REF</td>
                 <td t-out="doc.client_order_ref or doc.opportunity_id.name or ''"/></tr>
-            <!-- Como los PDF de su CRM: la agencia con su teléfono, y la persona que lleva el grupo con el suyo -->
+            <!-- Orden de Conchita (11/11): agencia; contacto de la agencia con su teléfono; al final Restagrup, el
+                 agente y su contacto. Cada teléfono una sola vez (antes el de la agencia salía repetido). -->
             <t t-set="agency" t-value="doc.partner_id.commercial_partner_id"/>
+            <t t-set="person" t-value="doc.partner_id if doc.partner_id != agency else False"/>
+            <t t-set="person_phone" t-value="person and (person.phone or person.email) or ''"/>
+            <t t-set="agent" t-value="doc.user_id"/>
+            <t t-set="agent_contact" t-value="' · '.join(p for p in (agent.phone or doc.company_id.phone, agent.email or doc.company_id.email) if p)"/>
             <tr><td style="color: #555; padding: 2px 0;">AGENCIA</td><td t-out="agency.name"/></tr>
-            <tr><td style="color: #555; padding: 2px 0;">TELÉFONO</td>
-                <td t-out="agency.phone or doc.partner_id.phone or ''"/></tr>
-            <tr><td style="color: #555; padding: 2px 0;">NOMBRE</td>
-                <td t-out="doc.partner_id.name if doc.partner_id != agency else ''"/></tr>
-            <tr><td style="color: #555; padding: 2px 0;">CONTACTO</td>
-                <td t-out="(doc.partner_id.phone or doc.partner_id.email or '') if doc.partner_id != agency else (agency.email or '')"/></tr>
-            <tr><td style="color: #555; padding: 2px 0;">AGENTE RESTAGRUP</td><td t-out="doc.user_id.name or ''"/></tr>
+            <tr t-if="agency.phone and agency.phone != person_phone"><td style="color: #555; padding: 2px 0;">TELÉFONO AGENCIA</td>
+                <td t-out="agency.phone"/></tr>
+            <tr t-if="person"><td style="color: #555; padding: 2px 0;">CONTACTO AGENCIA</td>
+                <td><span t-out="person.name"/><t t-if="person_phone"> · <span t-out="person_phone"/></t></td></tr>
+            <tr t-if="not person and agency.email"><td style="color: #555; padding: 2px 0;">CONTACTO AGENCIA</td>
+                <td t-out="agency.email"/></tr>
+            <tr><td style="color: #555; padding: 2px 0;">AGENTE RESTAGRUP</td><td t-out="agent.name or ''"/></tr>
+            <tr t-if="agent_contact"><td style="color: #555; padding: 2px 0;">CONTACTO RESTAGRUP</td>
+                <td t-out="agent_contact"/></tr>
         </table>
     </template>
 

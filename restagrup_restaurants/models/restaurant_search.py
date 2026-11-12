@@ -289,6 +289,7 @@ class RestaurantSearch(models.Model):
             self.env['restagrup.restaurant.search.line'].create(new_lines)
         else:
             self.message_post_if_exists(_('Buscar restaurantes: sin resultados nuevos.'))
+        self._restagrup_name_matches_first()
 
         return {
             'type': 'ir.actions.act_window',
@@ -297,6 +298,17 @@ class RestaurantSearch(models.Model):
             'view_mode': 'form',
             'target': 'current',
         }
+
+    def _restagrup_name_matches_first(self):
+        """Con «Buscar restaurante por nombre», lo que coincide sube arriba del todo: si no, al volver a buscar
+        quedaba detrás de los resultados anteriores y no se veía (ronda de ajustes 11/11)."""
+        needle = (self.restaurant_name or '').strip().lower()
+        if not needle or not self.line_ids:
+            return
+        matches = self.line_ids.filtered(lambda line: needle in (line.name or '').lower())
+        top = min(self.line_ids.mapped('sequence'))
+        for offset, line in enumerate(matches.sorted('sequence'), start=1):
+            line.sequence = top - len(matches) - 1 + offset
 
     def action_open_lead(self):
         """Vuelve a la petición del grupo."""
@@ -350,14 +362,17 @@ class RestaurantSearch(models.Model):
             domain.append(('zip', 'ilike', self.zip))
         if self.street:
             domain.append(('street', 'ilike', self.street))
+        # Sin dato (aforo 0, nivel de precio vacío) no se descarta: sale y lo valora quien busca (ronda 11/11:
+        # «El 3 de Oro», dado de alta a mano sin aforo, no salía nunca).
         if self.min_capacity:
-            domain.append(('restaurant_capacity', '>=', self.min_capacity))
+            domain += ['|', ('restaurant_capacity', '=', 0), ('restaurant_capacity', '>=', self.min_capacity)]
         if self.require_bus_parking:
             domain.append(('restaurant_bus_parking', '=', True))
         if self.cuisine_type:
             domain.append(('restaurant_cuisine_type', 'ilike', self.cuisine_type))
         if self.max_price_level:
-            domain.append(('restaurant_price_level', '<=', self.max_price_level))
+            domain += ['|', ('restaurant_price_level', '=', False),
+                       ('restaurant_price_level', '<=', self.max_price_level)]
         if self.restaurant_name:
             domain.append(('name', 'ilike', self.restaurant_name.strip()))
         return self.env['res.partner'].search(domain, order='name')

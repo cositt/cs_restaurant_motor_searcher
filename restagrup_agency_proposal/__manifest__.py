@@ -16,6 +16,7 @@
         'reports/restaurant_proposal_report.xml',
         'reports/client_comparison_report.xml',
         'reports/booking_documents.xml',
+        'reports/invoice_report.xml',
         'views/payment_views.xml',  # antes: actualiza la vista que usaba los textos de pago ya quitados
         'views/sale_order_views.xml',
         'views/purchase_order_views.xml',

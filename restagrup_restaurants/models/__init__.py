@@ -20,3 +20,4 @@ from . import search_menu_pick
 from . import partner_address
 from . import catalog_quote
 from . import partner_google_fill
+from . import web_email

@@ -24,6 +24,9 @@ Devuelve SOLO un objeto JSON, sin texto adicional, con estas claves exactas:
 "ciudad": la ciudad de la que habla el correo (string o null), "fecha": la fecha del servicio de la que
 habla, en formato YYYY-MM-DD (string o null; si no indica el año, la próxima vez que ocurra a partir de {hoy}),
 "num_pax": el número de comensales que menciona (entero o null). No inventes: si no aparece, null.
+Pedir disponibilidad o presupuesto para un grupo distinto o para otra fecha es "new_request", aunque el asunto
+empiece por "Re:" o la agencia ya tenga otros grupos: una agencia que contrata más servicios para el mismo grupo
+lo dice expresamente o contesta en el mismo hilo.
 Si dudas entre petición nueva y otra cosa, elige "new_request"."""
 
 MATCH_SYSTEM_PROMPT = """\
@@ -58,6 +61,9 @@ class MailThread(models.AbstractModel):
             return routes
         category, summary, log, hints = self._restagrup_classify(message_dict)
         if category in (None, 'new_request'):
+            return routes
+        if category == 'agency_reply' and self._restagrup_date_of_no_group(message_dict, hints):
+            # Ronda 11/11: «respuesta» con una fecha que no es de ninguno de sus grupos = petición nueva.
             return routes
         new_routes = []
         for route in routes:
@@ -156,17 +162,41 @@ class MailThread(models.AbstractModel):
         return picked if picked in leads.ids else None
 
     @api.model
-    def _restagrup_match_existing(self, category, message_dict, hints=None):
-        """(modelo, id) del lead existente al que corresponde un cambio o una respuesta, o None. Se prueba, por
-        orden: el único lead abierto del remitente, el que se nombra en el asunto o el texto, el que coincide en
-        ciudad y fecha y, si sigue habiendo empate, el que elige la IA entre los candidatos."""
+    def _restagrup_sender_open_leads(self, message_dict):
         email = email_normalize(message_dict.get('email_from') or '')
         if not email:
-            return None
-        leads = self.env['crm.lead'].sudo().search([
+            return self.env['crm.lead']
+        return self.env['crm.lead'].sudo().search([
             '|', ('email_normalized', '=', email), ('partner_id.email_normalized', '=', email),
             ('stage_id.is_won', '=', False),
         ], order='id desc')
+
+    @api.model
+    def _restagrup_date_compatible(self, leads, hints):
+        """Los grupos que pueden ser los del correo por fecha: si el correo trae fecha, se descartan los que
+        tienen fechas y ninguna es esa (otra fecha es otro servicio). Los grupos sin fecha siguen siendo candidatos."""
+        day = (hints or {}).get('fecha')
+        if not day:
+            return leads
+
+        def compatible(lead):
+            days = self._restagrup_lead_places_and_days(lead)[1]
+            return not days or day in days
+        return leads.filtered(compatible)
+
+    @api.model
+    def _restagrup_date_of_no_group(self, message_dict, hints):
+        """True si el correo trae una fecha y el remitente tiene grupos abiertos, pero ninguno con esa fecha."""
+        leads = self._restagrup_sender_open_leads(message_dict)
+        return bool((hints or {}).get('fecha') and leads and not self._restagrup_date_compatible(leads, hints))
+
+    @api.model
+    def _restagrup_match_existing(self, category, message_dict, hints=None):
+        """(modelo, id) del lead existente al que corresponde un cambio o una respuesta, o None. Se prueba, por
+        orden: el único lead abierto del remitente, el que se nombra en el asunto o el texto, el que coincide en
+        ciudad y fecha y, si sigue habiendo empate, el que elige la IA entre los candidatos. Antes se apartan los
+        grupos con otra fecha (ronda 11/11): un cambio de fecha no se enlaza a ciegas, lo revisa una persona."""
+        leads = self._restagrup_date_compatible(self._restagrup_sender_open_leads(message_dict), hints)
         if not leads:
             return None
         if len(leads) == 1:

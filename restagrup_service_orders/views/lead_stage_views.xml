@@ -6,6 +6,10 @@
         <field name="model">crm.lead</field>
         <field name="inherit_id" ref="crm.crm_lead_view_form"/>
         <field name="arch" type="xml">
+            <!-- Ronda 11/11: en una petición a mano salía el ejemplo de Odoo «p. ej. Precios de productos» -->
+            <xpath expr="//sheet//field[@name='name']" position="attributes">
+                <attribute name="placeholder">Nombre del grupo (p. ej. Colegio de Médicos Sevilla)</attribute>
+            </xpath>
             <xpath expr="//header" position="inside">
                 <field name="restagrup_stage_key" invisible="1"/>
                 <button name="action_pass_to_quote" type="object" string="Pasar a presupuesto" class="btn-primary"

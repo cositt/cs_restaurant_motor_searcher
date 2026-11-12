@@ -87,7 +87,8 @@ class TestReunion0511Medio(TransactionCase):
     def test_agency_documents_header_like_their_crm(self):
         html = self._html('restagrup_agency_proposal.report_booking_confirmation', self.order)
         header = html.split('DOCUMENTO', 1)[1].split('</table>', 1)[0]
-        for label in ('GRUP. REF', 'AGENCIA', 'TELÉFONO', 'NOMBRE', 'CONTACTO', 'AGENTE RESTAGRUP'):
+        # Etiquetas renombradas en la ronda 11/11 (TELÉFONO/NOMBRE/CONTACTO → TELÉFONO AGENCIA/CONTACTO AGENCIA)
+        for label in ('GRUP. REF', 'AGENCIA', 'TELÉFONO AGENCIA', 'CONTACTO AGENCIA', 'AGENTE RESTAGRUP'):
             self.assertIn(label, header)
         self.assertIn('Costa Viajes Ibéricos', header)
         self.assertIn('91 000 00 00', header)  # teléfono de la agencia
