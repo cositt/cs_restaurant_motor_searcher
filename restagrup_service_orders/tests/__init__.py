@@ -26,3 +26,4 @@ from . import test_mail_locator
 from . import test_agency_fiscal_data
 from . import test_stats_conchita_0911
 from . import test_ronda_1111_service
+from . import test_punto6_price_pp
