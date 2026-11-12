@@ -54,23 +54,44 @@ class PurchaseOrder(models.Model):
         return self._restagrup_gated('confirm_restaurant', '_restagrup_do_send_confirmation_restaurant')
 
     def _restagrup_do_send_confirmation_restaurant(self):
-        for sheet in self:
-            email_to = (sheet.partner_id.email or '').strip()
-            if not email_to:
-                raise UserError(_('%s no tiene email: añádeselo o descarga la confirmación y envíasela a mano.')
-                                % sheet.partner_id.name)
-            subject, body_text = sheet._restagrup_confirmation_content()
-            order = sheet.restagrup_sale_order_id
-            sheet.message_post(
-                body=Markup('<br/>').join(Markup.escape(line) for line in body_text.splitlines()),
-                subject=subject, message_type='email', subtype_xmlid='mail.mt_comment',
-                email_from=self.env['restagrup.system.mail'].email_from(order.user_id.email or self.env.user.email),
-                email_add_signature=False, outgoing_email_to=email_to,
-                attachments=[sheet._restagrup_proforma()],
-            )
-            note = _('Confirmación de reserva enviada a %(name)s (%(email)s).') % {
-                'name': sheet.partner_id.name, 'email': email_to}
-            order._restagrup_log_on_searches(note)
-            if order.opportunity_id:
-                order.opportunity_id.message_post(body=note)
+        """Reunión 12/11 (7.6): abre «Revisar y enviar» con el texto y el PDF; se envía desde allí. Con varias
+        hojas, una ventana detrás de otra."""
+        sheet = self[:1]
+        chain = list(self.env.context.get('restagrup_send_chain') or []) + self[1:].ids
+        sheet._restagrup_default_send_emails()  # sin email, el aviso de siempre antes de abrir nada
+        subject, body_text = sheet._restagrup_confirmation_content()
+        name, pdf = sheet._restagrup_proforma()
+        return self.env['restagrup.send.wizard'].with_context(restagrup_send_chain=chain)._open_for(
+            sheet, subject, body_text, partner=sheet.partner_id,
+            title=_('Confirmación a %s') % sheet.partner_id.name,
+            attachments=self.env['restagrup.send.wizard']._draft_attachment(name, pdf),
+            chain_method='action_send_confirmation_restaurant')
+
+    def _restagrup_default_send_emails(self):
+        """El email del restaurante o, si solo lo tiene un contacto suyo, el de ese contacto (reunión 12/11, 3.6)."""
+        self.ensure_one()
+        partner = self.partner_id
+        email = (partner.email or partner.child_ids.filtered(lambda c: (c.email or '').strip())[:1].email or '')
+        if not email.strip():
+            raise UserError(_('%s no tiene email: añádeselo o descarga la confirmación y envíasela a mano.')
+                            % partner.name)
+        return [email.strip()]
+
+    def _restagrup_send_reviewed(self, subject, body_text, emails, attachments=None):
+        """Sale por el hilo de la hoja: el OK del restaurante vuelve aquí."""
+        self.ensure_one()
+        order = self.restagrup_sale_order_id
+        email_to = ', '.join(emails)
+        self.message_post(
+            body=Markup('<br/>').join(Markup.escape(line) for line in body_text.splitlines()),
+            subject=subject, message_type='email', subtype_xmlid='mail.mt_comment',
+            email_from=self.env['restagrup.system.mail'].email_from(order.user_id.email or self.env.user.email),
+            email_add_signature=False, outgoing_email_to=email_to,
+            attachment_ids=attachments.ids if attachments else [],
+        )
+        note = _('Confirmación de reserva enviada a %(name)s (%(email)s).') % {
+            'name': self.partner_id.name, 'email': email_to}
+        order._restagrup_log_on_searches(note)
+        if order.opportunity_id:
+            order.opportunity_id.message_post(body=note)
         return True

@@ -14,6 +14,10 @@ class TestBulkQuoteRequest(TransactionCase):
             'lead_id': cls.lead.id, 'city': 'Málaga', 'min_capacity': 30,
         })
 
+    def _send(self, action):
+        """Reunión 12/11: el envío pasa por la ventana «Revisar y enviar»; aquí se pulsa Enviar sin tocar nada."""
+        return self.env[action['res_model']].browse(action['res_id']).action_send()
+
     def _line(self, name, **vals):
         return self.env['restagrup.restaurant.search.line'].create(
             dict({'search_id': self.search.id, 'source': 'google', 'name': name}, **vals))
@@ -28,7 +32,7 @@ class TestBulkQuoteRequest(TransactionCase):
         first = self._line('A', etiqueta='interesado', email='a@example.com')
         second = self._line('B', etiqueta='interesado', email='b@example.com')
         untouched = self._line('C', etiqueta='visto', email='c@example.com')
-        self.search.action_request_quote_interested()
+        self._send(self.search.action_request_quote_interested())
         self.assertEqual((first | second).mapped('etiqueta'), ['solicitado', 'solicitado'])
         self.assertEqual(untouched.etiqueta, 'visto')
         sent = (first | second).message_ids.filtered(lambda m: m.message_type == 'email')
@@ -37,7 +41,7 @@ class TestBulkQuoteRequest(TransactionCase):
     def test_lines_without_email_are_skipped_and_stay_interested(self):
         with_email = self._line('A', etiqueta='interesado', email='a@example.com')
         without_email = self._line('Sin correo', etiqueta='interesado', email=False)
-        result = self.search.action_request_quote_interested()
+        result = self._send(self.search.action_request_quote_interested())
         self.assertEqual(with_email.etiqueta, 'solicitado')
         self.assertEqual(without_email.etiqueta, 'interesado')
         self.assertIn('Sin correo', result['params']['message'])
@@ -46,23 +50,23 @@ class TestBulkQuoteRequest(TransactionCase):
     def test_summary_is_logged_on_the_search(self):
         self._line('A', etiqueta='interesado', email='a@example.com')
         self._line('Sin correo', etiqueta='interesado', email=False)
-        self.search.action_request_quote_interested()
+        self._send(self.search.action_request_quote_interested())
         bodies = ' '.join(self.search.message_ids.mapped('body'))
         self.assertIn('Presupuesto pedido a 1 restaurante', bodies)
         self.assertIn('Sin correo', bodies)
 
     def test_all_sent_returns_success_notification(self):
         self._line('A', etiqueta='interesado', email='a@example.com')
-        result = self.search.action_request_quote_interested()
+        result = self._send(self.search.action_request_quote_interested())
         self.assertEqual(result['params']['type'], 'success')
 
     def test_no_interested_lines_raises(self):
         self._line('C', etiqueta='visto', email='c@example.com')
         with self.assertRaises(UserError):
-            self.search.action_request_quote_interested()
+            self._send(self.search.action_request_quote_interested())
 
     def test_none_with_email_raises_and_sends_nothing(self):
         line = self._line('Sin correo', etiqueta='interesado', email=False)
         with self.assertRaises(UserError):
-            self.search.action_request_quote_interested()
+            self._send(self.search.action_request_quote_interested())
         self.assertEqual(line.etiqueta, 'interesado')

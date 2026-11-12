@@ -15,6 +15,13 @@ def _report(action):
     return action.get('context', {}).get('report_action', action)
 
 
+def _send(env, action):
+    """Reunión 12/11: el envío pasa por la ventana «Revisar y enviar»; se pulsa Enviar sin tocar nada."""
+    while isinstance(action, dict) and action.get('res_model') == 'restagrup.send.wizard':
+        action = env[action['res_model']].browse(action['res_id']).action_send()
+    return action
+
+
 @tagged('post_install', '-at_install')
 class TestRonda1111FileWithoutOrder(TransactionCase):
 
@@ -56,7 +63,7 @@ class TestRonda1111FileWithoutOrder(TransactionCase):
 
     def test_send_agency_confirmation_creates_the_missing_order(self):
         lead, search = self._old_file()
-        lead.action_send_agency_confirmation()
+        _send(self.env, lead.action_send_agency_confirmation())
         order = search.sale_order_id
         self.assertTrue(order)
         self.assertTrue(order.message_ids.filtered(lambda m: m.message_type == 'email'))

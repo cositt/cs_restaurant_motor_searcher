@@ -24,3 +24,6 @@ from . import test_ronda_0911_google_fill
 from . import test_ronda_1111_search
 from . import test_ronda_1111_bulk_quote
 from . import test_ronda_1111_web_email
+from . import test_reunion_1211
+from . import test_reunion_1211_send
+from . import test_reunion_1211_menus

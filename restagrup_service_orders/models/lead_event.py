@@ -16,6 +16,28 @@ class RestagrupLeadEvent(models.Model):
     sale_order_id = fields.Many2one('sale.order', string='Presupuesto de venta', compute='_compute_chosen')
     sheet_state = fields.Char(string='Hoja de servicio', compute='_compute_chosen')
 
+    # Reunión 12/11 (7.5): lo que se corrige en el servicio después de crear el pedido tiene que llegar al pedido
+    # (la confirmación al restaurante y la hoja leen la fecha y la hora del pedido).
+    _ORDER_SYNC_FIELDS = ('event_date', 'event_time', 'event_type_id')
+
+    def write(self, vals):
+        result = super().write(vals)
+        if any(field in vals for field in self._ORDER_SYNC_FIELDS):
+            self._restagrup_sync_order_lines()
+        return result
+
+    def _restagrup_sync_order_lines(self):
+        lines = self.env['sale.order.line'].sudo().search([
+            ('restagrup_search_line_id.search_id.event_id', 'in', self.ids), ('order_id.state', '!=', 'cancel'),
+        ])
+        for event in self:
+            event_lines = lines.filtered(lambda l: l.restagrup_search_line_id.search_id.event_id == event)
+            if event_lines:
+                event_lines.write({
+                    'service_date': event.event_date, 'service_hour': event.event_time,
+                    'service_event_type_id': event.event_type_id.id,
+                })
+
     @api.depends(
         'search_ids.chosen_line_id', 'search_ids.chosen_line_id.quote_client_price_per_person',
         'search_ids.sale_order_id',

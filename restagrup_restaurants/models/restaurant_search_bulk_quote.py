@@ -21,7 +21,9 @@ class RestaurantSearch(models.Model):
 
     def action_request_quote_interested(self):
         """Mismo correo que «Pedir presupuesto» en cada tarjeta, a todos los interesados con email.
-        Los que no tienen email se quedan como interesados y se avisa de cuáles son."""
+        Los que no tienen email se quedan como interesados y se avisa de cuáles son.
+        Reunión 12/11 (4.1): antes se revisa en una ventana un texto común para todos; {restaurante} y {menu} se
+        rellenan con los de cada uno."""
         self.ensure_one()
         interested = self._interested_lines()
         catalogue_note = self._catalogue_pending_note()
@@ -37,21 +39,7 @@ class RestaurantSearch(models.Model):
                 'Ninguno de los interesados tiene email de contacto (%s). Añádelos como contacto'
                 ' o edita su email antes de pedir presupuesto.') % ', '.join(skipped.mapped('name'))
                 + catalogue_note)
-        for line in with_email:
-            line.action_request_quote()
-        message = self._bulk_quote_summary(with_email, skipped)
-        self.message_post_if_exists(Markup('<p>%s</p>') % message)
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Presupuestos pedidos'),
-                'message': message,
-                'type': 'warning' if skipped else 'success',
-                'sticky': bool(skipped),
-                'next': {'type': 'ir.actions.client', 'tag': 'soft_reload'},
-            },
-        }
+        return with_email._restagrup_open_common_quote_request(skipped)
 
     def _catalogue_pending_note(self):
         """Los que tienen presupuesto de catálogo ya no están como interesados (ronda de ajustes 11/11: Conchita
@@ -71,3 +59,38 @@ class RestaurantSearch(models.Model):
         if skipped:
             message += ' ' + _('Sin email, siguen como interesados: %s.') % ', '.join(skipped.mapped('name'))
         return message
+
+
+class RestaurantSearchLineBulkQuote(models.Model):
+    _inherit = 'restagrup.restaurant.search.line'
+
+    def _restagrup_open_common_quote_request(self, skipped):
+        """Ventana «Revisar y enviar» con un texto común para estas líneas (todas de la misma búsqueda)."""
+        first = self[:1]
+        values = dict(first._mail_values(self.env.user.name), restaurante='{restaurante}', menu='{menu}')
+        subject, body_text = first._quote_request_content(values)
+        summary = '\n'.join('%s — %s%s' % (
+            line.name, line._get_quote_email_to(), ' ⚠ %s' % line.warnings_text if line.warnings_text else '')
+            for line in self)
+        if skipped:
+            summary += '\n\n' + _('Sin email, siguen como interesados: %s.') % ', '.join(skipped.mapped('name'))
+        summary += '\n\n' + _('{restaurante} y {menu} se cambian por los de cada restaurante.')
+        return self.env['restagrup.send.wizard']._open_for(
+            self, subject, body_text, title=_('Pedir presupuesto a %s interesados') % len(self), summary=summary)
+
+    def _restagrup_after_multi_send(self):
+        search = self.search_id[:1]
+        skipped = search._interested_lines() - self  # los enviados ya están como «Solicitado»
+        message = search._bulk_quote_summary(self, skipped)
+        search.message_post_if_exists(Markup('<p>%s</p>') % message)
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Presupuestos pedidos'),
+                'message': message,
+                'type': 'warning' if skipped else 'success',
+                'sticky': bool(skipped),
+                'next': {'type': 'ir.actions.client', 'tag': 'soft_reload'},
+            },
+        }

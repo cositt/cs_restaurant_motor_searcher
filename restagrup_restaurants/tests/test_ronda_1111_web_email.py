@@ -43,6 +43,10 @@ class TestRonda1111WebEmail(TransactionCase):
             'search_id': cls.search.id, 'source': 'google', 'name': 'Flor De Sal Web', 'google_place_id': 'abc',
             'etiqueta': 'interesado'})
 
+    def _send(self, action):
+        """Reunión 12/11: el envío pasa por la ventana «Revisar y enviar»; aquí se pulsa Enviar sin tocar nada."""
+        return self.env[action['res_model']].browse(action['res_id']).action_send()
+
     def test_email_on_the_home_page(self):
         pages = {'https://www.flordesal.example/': '<a href="mailto:reservas@flordesal.example">Escríbenos</a>'}
         with patch(REQUESTS_GET, side_effect=fake_web(pages)):
@@ -71,11 +75,11 @@ class TestRonda1111WebEmail(TransactionCase):
     def test_bulk_request_uses_the_email_from_the_web(self):
         pages = {'https://www.flordesal.example/': 'reservas@flordesal.example'}
         with patch(REQUESTS_GET, side_effect=fake_web(pages)):
-            self.search.action_request_quote_interested()
+            self._send(self.search.action_request_quote_interested())
         self.assertEqual(self.line.etiqueta, 'solicitado')
         self.assertTrue(any('su web' in (m.body or '') for m in self.search.message_ids))
 
     def test_without_web_email_it_still_says_so(self):
         with patch(REQUESTS_GET, side_effect=fake_web({}, website='')):
             with self.assertRaises(UserError):
-                self.search.action_request_quote_interested()
+                self._send(self.search.action_request_quote_interested())

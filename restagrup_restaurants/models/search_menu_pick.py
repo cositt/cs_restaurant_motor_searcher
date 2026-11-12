@@ -25,6 +25,24 @@ class RestaurantSearchLineMenus(models.Model):
         }
 
 
+    def action_offer_other_menu(self):
+        """Reunión 12/11 (5.7/5.6): otra tarjeta del mismo restaurante para registrar otro menú con su precio; en
+        la propuesta sale una opción por menú y ninguno pisa el precio del otro. Queda como «Visto» (sin
+        recordatorios ni petición a interesados) hasta registrar el menú."""
+        self.ensure_one()
+        if not self.partner_id:
+            raise UserError(_('Añade primero el restaurante como contacto: los menús se guardan en su ficha.'))
+        other = self.copy({
+            'etiqueta': 'visto', 'menu_id': False, 'quote_price_pp': 0.0, 'quote_amount': 0.0, 'quote_notes': False,
+            'quote_raw_text': False, 'quote_received_date': False, 'quote_requested_date': False,
+            'quote_reminder_sent_date': False, 'quote_availability_pending': False, 'sequence': self.sequence,
+        })
+        self.search_id.message_post_if_exists(_('%s: otra tarjeta para ofrecer otro menú.') % self.name)
+        action = other.action_open_quote_form()
+        action['name'] = _('Otro menú de %s') % self.name
+        return action
+
+
 class RestaurantMenuPick(models.Model):
     _inherit = 'restagrup.restaurant.menu'
 
@@ -37,5 +55,4 @@ class RestaurantMenuPick(models.Model):
         if line.partner_id != self.partner_id:
             raise UserError(_('Este menú es de otro restaurante.'))
         line.menu_id = self
-        line.action_request_quote()
-        return {'type': 'ir.actions.act_window_close', 'infos': {'reload': True}}
+        return line.action_open_quote_request()  # reunión 12/11 (4.1): se revisa antes de enviar

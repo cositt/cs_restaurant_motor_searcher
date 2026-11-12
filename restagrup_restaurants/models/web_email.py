@@ -104,6 +104,6 @@ class RestaurantSearchLineWebEmail(models.Model):
         return email
 
     def _get_quote_email_to(self):
-        if not (self.partner_id.email or self.email):
+        if not (self.partner_id.email or self.email or self._quote_contact_email()):
             self._restagrup_find_web_email()
         return super()._get_quote_email_to()
