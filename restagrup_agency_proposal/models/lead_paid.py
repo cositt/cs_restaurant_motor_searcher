@@ -23,6 +23,8 @@ class CrmLeadPaid(models.Model):
     def _inverse_restagrup_paid(self):
         for lead in self:
             orders = lead._restagrup_close_orders()
+            if not orders and not lead.restagrup_paid:
+                continue  # crear el grupo desde el formulario manda «Pagado = No»: no hay nada que cambiar
             if not orders:
                 raise UserError(_('Este grupo aún no tiene pedido confirmado: no hay nada que marcar como pagado.'))
             if lead.restagrup_paid:
