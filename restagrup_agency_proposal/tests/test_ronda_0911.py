@@ -15,6 +15,13 @@ from odoo.tests.common import TransactionCase, tagged
 LINE = 'restagrup.restaurant.search.line'
 
 
+def _send(env, action):
+    """Reunión 12/11: el envío pasa por la ventana «Revisar y enviar»; se pulsa Enviar sin tocar nada."""
+    while isinstance(action, dict) and action.get('res_model') == 'restagrup.send.wizard':
+        action = env[action['res_model']].browse(action['res_id']).action_send()
+    return action
+
+
 @tagged('post_install', '-at_install')
 class TestRonda0911(TransactionCase):
 
@@ -191,7 +198,7 @@ class TestRonda0911(TransactionCase):
     def test_restaurant_confirmation_goes_by_email_in_the_sheet_thread(self):
         lead, order = self._confirmed_order()
         sheet = order.sudo().restaurant_po_ids[:1]
-        sheet.action_send_confirmation_restaurant()
+        _send(self.env, sheet.action_send_confirmation_restaurant())
         message = sheet.message_ids.filtered(lambda m: m.message_type == 'email')[:1]
         self.assertTrue(message)
         self.assertEqual(message.outgoing_email_to, 'arcos@example.com')

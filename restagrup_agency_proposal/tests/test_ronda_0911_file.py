@@ -17,6 +17,13 @@ def _report(action):
     return action.get('context', {}).get('report_action', action)
 
 
+def _send(env, action):
+    """Reunión 12/11: el envío pasa por la ventana «Revisar y enviar»; se pulsa Enviar sin tocar nada."""
+    while isinstance(action, dict) and action.get('res_model') == 'restagrup.send.wizard':
+        action = env[action['res_model']].browse(action['res_id']).action_send()
+    return action
+
+
 @tagged('post_install', '-at_install')
 class TestRonda0911File(TransactionCase):
 
@@ -49,7 +56,7 @@ class TestRonda0911File(TransactionCase):
 
     def test_agency_confirmation_goes_by_email_with_its_pdf(self):
         lead, order = self._file()
-        lead.action_send_agency_confirmation()
+        _send(self.env, lead.action_send_agency_confirmation())
         message = order.message_ids.filtered(lambda m: m.message_type == 'email')[:1]
         self.assertTrue(message)
         self.assertEqual(message.outgoing_email_to, 'grupos@expediente.example')
@@ -62,7 +69,7 @@ class TestRonda0911File(TransactionCase):
     def test_agency_confirmation_counts_as_a_proforma(self):
         lead, _order = self._file()
         before = lead.restagrup_proformas_sent
-        lead.action_send_agency_confirmation()
+        _send(self.env, lead.action_send_agency_confirmation())
         self.assertEqual(lead.restagrup_proformas_sent, before + 1)
         self.assertTrue(any('Confirmación de reserva enviada a la agencia' in (m.body or '')
                             for m in lead.message_ids))
@@ -71,12 +78,12 @@ class TestRonda0911File(TransactionCase):
         lead, order = self._file()
         order.partner_id.email = False
         with self.assertRaises(UserError):
-            lead.action_send_agency_confirmation()
+            _send(self.env, lead.action_send_agency_confirmation())
 
     def test_agency_confirmation_needs_the_order(self):
         lead = self.env['crm.lead'].create({'name': 'Sin pedido'})
         with self.assertRaises(UserError):
-            lead.action_send_agency_confirmation()
+            _send(self.env, lead.action_send_agency_confirmation())
 
     # --- documentos desde el expediente ---
 
@@ -102,7 +109,7 @@ class TestRonda0911File(TransactionCase):
 
     def test_send_restaurant_confirmations_from_the_file(self):
         lead, order = self._file()
-        lead.action_send_restaurant_confirmations()
+        _send(self.env, lead.action_send_restaurant_confirmations())
         sheet = order.sudo().restaurant_po_ids[:1]
         self.assertTrue(sheet.message_ids.filtered(
             lambda m: m.message_type == 'email' and m.outgoing_email_to == 'casa@expediente.example'))

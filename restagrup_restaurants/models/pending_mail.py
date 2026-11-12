@@ -56,6 +56,10 @@ class RestagrupPendingMail(models.Model):
     approved_by = fields.Many2one('res.users', string='Aprobado por', readonly=True)
     approved_date = fields.Datetime(string='Fecha de aprobación', readonly=True)
     error_message = fields.Char(string='Error', readonly=True)
+    recipient_warning = fields.Char(
+        string='Aviso de destinatario', compute='_compute_recipient_warning',
+        help='El email del restaurante ha cambiado desde que se preparó el correo (reunión 12/11, 4.7).',
+    )
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -82,6 +86,16 @@ class RestagrupPendingMail(models.Model):
     def _compute_restaurant_name(self):
         for mail in self:
             mail.restaurant_name = mail.line_id.partner_id.name or mail.line_id.name or False
+
+    @api.depends('recipient_email', 'line_id.partner_id.email', 'line_id.email')
+    def _compute_recipient_warning(self):
+        for mail in self:
+            line = mail.line_id
+            current = (line.partner_id.email or line.email or '').strip() if line else ''
+            if mail.state == 'pending' and current and (mail.recipient_email or '').strip().lower() != current.lower():
+                mail.recipient_warning = _('El email del restaurante ahora es %s: revisa el destinatario antes de aprobar.') % current
+            else:
+                mail.recipient_warning = False
 
     def _creation_message(self):
         # Los crean los crons, que corren sin idioma: el «… created» de Odoo saldría en inglés.
@@ -127,7 +141,9 @@ class RestagrupPendingMail(models.Model):
         return self.create({
             'kind': 'data_request', 'line_id': line.id, 'recipient_email': line._get_quote_email_to(),
             'subject': subject, 'body': body,
-            'reason': _('Faltan datos: %s') % line.missing_fields_text,
+            'reason': _('Faltan datos: %(missing)s · lo pidió %(user)s desde la búsqueda de «%(group)s»') % {
+                'missing': line.missing_fields_text, 'user': self.env.user.name,
+                'group': line.search_id.lead_id.name or line.search_id.display_name},
         })
 
     @api.model

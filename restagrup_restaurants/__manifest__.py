@@ -22,6 +22,7 @@
         'views/crm_lead_views.xml',
         'views/pending_mail_views.xml',
         'views/approx_options_wizard_views.xml',
+        'views/send_wizard_views.xml',
         'reports/approx_options_report.xml',
         'views/inbox_mail_views.xml',
         'views/ai_log_views.xml',

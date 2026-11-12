@@ -33,6 +33,7 @@
                                  help="Buzón central: la IA clasifica cada correo antes de crear el lead. Y desde qué dirección salen los envíos del sistema.">
                             <field name="restagrup_classify_incoming"/>
                             <field name="restagrup_system_sender" placeholder="Vacío = correo del usuario"/>
+                            <field name="restagrup_reply_to" placeholder="Vacío = buzón de respuestas de restaurantes"/>
                         </setting>
                         <setting id="restagrup_alerts"
                                  help="Quién recibe la actividad cuando la IA falla o detecta una incidencia y el grupo no tiene responsable.">

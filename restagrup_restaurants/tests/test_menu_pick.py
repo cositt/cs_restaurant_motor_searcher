@@ -24,6 +24,10 @@ class TestMenuPick(TransactionCase):
             'search_id': search.id, 'source': 'partner', 'name': cls.restaurant.name,
             'partner_id': cls.restaurant.id, 'email': cls.restaurant.email})
 
+    def _send(self, action):
+        """Reunión 12/11: el envío pasa por la ventana «Revisar y enviar»; aquí se pulsa Enviar sin tocar nada."""
+        return self.env[action['res_model']].browse(action['res_id']).action_send()
+
     def test_view_menus_shows_only_this_restaurant_with_cost_and_sale(self):
         action = self.line.action_view_menus()
         menus = self.env['restagrup.restaurant.menu'].search(action['domain'])
@@ -35,7 +39,7 @@ class TestMenuPick(TransactionCase):
             self.assertIn(name, arch)
 
     def test_request_availability_of_a_specific_menu(self):
-        self.menu.with_context(restagrup_search_line_id=self.line.id).action_request_quote_with_menu()
+        self._send(self.menu.with_context(restagrup_search_line_id=self.line.id).action_request_quote_with_menu())
         self.assertEqual(self.line.menu_id, self.menu)
         self.assertEqual(self.line.etiqueta, 'solicitado')
         message = self.line.message_ids.filtered(lambda m: m.message_type == 'email')[:1]

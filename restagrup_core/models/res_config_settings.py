@@ -56,6 +56,12 @@ class ResConfigSettings(models.TransientModel):
              ' avisos): la cuenta dedicada. Vacío = el correo del usuario. Debe poder enviar con tu servidor'
              ' de correo saliente.',
     )
+    restagrup_reply_to = fields.Char(
+        string='Buzón de respuestas', config_parameter='restagrup.reply_to',
+        help='«Responder a» de los correos a restaurantes y agencias: el buzón que lee Odoo, para que la respuesta'
+             ' entre sola en el grupo, la tarjeta o el pedido del que salió. Vacío = el buzón de entrada de'
+             ' respuestas de restaurantes.',
+    )
     restagrup_alert_user_id = fields.Many2one(
         'res.users', string='Usuario de alertas IA', config_parameter='restagrup.alert_user_id',
         help='Quien recibe una actividad cuando la IA falla o detecta una incidencia y el grupo no tiene un'

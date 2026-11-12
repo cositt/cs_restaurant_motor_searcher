@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import json
+
 from markupsafe import Markup
 
 from odoo import _, api, fields, models
@@ -78,6 +80,8 @@ class FirewallMixin(models.AbstractModel):
         wizard = self.env['restagrup.firewall.wizard'].create({
             'res_model': self._name, 'res_id': self.id, 'method': method, 'message': text,
             'is_review': all(issue['check'].is_review for issue in issues),
+            'send_chain': json.dumps(self.env.context['restagrup_send_chain'])
+            if self.env.context.get('restagrup_send_chain') else False,
         })
         return {
             'type': 'ir.actions.act_window', 'name': _('Antes de continuar'), 'res_model': wizard._name,
@@ -94,6 +98,7 @@ class FirewallWizard(models.TransientModel):
     method = fields.Char(required=True)
     message = fields.Text(string='Falta o no cuadra', readonly=True)
     is_review = fields.Boolean(readonly=True)
+    send_chain = fields.Char(readonly=True, help='Envíos que van detrás (reunión 12/11: uno por restaurante).')
 
     def action_continue(self):
         """Sigue pese a los avisos. Queda anotado quién lo decidió y qué se saltó."""
@@ -103,7 +108,10 @@ class FirewallWizard(models.TransientModel):
                  else _('%s continúa pese a los avisos:', self.env.user.name))
         record._restagrup_firewall_log_target().message_post(body=Markup('%s<br/>%s') % (
             intro, Markup('<br/>').join(Markup.escape(line) for line in self.message.splitlines())))
-        result = getattr(record.with_context(restagrup_skip_firewall=True), self.method)()
+        context = {'restagrup_skip_firewall': True}
+        if self.send_chain:
+            context['restagrup_send_chain'] = json.loads(self.send_chain)
+        result = getattr(record.with_context(**context), self.method)()
         return result or {'type': 'ir.actions.act_window_close'}
 
     def action_cancel(self):

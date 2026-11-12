@@ -15,8 +15,7 @@
                     <field name="interested_count" invisible="1"/>
                     <button name="action_request_quote_interested" type="object" class="btn-primary"
                             icon="fa-paper-plane" invisible="not interested_count"
-                            string="Pedir presupuesto a interesados"
-                            confirm="Se enviará la petición de presupuesto por correo a todos los restaurantes marcados como «Interesado» (también a los que tengan avisos de aforo o día de cierre). ¿Continuar?"/>
+                            string="Pedir presupuesto a interesados"/>
                     <field name="pipeline_stage" widget="statusbar"
                            statusbar_visible="searching,quotes_requested,quotes_received,chosen"/>
                 </header>
@@ -152,6 +151,7 @@
                                                     <span class="tag">Ficha incompleta</span>
                                                     <span class="text-muted small">Faltan: <t t-esc="record.missing_fields_text.value"/></span>
                                                     <button name="action_request_missing_data" type="object"
+                                                            confirm="¿Pedir a este restaurante los datos que faltan de su ficha? El correo irá a «Pendientes de aprobar»."
                                                             class="btn btn-link btn-sm">Pedir datos que faltan</button>
                                                 </div>
                                                 <div class="o_restagrup_rest_proposal" t-if="record.data_proposal.raw_value">
@@ -175,6 +175,9 @@
                                                             class="btn btn-link btn-sm">Añadir como contacto</button>
                                                     <button t-if="record.partner_id.raw_value" name="action_view_menus" type="object"
                                                             class="btn btn-outline-secondary btn-sm" title="Menús del restaurante: coste, venta y pedir uno concreto">👁 Ver menús</button>
+                                                    <button t-if="record.partner_id.raw_value and record.etiqueta.raw_value == 'presupuesto_recibido'"
+                                                            name="action_offer_other_menu" type="object" class="btn btn-outline-secondary btn-sm"
+                                                            title="Otra tarjeta de este restaurante para registrar otro menú con su precio: en la propuesta salen los dos">+ Otro menú</button>
                                                 </div>
                                                 <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap:6px">
                                                     <t t-set="step_order" t-value="['interesado', 'solicitado', 'presupuesto_recibido']"/>
@@ -213,12 +216,12 @@
                                                                 name="action_recover_quote" type="object" class="btn btn-outline-primary"
                                                                 title="Vuelve con el presupuesto que ya dio, sin pedirlo otra vez">Recuperar</button>
                                                         <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido' and record.etiqueta.raw_value != 'solicitado' and !record.warnings_text.raw_value"
-                                                                name="action_request_quote" type="object" class="btn btn-outline-primary">Pedir presupuesto</button>
+                                                                name="action_open_quote_request" type="object" class="btn btn-outline-primary">Pedir presupuesto</button>
                                                         <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido' and record.etiqueta.raw_value != 'solicitado' and record.warnings_text.raw_value"
-                                                                name="action_request_quote" type="object" class="btn btn-outline-primary"
+                                                                name="action_open_quote_request" type="object" class="btn btn-outline-primary"
                                                                 confirm="Este restaurante tiene avisos para la petición (aforo o día de cierre). ¿Pedir presupuesto igualmente?">Pedir presupuesto</button>
                                                         <button t-if="record.etiqueta.raw_value == 'solicitado'"
-                                                                name="action_request_quote" type="object" class="btn btn-outline-primary">Reenviar petición</button>
+                                                                name="action_open_quote_request" type="object" class="btn btn-outline-primary">Reenviar petición</button>
                                                         <button t-if="record.quote_pending_confirmation.raw_value"
                                                                 name="action_register_quote" type="object" class="btn btn-primary">Confirmar presupuesto</button>
                                                         <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido'"

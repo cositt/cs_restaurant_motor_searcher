@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_restagrup_send_wizard_form" model="ir.ui.view">
+        <field name="name">restagrup.send.wizard.form</field>
+        <field name="model">restagrup.send.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Revisar y enviar">
+                <field name="is_multi" invisible="1"/>
+                <field name="candidate_ids" invisible="1"/>
+                <div class="alert alert-info" role="alert" invisible="is_multi">
+                    Revisa el texto antes de enviarlo: lo que escribas aquí es lo que recibe.
+                    En «Para» puedes poner la ficha y/o uno o varios de sus contactos.
+                </div>
+                <div class="alert alert-info" role="alert" invisible="not is_multi">
+                    Un mismo texto para todos. Cada restaurante lo recibe en su email, por separado.
+                </div>
+                <group>
+                    <field name="recipient_ids" widget="many2many_tags_email" invisible="is_multi"
+                           options="{'no_create': True}"/>
+                    <field name="extra_emails" invisible="is_multi" placeholder="otro@restaurante.com, ..."/>
+                    <field name="recipients_summary" invisible="not is_multi"/>
+                    <field name="subject"/>
+                </group>
+                <field name="body" nolabel="1" class="o_restagrup_send_body" style="min-height: 18em;"/>
+                <field name="attachment_ids" widget="many2many_binary" invisible="not attachment_ids"/>
+                <footer>
+                    <button name="action_send" type="object" string="Enviar" class="btn-primary" icon="fa-paper-plane"
+                            data-hotkey="q"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary" data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
