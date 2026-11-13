@@ -25,3 +25,4 @@ from . import test_ronda_1111
 from . import test_ronda_1111_invoice
 from . import test_reunion_1211_confirm
 from . import test_lead_paid_create
+from . import test_hallazgos_1211
