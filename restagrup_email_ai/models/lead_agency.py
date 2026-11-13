@@ -90,6 +90,8 @@ class CrmLeadAgency(models.Model):
         if self.partner_id != contact:
             self.sudo().partner_id = contact  # un lead sin asignar no es escribible por todos los comerciales
         if name and contact.parent_id and not _same_agency(name, contact.parent_id.name):
+            # Hallazgo guía 13/11: la empresa del lead es la de quien escribe, no la que nombra el correo.
+            self.partner_name = contact.parent_id.name
             self._restagrup_warn_agency_mismatch(name, contact)
         if name and not contact.is_company and not contact.parent_id:
             contact.sudo().parent_id = self._restagrup_find_or_create_agency(name, signature)
@@ -103,6 +105,21 @@ class CrmLeadAgency(models.Model):
                     ' la agencia del grupo.', named=named, contact=contact.name, agency=contact.parent_id.name)
         self.sudo().restagrup_agency_warning = warning
         self.sudo().message_post(body=warning, subtype_xmlid='mail.mt_note')
+
+    def action_dismiss_agency_warning(self):
+        """Hallazgo guía 13/11: una persona ya lo ha revisado; el aviso desaparece."""
+        self.sudo().restagrup_agency_warning = False
+
+    def write(self, vals):
+        # Si cambian el cliente, el aviso de agencia ya está resuelto (lo decidió una persona).
+        if 'partner_id' in vals and 'restagrup_agency_warning' not in vals:
+            changed = self.filtered(lambda lead: lead.restagrup_agency_warning
+                                    and lead.partner_id.id != vals['partner_id'])
+            result = super().write(vals)
+            if changed:
+                changed.sudo().restagrup_agency_warning = False
+            return result
+        return super().write(vals)
 
     def _restagrup_partner_domain(self):
         """Contactos que pueden ser la agencia o su gente: nunca un restaurante."""

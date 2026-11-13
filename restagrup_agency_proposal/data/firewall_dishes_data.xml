@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Hallazgo guía 13/11: platos elegidos por la agencia que no están en el menú. Solo avisan. -->
+    <record id="firewall_dishes_in_menu" model="restagrup.firewall.check">
+        <field name="code">dishes_in_menu</field>
+        <field name="name">Los platos elegidos por la agencia están en el menú</field>
+        <field name="trigger">confirm_agency</field>
+        <field name="sequence">105</field>
+    </record>
+    <record id="firewall_dishes_in_menu_restaurant" model="restagrup.firewall.check">
+        <field name="code">dishes_in_menu_restaurant</field>
+        <field name="name">Los platos elegidos por la agencia están en el menú</field>
+        <field name="trigger">confirm_restaurant</field>
+        <field name="sequence">125</field>
+    </record>
+</odoo>

@@ -817,7 +817,11 @@ class RestaurantSearchLine(models.Model):
         self._fetch_google_phone()
         # Reunión 12/11 (3.5): la dirección de Google («calle, CP ciudad, España») se trocea antes de crear la
         # ficha; si no, con la ciudad de la búsqueda ya puesta, todo se quedaba en «Calle».
-        vals = self.env['res.partner']._restagrup_split_address_vals(self._partner_vals_from_google())
+        Partner = self.env['res.partner']
+        google_vals = self._partner_vals_from_google()
+        vals = Partner._restagrup_split_address_vals(google_vals)
+        if vals is google_vals:
+            vals = Partner._restagrup_split_city_vals(google_vals, self.search_id.city)
         existing = self.google_place_id and self.env['res.partner'].search(
             [('restaurant_google_place_id', '=', self.google_place_id)], limit=1,
         )
@@ -1152,7 +1156,8 @@ class RestaurantSearchLine(models.Model):
             # Varios menús con precios distintos: no hay un precio que revisar, lo elige una persona.
             note = _('%(name)s: respuesta de presupuesto recibida por email, sin un precio único (leída por IA,'
                      ' %(provider)s) — elige el menú o escribe el precio por persona a mano.')
-        self.search_id.message_post_if_exists(note % {'name': self.name, 'provider': provider})
+        self.search_id.message_post_if_exists(note % {'name': self.name, 'provider': provider}
+                                              + self._restagrup_vat_note(data))
 
     def action_extract_quote_from_text(self):
         """Propone importe y notas leyendo el texto pegado -- nunca registra sola,
@@ -1184,15 +1189,8 @@ class RestaurantSearchLine(models.Model):
         self._restagrup_menus_from_reply(data.get('menus'))
         self.search_id.message_post_if_exists(_(
             '%(name)s: precio extraído por IA (%(provider)s) — revisa antes de registrar.'
-        ) % {'name': self.name, 'provider': provider})
-        return {
-            'type': 'ir.actions.act_window',
-            'res_model': 'restagrup.restaurant.search.line',
-            'res_id': self.id,
-            'view_mode': 'form',
-            'view_id': self.env.ref('restagrup_restaurants.view_restaurant_search_line_quote_form').id,
-            'target': 'new',
-        }
+        ) % {'name': self.name, 'provider': provider} + self._restagrup_vat_note(data))
+        return self.action_open_quote_form()
 
     def _quote_price_text(self):
         """«19,00 €/pers. (570,00 € el grupo)» para el historial."""
@@ -1220,10 +1218,15 @@ class RestaurantSearchLine(models.Model):
 
     @api.model
     def _restagrup_quote_notes(self, data):
-        notes = [data.get('notas')] if data.get('notas') else []
-        if data.get('vat_added'):
-            notes.append(_('Precios dados sin IVA: se ha sumado el %s %%.') % round(RESTAURANT_VAT_RATE * 100))
-        return '\n'.join(notes)
+        """Notas del restaurante (salen a la agencia en la propuesta). Lo del IVA va al historial, no aquí."""
+        return data.get('notas') or ''
+
+    @api.model
+    def _restagrup_vat_note(self, data):
+        """Hallazgo guía 13/11: «se ha sumado el IVA» es para el equipo, no para la agencia."""
+        if not data.get('vat_added'):
+            return ''
+        return ' ' + _('Precios dados sin IVA: se ha sumado el %s %%.') % round(RESTAURANT_VAT_RATE * 100)
 
     def _quote_price_vals(self, data):
         """Precio que propone la IA, siempre por persona: el que da el restaurante; si solo da el total, el
@@ -1268,6 +1271,7 @@ class RestaurantSearchLine(models.Model):
         self.ensure_one()
         return {
             'type': 'ir.actions.act_window',
+            'name': _('Registrar menú de %s') % self.name,
             'res_model': 'restagrup.restaurant.search.line',
             'res_id': self.id,
             'view_mode': 'form',
