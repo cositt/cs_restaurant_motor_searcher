@@ -131,6 +131,21 @@ class TestAlerts(TransactionCase):
         line.etiqueta = 'presupuesto_recibido'
         self.assertNotIn('quote_to_confirm', self._alerts(self.ana))
 
+    def test_restaurant_reply_without_price_alerts_until_registered(self):
+        """Reunión 12/11 (4.6): el restaurante contesta con varios menús o sin precio único y no saltaba nada."""
+        self.env['restagrup.restaurant.search.line'].search(
+            [('quote_reply_date', '!=', False)]).write({'quote_reply_date': False})
+        search = self._search()
+        partner = self.env['res.partner'].create({'name': 'Rest Contesta', 'is_restaurant': True})
+        line = self.env['restagrup.restaurant.search.line'].create({
+            'search_id': search.id, 'name': 'Rest Contesta', 'partner_id': partner.id, 'source': 'partner',
+            'etiqueta': 'solicitado'})
+        self.assertNotIn('quote_to_confirm', self._alerts(self.ana))
+        line.quote_reply_date = '2026-11-13 10:00:00'
+        self.assertEqual(self._alerts(self.ana)['quote_to_confirm']['count'], 1)
+        line.etiqueta = 'presupuesto_recibido'
+        self.assertNotIn('quote_to_confirm', self._alerts(self.ana))
+
     def test_client_choice_alerts_until_a_sale_order_exists(self):
         search = self._search()
         partner = self.env['res.partner'].create({'name': 'Rest Elegido', 'is_restaurant': True})

@@ -49,7 +49,14 @@ texto o en los adjuntos; lista vacía si no describe ninguno). Cada menú es un 
 "bebidas" (string con las bebidas incluidas o null), "platos" (lista de objetos
 {"tipo": uno de "entrante", "principal", "postre", "bebida", "otro"; "nombre": string}),
 "min_comensales" (entero o null), "max_comensales" (entero o null).
+Además "iva_incluido": false si el restaurante dice que sus precios son sin IVA o «+ IVA» / «IVA no
+incluido»; true si dice que llevan el IVA incluido; null si no lo dice. Copia los precios tal cual los da el
+restaurante, sin sumar ni quitar IVA.
 Si un dato no aparece claramente en el texto, pon null -- nunca lo inventes."""
+
+# Reunión 12/11 (4.5): los precios se trabajan siempre con IVA; si el restaurante los da «+ IVA», se suma el de
+# hostelería.
+RESTAURANT_VAT_RATE = 0.10
 
 QUOTE_DONE_ETIQUETAS = ('solicitado', 'presupuesto_recibido')
 ETIQUETA_SELECTION = [
@@ -578,6 +585,10 @@ class RestaurantSearchLine(models.Model):
     source = fields.Selection([('partner', 'Ya en Odoo'), ('google', 'Google Places')], required=True)
     name = fields.Char(string='Nombre')
     address = fields.Char(string='Dirección')
+    quote_reply_date = fields.Datetime(
+        string='Respuesta del restaurante', copy=False, readonly=True,
+        help='Cuándo contestó el restaurante a la petición de presupuesto (reunión 12/11, 4.6: el aviso salta aunque'
+             ' no dé un precio único).')
     phone = fields.Char(string='Teléfono')
     email = fields.Char(string='Email')
     rating = fields.Float(string='Rating')
@@ -804,7 +815,9 @@ class RestaurantSearchLine(models.Model):
         if self.partner_id:
             return
         self._fetch_google_phone()
-        vals = self._partner_vals_from_google()
+        # Reunión 12/11 (3.5): la dirección de Google («calle, CP ciudad, España») se trocea antes de crear la
+        # ficha; si no, con la ciudad de la búsqueda ya puesta, todo se quedaba en «Calle».
+        vals = self.env['res.partner']._restagrup_split_address_vals(self._partner_vals_from_google())
         existing = self.google_place_id and self.env['res.partner'].search(
             [('restaurant_google_place_id', '=', self.google_place_id)], limit=1,
         )
@@ -820,7 +833,7 @@ class RestaurantSearchLine(models.Model):
             vals,
             name=self.name,
             is_restaurant=True,
-            city=self.search_id.city,
+            city=vals.get('city') or self.search_id.city,
             company_type='company',
             date_localization=fields.Date.context_today(self) if self.latitude else False,
         ))
@@ -1114,17 +1127,20 @@ class RestaurantSearchLine(models.Model):
         if attached:
             text = '%s\n\n%s' % (text, attached)
 
+        self.quote_reply_date = fields.Datetime.now()
         connector = self.env['restagrup.llm.connector']
         data, provider, _log = connector.run('quote_extraction', EXTRACT_QUOTE_SYSTEM_PROMPT, text, source=self, label=self.name)
         if not data:
             return
+        data = self._restagrup_with_vat(data)
 
         vals = self._quote_price_vals(data)
         has_price = bool(vals)
         if has_price:
             vals['quote_received_date'] = fields.Datetime.now()
-        if data.get('notas'):
-            vals['quote_notes'] = data['notas']
+        notes = self._restagrup_quote_notes(data)
+        if notes:
+            vals['quote_notes'] = notes
         if vals:
             self.write(vals)
         self._restagrup_menus_from_reply(data.get('menus'))
@@ -1152,6 +1168,7 @@ class RestaurantSearchLine(models.Model):
                 'No se pudo extraer el importe automáticamente (IA no configurada o'
                 ' sin respuesta) -- introduce el presupuesto a mano.'
             ))
+        data = self._restagrup_with_vat(data)
         vals = self._quote_price_vals(data)
         if not vals:
             raise UserError(_(
@@ -1159,8 +1176,9 @@ class RestaurantSearchLine(models.Model):
                 ' introduce el precio por persona a mano.'
             ))
         vals['quote_received_date'] = fields.Datetime.now()
-        if data.get('notas'):
-            vals['quote_notes'] = data['notas']
+        notes = self._restagrup_quote_notes(data)
+        if notes:
+            vals['quote_notes'] = notes
         self.write(vals)
         self._restagrup_menus_from_reply(data.get('menus'))
         self.search_id.message_post_if_exists(_(
@@ -1181,6 +1199,30 @@ class RestaurantSearchLine(models.Model):
         fmt = self.env['restagrup.pricing'].format_amount
         return _('%(pp)s €/pers. (%(total)s € el grupo)') % {
             'pp': fmt(self.quote_price_pp), 'total': fmt(self.quote_amount)}
+
+    @api.model
+    def _restagrup_with_vat(self, data):
+        """Copia de lo extraído con los precios ya con IVA: si el restaurante los dio sin IVA se les suma el 10 %
+        (reunión 12/11, 4.5). Lo original no se toca (queda en la Actividad IA)."""
+        if data.get('iva_incluido') is not False:
+            return data
+        factor = 1 + RESTAURANT_VAT_RATE
+
+        def with_vat(value):
+            amount = self._restagrup_safe_float(value)
+            return round(amount * factor, 2) if amount else value
+
+        menus = [dict(menu, precio_persona=with_vat(menu.get('precio_persona'))) if isinstance(menu, dict) else menu
+                 for menu in (data.get('menus') or [])]
+        return dict(data, precio_persona=with_vat(data.get('precio_persona')), importe=with_vat(data.get('importe')),
+                    menus=menus, vat_added=True)
+
+    @api.model
+    def _restagrup_quote_notes(self, data):
+        notes = [data.get('notas')] if data.get('notas') else []
+        if data.get('vat_added'):
+            notes.append(_('Precios dados sin IVA: se ha sumado el %s %%.') % round(RESTAURANT_VAT_RATE * 100))
+        return '\n'.join(notes)
 
     def _quote_price_vals(self, data):
         """Precio que propone la IA, siempre por persona: el que da el restaurante; si solo da el total, el

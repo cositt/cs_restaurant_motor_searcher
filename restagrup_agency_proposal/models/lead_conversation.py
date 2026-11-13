@@ -65,11 +65,14 @@ class CrmLeadConversation(models.Model):
     @api.depends('restagrup_conversation_filter', 'message_ids')
     def _compute_restagrup_conversation(self):
         for lead in self:
-            if not lead.id:
+            # Reunión 12/11 (6.2): al cambiar «Ver» la ficha recalcula sobre un registro temporal (NewId, que vale
+            # False): la conversación se lee del registro guardado (_origin) para que el filtro funcione.
+            saved = lead._origin
+            if not saved.id:
                 lead.restagrup_conversation_html = False
                 continue
             wanted = lead.restagrup_conversation_filter or 'all'
-            entries = [entry for entry in lead._restagrup_conversation_entries()
+            entries = [entry for entry in saved._restagrup_conversation_entries()
                        if wanted == 'all' or entry['side'] == wanted]
             if not entries:
                 lead.restagrup_conversation_html = Markup('<p class="text-muted">%s</p>') % _(
