@@ -31,6 +31,7 @@
         <div t-if="svc.get('voucher')" style="margin-top: 4px;">AV / voucher: <strong t-out="svc['voucher']"/></div>
         <div t-if="svc['menu_name']" style="font-weight: bold; margin-top: 8px;" t-out="svc['menu_name']"/>
         <div t-if="svc['menu_text']" style="white-space: pre-line;" t-out="svc['menu_text']"/>
+        <div t-if="svc.get('notes')" style="margin-top: 6px; white-space: pre-line;"><strong>Notas:</strong> <t t-out="svc['notes']"/></div>
     </template>
 
     <!-- ===== Confirmación de reserva (agencia) ===== -->

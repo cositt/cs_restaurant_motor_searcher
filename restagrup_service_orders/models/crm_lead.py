@@ -12,6 +12,33 @@ class CrmLead(models.Model):
     restagrup_order_total = fields.Float(string='Presupuestado (sin IVA)', compute='_compute_restagrup_summary')
     restagrup_confirmation_summary = fields.Char(string='Confirmados', compute='_compute_restagrup_summary')
     restagrup_notice_pending_count = fields.Integer(string='Avisos sin respuesta', compute='_compute_restagrup_summary')
+    restagrup_services_headline = fields.Text(
+        string='Servicios', compute='_compute_restagrup_services_headline',
+        help='Reunión 12/11 (6.6): fecha con año, hora y comensales de cada servicio, como en su CRM.')
+
+    @api.depends('restagrup_event_ids.city', 'restagrup_event_ids.event_date', 'restagrup_event_ids.event_time',
+                 'restagrup_event_ids.pax', 'restagrup_event_ids.sequence')
+    def _compute_restagrup_services_headline(self):
+        """«Serv. 1: MADRID | 23/10/27 13:00 · 30 pax», un servicio por línea."""
+        for lead in self:
+            events = lead.restagrup_event_ids.sorted(
+                lambda e: (e.event_date or fields.Date.to_date('9999-12-31'), e.sequence, e.id))
+            lead.restagrup_services_headline = '\n'.join(
+                lead._restagrup_service_headline(index, event) for index, event in enumerate(events, start=1)
+            ) or False
+
+    @staticmethod
+    def _restagrup_service_headline(index, event):
+        hour = event.event_time
+        when = ' '.join(part for part in (
+            event.event_date.strftime('%d/%m/%y') if event.event_date else '',
+            '%02d:%02d' % divmod(round(hour * 60), 60) if hour else '') if part)
+        text = 'Serv. %s: %s' % (index, (event.city or '').upper() or '—')
+        if when:
+            text += ' | %s' % when
+        if event.pax:
+            text += ' · %s pax' % event.pax
+        return text
 
     @api.depends(
         'restagrup_event_ids', 'restagrup_restaurant_search_ids.chosen_line_id',

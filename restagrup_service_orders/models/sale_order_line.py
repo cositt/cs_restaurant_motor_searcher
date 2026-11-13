@@ -5,6 +5,11 @@ from odoo import api, fields, models
 class SaleOrderLine(models.Model):
     _inherit = 'sale.order.line'
 
+    def _restagrup_third_party_notes(self):
+        """Notas del servicio para agencia y restaurante (reunión 12/11, 8.3). Nunca las internas del grupo."""
+        self.ensure_one()
+        return (self.restagrup_search_line_id.search_id.event_id.notes or '').strip()
+
     restaurant_id = fields.Many2one(
         'res.partner', string='Restaurante',
         compute='_compute_restaurant_id', store=True, readonly=False, precompute=True,

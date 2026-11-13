@@ -24,7 +24,10 @@ class RestagrupLeadEvent(models.Model):
              'se sustituye.')
     event_type_id = fields.Many2one('restagrup.event.type', string='Tipo de servicio', ondelete='restrict')
     pax = fields.Integer(string='Comensales')
-    notes = fields.Text(string='Notas')
+    notes = fields.Text(
+        string='Notas para agencia y restaurante',
+        help='Reunión 12/11 (8.3): intolerancias, guía, teléfonos, indicaciones… Van en la petición de presupuesto,'
+             ' en la confirmación al restaurante y en los documentos. Lo interno, en «Notas internas» del grupo.')
     audience = fields.Selection(AUDIENCE_SELECTION, string='Público', default='adults')
     budget_pp = fields.Float(
         string='Precio/persona (€)', digits=(16, 2),
