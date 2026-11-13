@@ -68,6 +68,7 @@ class SaleOrderLine(models.Model):
             'pax_total': paying + self.restagrup_gratuities,
             'menu_name': menu_name,
             'menu_text': menu_text,
+            'notes': self._restagrup_third_party_notes(),
             'pvd': round(self.price_total / paying, 2) if paying else 0.0,
             'total': self.price_total,
             'cost_unit': self.restagrup_unit_cost,

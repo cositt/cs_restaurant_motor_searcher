@@ -47,9 +47,22 @@
             <xpath expr="//field[@name='date_deadline']" position="attributes">
                 <attribute name="invisible">1</attribute>
             </xpath>
+            <xpath expr="//page[@name='internal_notes']" position="attributes">
+                <attribute name="string">Notas internas</attribute>
+            </xpath>
+            <xpath expr="//page[@name='internal_notes']/field[@name='description']" position="before">
+                <div class="alert alert-secondary mb-2" role="status">
+                    Solo para el equipo: nunca salen en correos ni documentos. Lo que deba saber la agencia o el
+                    restaurante (intolerancias, guía, teléfonos…) va en las notas de cada servicio.
+                </div>
+            </xpath>
             <xpath expr="//div[hasclass('oe_title')]" position="before">
                 <div class="text-muted mb-1" invisible="not restagrup_doc_number">
                     Documento <field name="restagrup_doc_number" class="oe_inline fw-bold"/>
+                </div>
+                <!-- Reunión 12/11 (6.6): los servicios en grande, como en su CRM. -->
+                <div class="fs-4 fw-bold mb-2 o_restagrup_services_headline" invisible="not restagrup_services_headline">
+                    <field name="restagrup_services_headline" nolabel="1" readonly="1"/>
                 </div>
                 <div class="mb-1" invisible="not restagrup_chosen_summary">
                     <i class="fa fa-cutlery me-1" title="Restaurantes elegidos"/>

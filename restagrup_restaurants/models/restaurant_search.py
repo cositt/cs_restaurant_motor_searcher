@@ -972,7 +972,8 @@ class RestaurantSearchLine(models.Model):
             'ciudad': search.city or event.city or '',
             'pax': event.pax or search.min_capacity or '?',
             'menu': self.menu_id._render_text_for_restaurant() if self.menu_id else '',
-            'notas': search.notes or '',
+            # Reunión 12/11 (8.3): también las notas del servicio para agencia y restaurante.
+            'notas': '\n'.join(part for part in ((search.notes or '').strip(), (event.notes or '').strip()) if part),
             'empresa': self.env.company.name,
             'firma': signer_name,
             'localizador': search.lead_id._restagrup_locator() or '',

@@ -153,6 +153,9 @@ class PurchaseOrder(models.Model):
             # Y los comensales («— Madrid, 30 pax»), que ya van delante con la cantidad real de la línea.
             what = PAX_SUFFIX.sub('', what)
             rows.append('- %s' % ' · '.join(filter(None, [when, _('%g pax') % line.product_uom_qty, what])))
+            notes = line._restagrup_third_party_notes()
+            if notes:
+                rows.append('  %s' % (_('Notas: %s') % notes))
         return '\n'.join(rows)
 
     def _restagrup_service_sheet_content(self):
