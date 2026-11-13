@@ -122,6 +122,23 @@ class SaleOrder(models.Model):
         searches = self.env['restagrup.restaurant.search'].search([('sale_order_id', 'in', self.ids)])
         searches.message_post_if_exists(body)
 
+    def _restagrup_log_on_searches_and_lead(self, body):
+        """Como _restagrup_log_on_searches, y también en el lead si ninguna búsqueda lo ha anotado ya allí
+        (hallazgo 12/11: la nota salía dos veces en el chatter del lead)."""
+        self._restagrup_log_on_searches(body)
+        searches = self.env['restagrup.restaurant.search'].search([('sale_order_id', 'in', self.ids)])
+        leads = self.opportunity_id - searches.lead_id
+        for lead in leads:
+            lead.message_post(body=body)
+
+    def _action_cancel(self):
+        """Cancelar el pedido cancela también sus hojas de servicio (hallazgo 12/11): si no, el restaurante
+        seguía con una hoja viva de un grupo que ya no sale. sudo: quien cancela puede no tener permisos de
+        Compras."""
+        sheets = self.sudo().restaurant_po_ids.filtered(lambda po: po.state != 'cancel')
+        sheets.button_cancel()
+        return super()._action_cancel()
+
     def _sync_restaurant_purchase_orders(self):
         # Las hojas de servicio las genera el sistema: quien confirma el presupuesto puede ser
         # un comercial sin permisos de Compras, así que todo lo que toca purchase.order va con sudo.

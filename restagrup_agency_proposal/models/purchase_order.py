@@ -70,12 +70,11 @@ class PurchaseOrder(models.Model):
     def _restagrup_default_send_emails(self):
         """El email del restaurante o, si solo lo tiene un contacto suyo, el de ese contacto (reunión 12/11, 3.6)."""
         self.ensure_one()
-        partner = self.partner_id
-        email = (partner.email or partner.child_ids.filtered(lambda c: (c.email or '').strip())[:1].email or '')
-        if not email.strip():
+        email = self._restagrup_restaurant_email()
+        if not email:
             raise UserError(_('%s no tiene email: añádeselo o descarga la confirmación y envíasela a mano.')
-                            % partner.name)
-        return [email.strip()]
+                            % self.partner_id.name)
+        return [email]
 
     def _restagrup_send_reviewed(self, subject, body_text, emails, attachments=None):
         """Sale por el hilo de la hoja: el OK del restaurante vuelve aquí."""
@@ -91,7 +90,5 @@ class PurchaseOrder(models.Model):
         )
         note = _('Confirmación de reserva enviada a %(name)s (%(email)s).') % {
             'name': self.partner_id.name, 'email': email_to}
-        order._restagrup_log_on_searches(note)
-        if order.opportunity_id:
-            order.opportunity_id.message_post(body=note)
+        order._restagrup_log_on_searches_and_lead(note)
         return True

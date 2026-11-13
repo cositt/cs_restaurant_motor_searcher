@@ -75,10 +75,9 @@ class SaleOrderAgencyConfirmation(models.Model):
             attachment_ids=attachments.ids if attachments else [],
         )
         note = _('Confirmación de reserva enviada a la agencia (%s).') % email_to
-        self._restagrup_log_on_searches(note)
+        self._restagrup_log_on_searches_and_lead(note)
         if self.opportunity_id:
             self.opportunity_id._restagrup_note_proforma_sent()
-            self.opportunity_id.message_post(body=note)
         return True
 
 

@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
+import re
+
 from markupsafe import Markup
 
 from odoo import _, api, fields, models
 from odoo.tools import html2plaintext
+
+PAX_SUFFIX = re.compile(r',\s*(?:\d+|\?)\s*pax$')
 
 SHEET_REPORT = 'purchase.report_purchase_quotation'
 SHEET_LANG = 'es_ES'
@@ -123,6 +127,14 @@ class PurchaseOrder(models.Model):
 
     # --- enviar la hoja de servicio ---
 
+    def _restagrup_restaurant_email(self):
+        """El email del restaurante o, si solo lo tiene un contacto suyo, el de ese contacto (reunión 12/11, 3.6).
+        Vacío si nadie lo tiene."""
+        self.ensure_one()
+        partner = self.partner_id
+        contact = partner.child_ids.filtered(lambda c: (c.email or '').strip())[:1]
+        return ((partner.email or '').strip() or (contact.email or '').strip())
+
     def _restagrup_service_lines_text(self):
         """Una línea por servicio: fecha, hora, comensales y qué se sirve."""
         self.ensure_one()
@@ -135,6 +147,11 @@ class PurchaseOrder(models.Model):
                 line.service_date.strftime('%d/%m/%Y') if line.service_date else '',
                 '%02d:%02d' % divmod(round(hour * 60), 60) if hour else '']))
             what = (line.name or line.product_id.display_name or '').splitlines()[0]
+            if line.service_date:
+                # La etiqueta del evento («Comida · 26/11 — Servicio en…») repetía la fecha que ya va delante.
+                what = what.replace(' · %s — ' % line.service_date.strftime('%d/%m'), ' — ', 1)
+            # Y los comensales («— Madrid, 30 pax»), que ya van delante con la cantidad real de la línea.
+            what = PAX_SUFFIX.sub('', what)
             rows.append('- %s' % ' · '.join(filter(None, [when, _('%g pax') % line.product_uom_qty, what])))
         return '\n'.join(rows)
 

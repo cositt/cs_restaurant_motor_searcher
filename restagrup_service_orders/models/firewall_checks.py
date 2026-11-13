@@ -94,4 +94,6 @@ class PurchaseOrderFirewall(models.Model):
         return False
 
     def _fw_restaurant_email(self):
-        return False if (self.partner_id.email or '').strip() else _('El restaurante no tiene email para enviarle la confirmación.')
+        if self._restagrup_restaurant_email():
+            return False
+        return _('El restaurante no tiene email para enviarle la confirmación.')
