@@ -211,8 +211,9 @@ class TestRonda1111ChosenDishes(TransactionCase):
         self.assertIn('Bistec en salsa', text)
         self.assertNotIn('Macarrones', text)
         self.assertNotIn('Caldereta', text)
-        for included in ('Pan', 'Vino', 'Agua'):
-            self.assertIn(included, text)
+        for included in ('pan', 'vino', 'agua'):
+            # Reunión 12/11 (7.2): cada bebida una sola vez (el vino y el agua van en «Bebidas: vino y agua»).
+            self.assertEqual(text.lower().count(included), 1, text)
 
     def test_without_chosen_dishes_the_whole_menu_stays(self):
         text, _order = self._menu_text('')

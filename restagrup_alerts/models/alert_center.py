@@ -32,7 +32,8 @@ KIND_SPECS = {
     },
     'quote_to_confirm': {
         'model': 'restagrup.restaurant.search.line',
-        'domain': [('etiqueta', '=', 'solicitado'), ('quote_amount', '!=', 0)],
+        # Reunión 12/11 (4.6): también si contestó sin un precio único (varios menús): alguien tiene que mirarlo.
+        'domain': [('etiqueta', '=', 'solicitado'), '|', ('quote_amount', '!=', 0), ('quote_reply_date', '!=', False)],
         'owner': [('search_id.user_id', '=', '{uid}')],
         'icon': 'fa-cutlery',
         'open_model': 'restagrup.restaurant.search',
@@ -96,8 +97,8 @@ class RestagrupAlertCenter(models.AbstractModel):
         titles = {
             'pending_approval': (_('1 correo pendiente de aprobar'), _('%s correos pendientes de aprobar')),
             'new_request': (_('1 petición nueva sin abrir'), _('%s peticiones nuevas sin abrir')),
-            'quote_to_confirm': (_('1 presupuesto de restaurante por confirmar'),
-                                 _('%s presupuestos de restaurante por confirmar')),
+            'quote_to_confirm': (_('1 restaurante ha contestado: presupuesto por confirmar'),
+                                 _('%s restaurantes han contestado: presupuestos por confirmar')),
             'client_choice': (_('1 cliente ha elegido restaurante'), _('%s clientes han elegido restaurante')),
             'unassigned': (_('1 petición sin asignar'), _('%s peticiones sin asignar')),
             'payment_proof': (_('1 justificante de pago por confirmar'), _('%s justificantes de pago por confirmar')),

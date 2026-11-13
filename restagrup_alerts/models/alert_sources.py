@@ -2,7 +2,7 @@
 """Lo que hace saltar cada aviso: marca el dato que falta y avisa por el bus cuando cambia."""
 from odoo import api, fields, models
 
-QUOTE_FIELDS = ('quote_amount', 'etiqueta')
+QUOTE_FIELDS = ('quote_amount', 'etiqueta', 'quote_reply_date')
 
 
 class RestagrupPendingMail(models.Model):

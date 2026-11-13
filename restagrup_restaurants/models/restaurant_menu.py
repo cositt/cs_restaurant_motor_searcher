@@ -192,6 +192,16 @@ class RestaurantMenu(models.Model):
                                symbol=self.currency_id.symbol or '')
         return text
 
+    def _restagrup_dish_lines(self):
+        """Platos en orden de carta, sin las bebidas que ya nombra «Bebidas» (reunión 12/11, 7.2: «refresco» salía
+        como plato de tipo Bebida y otra vez en «Bebidas: refresco»)."""
+        self.ensure_one()
+        drinks = self.drinks_description or ''
+        return self.line_ids.filtered(
+            lambda l: not (l.course == 'bebida' and drinks
+                           and re.search(r'\b%s\b' % re.escape(l.name.strip()), drinks, re.IGNORECASE))
+        ).sorted(lambda l: (COURSE_ORDER.get(l.course, len(COURSE_ORDER)), l.sequence, l.id))
+
     def _always_included(self):
         """Lo que el menú lleva siempre, elija lo que elija la agencia: pan, bebidas, café… (ronda 11/11: la proforma
         con los platos elegidos no debe perderlo). Con platos detallados: los de tipo Bebida y Otro y el texto de
@@ -201,9 +211,7 @@ class RestaurantMenu(models.Model):
         if description:
             return [line.strip() for line in description.splitlines()
                     if line.strip() and INCLUDED_PATTERN.search(line)]
-        items = ['- %s' % line.name for line in self.line_ids.sorted(
-            lambda l: (COURSE_ORDER.get(l.course, len(COURSE_ORDER)), l.sequence, l.id))
-            if line.course in ('bebida', 'otro')]
+        items = ['- %s' % line.name for line in self._restagrup_dish_lines() if line.course in ('bebida', 'otro')]
         if self.drinks_description or self.drinks_included:
             items.append(_('Bebidas: %s', self.drinks_description or _('incluidas')))
         return items
@@ -221,7 +229,7 @@ class RestaurantMenu(models.Model):
         description = (self.description or '').strip()
         if description:
             parts.append(description)
-        lines = [] if description else sorted(self.line_ids, key=lambda l: (COURSE_ORDER.get(l.course, len(COURSE_ORDER)), l.sequence, l.id))
+        lines = [] if description else self._restagrup_dish_lines()
         current = None
         for line in lines:
             if line.course != current:
