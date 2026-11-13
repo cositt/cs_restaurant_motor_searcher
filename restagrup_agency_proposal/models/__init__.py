@@ -19,3 +19,4 @@ from . import lead_portal_choice
 from . import lead_conversation
 from . import lead_paid
 from . import invoice_report
+from . import firewall_dishes

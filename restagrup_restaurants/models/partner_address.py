@@ -5,8 +5,11 @@ Al copiar la dirección de Google Maps («C. Sta. María la Blanca, 34, Casco An
 la calle y la ciudad quedaba vacía, así que el buscador (que filtra por ciudad) no encontraba el restaurante.
 Si la ciudad está vacía y la calle acaba en «CP Ciudad», se separa sola. Lo que ya está separado no se toca."""
 import re
+import unicodedata
 
 from odoo import api, models
+
+COUNTRY_SUFFIXES = ('espana', 'spain')  # ya sin tildes (_place_key)
 
 # «…, 41001 Sevilla» / «… 29005 Málaga, España» -> calle, CP (5 cifras), ciudad.
 PASTED_ADDRESS = re.compile(
@@ -33,6 +36,22 @@ def split_pasted_address(street):
     return match.group('street').strip(' ,'), match.group('zip'), match.group('city').strip()
 
 
+def _place_key(text):
+    text = unicodedata.normalize('NFKD', (text or '').casefold())
+    return ' '.join(''.join(char for char in text if not unicodedata.combining(char)).split())
+
+
+def split_city_suffix(street, known_cities):
+    """(calle, ciudad) si la dirección acaba en «, Ciudad[, España]» y la ciudad es una de `known_cities` (claves
+    de _place_key); si no, None. Hallazgo guía 13/11: Google no siempre da el CP («Calle Carretería, 92, Málaga»)."""
+    parts = [part.strip() for part in (street or '').split(',')]
+    while parts and _place_key(parts[-1]) in COUNTRY_SUFFIXES:
+        parts.pop()
+    if len(parts) < 2 or _place_key(parts[-1]) not in known_cities:
+        return None
+    return ', '.join(parts[:-1]), parts[-1]
+
+
 class ResPartnerPastedAddress(models.Model):
     _inherit = 'res.partner'
 
@@ -57,6 +76,25 @@ class ResPartnerPastedAddress(models.Model):
             state = self._restagrup_state_from_zip(new_vals['zip'])
             if state:
                 new_vals['state_id'] = state.id
+        return new_vals
+
+    @api.model
+    def _restagrup_split_city_vals(self, vals, city_hint=False):
+        """Sin CP: separa la ciudad del final si es la de la búsqueda o el nombre de una provincia, y pone España
+        (y la provincia, si la ciudad se llama como ella). Si no, vals tal cual."""
+        spain = self.env.ref('base.es')
+        states = {_place_key(state.name): state for state in self.env['res.country.state'].search(
+            [('country_id', '=', spain.id)])}
+        known = set(states) | ({_place_key(city_hint)} if city_hint else set())
+        parts = split_city_suffix(vals.get('street'), known)
+        if not parts:
+            return vals
+        street, city = parts
+        new_vals = dict(vals, street=street, city=city)
+        new_vals.setdefault('country_id', spain.id)
+        state = states.get(_place_key(city))
+        if state and not vals.get('state_id') and new_vals['country_id'] == spain.id:
+            new_vals['state_id'] = state.id
         return new_vals
 
     @api.model

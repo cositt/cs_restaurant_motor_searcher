@@ -26,6 +26,7 @@
         'views/restaurant_search_views.xml',
         'views/close_checklist_views.xml',
         'data/firewall_close_data.xml',
+        'data/firewall_dishes_data.xml',
         'data/agency_payment_data.xml',
         'data/restaurant_payment_data.xml',
         'data/restaurant_invoice_data.xml',

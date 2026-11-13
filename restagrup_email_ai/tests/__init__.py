@@ -9,3 +9,4 @@ from . import test_ronda_0911_ai
 from . import test_ronda_1111_new_request
 from . import test_g2_defaults
 from . import test_g4_ai
+from . import test_hallazgos_guia_1311

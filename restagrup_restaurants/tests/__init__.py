@@ -29,3 +29,4 @@ from . import test_reunion_1211_send
 from . import test_reunion_1211_menus
 from . import test_g1_reunion_1211
 from . import test_g2_reunion_1211
+from . import test_hallazgos_guia_1311
