@@ -1326,7 +1326,7 @@ class RestaurantSearchLine(models.Model):
         self.ensure_one()
         return {
             'type': 'ir.actions.act_window',
-            'name': _('Registrar presupuesto y elegir'),
+            'name': _('Registrar menú y elegir'),
             'res_model': 'restagrup.restaurant.search.line',
             'res_id': self.id,
             'view_mode': 'form',

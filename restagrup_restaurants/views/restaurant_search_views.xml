@@ -223,10 +223,10 @@
                                                         <button t-if="record.etiqueta.raw_value == 'solicitado'"
                                                                 name="action_open_quote_request" type="object" class="btn btn-outline-primary">Reenviar petición</button>
                                                         <button t-if="record.quote_pending_confirmation.raw_value"
-                                                                name="action_register_quote" type="object" class="btn btn-primary">Confirmar presupuesto</button>
+                                                                name="action_register_quote" type="object" class="btn btn-primary">Confirmar menú</button>
                                                         <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido'"
                                                                 name="action_open_quote_form" type="object" class="btn btn-outline-primary"
-                                                                title="Por correo, WhatsApp o teléfono: pega su respuesta o escribe el precio">Registrar presupuesto</button>
+                                                                title="Por correo, WhatsApp o teléfono: pega su respuesta o escribe el precio">Registrar menú</button>
                                                         <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido' and record.partner_menu_count.raw_value"
                                                                 name="action_quote_from_catalog" type="object" class="btn btn-outline-primary"
                                                                 title="Presupuesto con el menú de su ficha, sin esperar a que conteste (disponibilidad sin confirmar)">Precio de catálogo</button>
@@ -259,7 +259,7 @@
                                     <field name="menu_id" string="Menú"/>
                                     <field name="quote_received_date" string="Recibido"/>
                                     <field name="quote_notes"/>
-                                    <button name="action_register_quote" type="object" string="Confirmar"
+                                    <button name="action_register_quote" type="object" string="Confirmar menú"
                                             class="btn-primary" invisible="not quote_pending_confirmation"/>
                                     <button name="action_toggle_chosen" type="object" string="Elegir"
                                             class="btn-outline-success" invisible="is_chosen"/>
@@ -281,7 +281,7 @@
         <field name="name">restagrup.restaurant.search.line.quote.form</field>
         <field name="model">restagrup.restaurant.search.line</field>
         <field name="arch" type="xml">
-            <form string="Registrar presupuesto">
+            <form string="Registrar menú">
                 <group>
                     <field name="name" readonly="1"/>
                 </group>

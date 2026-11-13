@@ -83,5 +83,5 @@ class TestRonda0911CatalogQuote(TransactionCase):
     def test_card_says_register_quote_and_offers_the_catalog(self):
         arch = self.env['restagrup.restaurant.search'].get_view(view_type='form')['arch']
         self.assertNotIn('Pegar respuesta', arch)
-        self.assertIn('Registrar presupuesto', arch)
+        self.assertIn('Registrar menú', arch)  # reunión 12/11 (5.1)
         self.assertIn('action_quote_from_catalog', arch)

@@ -2,18 +2,20 @@
 """El menú que manda el restaurante en su respuesta: la IA lo guarda en su ficha y lo deja asignado a la línea."""
 import io
 import logging
+import re
 import unicodedata
 
 from odoo import _, api, fields, models
 from odoo.tools.pdf import PdfReader
 
-from .restaurant_menu import COURSES, MENU_TYPES
+from .restaurant_menu import COURSES, MENU_TYPES, name_with_season
 
 _logger = logging.getLogger(__name__)
 
 MENU_TYPE_KEYS = {key for key, _label in MENU_TYPES}
 COURSE_KEYS = {key for key, _label in COURSES}
 MAX_ATTACHMENT_CHARS = 6000
+COMBINED_PLATE = re.compile(r'\bplatos? combinados?\b', re.IGNORECASE)
 
 
 def _normalized(name):
@@ -73,7 +75,9 @@ class RestaurantSearchLine(models.Model):
         menu_type = (data.get('tipo') or '').strip().lower()
         dishes = [d for d in (data.get('platos') or []) if isinstance(d, dict) and (d.get('nombre') or '').strip()]
         return {
-            'name': (data.get('nombre') or '').strip() or _('Menú %s') % (self.partner_id.name or ''),
+            # Reunión 12/11 (8.2): sin nombre, «Menú grupos»; el año (de la fecha del servicio) lo pone el menú.
+            'name': (data.get('nombre') or '').strip() or _('Menú grupos'),
+            'season': self._restagrup_menu_season(),
             'partner_id': self.partner_id.id,
             'menu_type': menu_type if menu_type in MENU_TYPE_KEYS else 'sin_definir',
             'cost_price': _number(data.get('precio_persona')),
@@ -90,11 +94,18 @@ class RestaurantSearchLine(models.Model):
             'source_line_id': self.id,
         }
 
+    def _restagrup_menu_season(self):
+        """Año del servicio para el que se pidió el menú; sin fecha, el actual."""
+        self.ensure_one()
+        event_date = self.search_id.event_id.event_date
+        return event_date.year if event_date else fields.Date.context_today(self).year
+
     def _restagrup_store_menu(self, data):
         """Guarda un menú de la respuesta. Uno igual (nombre, precio y platos) se reutiliza; uno con el mismo
         nombre pero distinto se crea aparte, con la fecha en el nombre, y se avisa."""
         Menu = self.env['restagrup.restaurant.menu']
         vals = self._restagrup_menu_vals(data)
+        vals['name'] = name_with_season(vals['name'], vals['season'])
         same_name = Menu.search([('partner_id', '=', self.partner_id.id)]).filtered(
             lambda m: _normalized(m.name) == _normalized(vals['name']))
         dishes = sorted((cmd[2]['course'], _normalized(cmd[2]['name'])) for cmd in vals['line_ids'])
@@ -133,6 +144,12 @@ class RestaurantSearchLine(models.Model):
     # --- lo que falta en la respuesta ---
 
     @api.model
+    def _restagrup_is_combined_plate(self, data):
+        names = [data.get('nombre') or ''] + [d.get('nombre') or '' for d in (data.get('platos') or [])
+                                               if isinstance(d, dict)]
+        return any(COMBINED_PLATE.search(name) for name in names)
+
+    @api.model
     def _restagrup_menu_missing(self, data, amount):
         missing = []
         if not _number(data.get('precio_persona')) and not amount:
@@ -140,7 +157,8 @@ class RestaurantSearchLine(models.Model):
         courses = {(d.get('tipo') or '').strip().lower() for d in (data.get('platos') or []) if isinstance(d, dict)}
         if not (data.get('bebidas') or '').strip() and 'bebida' not in courses:
             missing.append(_('Bebidas'))
-        if courses and 'postre' not in courses:
+        # Reunión 12/11 (6.4): un plato combinado no lleva postre: no se pide.
+        if courses and 'postre' not in courses and not self._restagrup_is_combined_plate(data):
             missing.append(_('Postre'))
         return missing
 
