@@ -5,7 +5,10 @@
   («Grupo escolar») y, por defecto, «Grupo adulto».
 - Quien escribe es el contacto; la agencia es su empresa. Si la agencia ya existe (por nombre o por el dominio de
   su correo) se usa; si no, se crea con los datos de la firma. Lo que ya tenía una ficha nunca se pisa."""
-from odoo import models
+import re
+import unicodedata
+
+from odoo import _, fields, models
 from odoo.tools import email_normalize
 from odoo.tools.mail import parse_contact_from_email
 
@@ -37,6 +40,21 @@ def _street_only(street, signature):
     return street
 
 
+# Lo que no distingue a una agencia de otra al comparar nombres («Sol y Nubes S.L.» = «SOL Y NUBES»).
+LEGAL_SUFFIXES = re.compile(r'\b(s\.?\s?l\.?u?|s\.?\s?a\.?|sociedad limitada|viajes|agencia de viajes)\b')
+
+
+def _agency_key(name):
+    text = unicodedata.normalize('NFKD', _text(name).casefold())
+    text = ''.join(char for char in text if not unicodedata.combining(char))
+    return ' '.join(LEGAL_SUFFIXES.sub(' ', re.sub(r'[^\w\s.]', ' ', text)).replace('.', ' ').split())
+
+
+def _same_agency(first, second):
+    a, b = _agency_key(first), _agency_key(second)
+    return bool(a and b) and (a == b or a in b or b in a)
+
+
 def _mail_domain(email):
     email = email_normalize(email or '') or ''
     return email.rpartition('@')[2] if '@' in email else ''
@@ -44,6 +62,11 @@ def _mail_domain(email):
 
 class CrmLeadAgency(models.Model):
     _inherit = 'crm.lead'
+
+    restagrup_agency_warning = fields.Char(
+        string='Aviso de agencia', copy=False,
+        help='Reunión 12/11 (2.1): el correo nombra una agencia distinta de la de quien escribe. No se asigna a'
+             ' ciegas: lo revisa una persona.')
 
     # --- título ---
 
@@ -66,10 +89,20 @@ class CrmLeadAgency(models.Model):
             return
         if self.partner_id != contact:
             self.sudo().partner_id = contact  # un lead sin asignar no es escribible por todos los comerciales
+        if name and contact.parent_id and not _same_agency(name, contact.parent_id.name):
+            self._restagrup_warn_agency_mismatch(name, contact)
         if name and not contact.is_company and not contact.parent_id:
             contact.sudo().parent_id = self._restagrup_find_or_create_agency(name, signature)
         if contact.parent_id:
             self._restagrup_complete_agency(contact.parent_id, signature)
+
+    def _restagrup_warn_agency_mismatch(self, named, contact):
+        """Reunión 12/11 (2.1): el correo habla de una agencia y quien escribe es de otra (Peregrino Travel / Sol
+        y Nubes). Se deja la de quien escribe y se avisa para que una persona decida."""
+        warning = _('El correo nombra la agencia «%(named)s», pero %(contact)s es de «%(agency)s». Revisa cuál es'
+                    ' la agencia del grupo.', named=named, contact=contact.name, agency=contact.parent_id.name)
+        self.sudo().restagrup_agency_warning = warning
+        self.sudo().message_post(body=warning, subtype_xmlid='mail.mt_note')
 
     def _restagrup_partner_domain(self):
         """Contactos que pueden ser la agencia o su gente: nunca un restaurante."""

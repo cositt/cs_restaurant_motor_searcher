@@ -33,6 +33,8 @@ MAX_EVENTS = 20
 # Reunión 12/11 (6.8): lo que se supone si la agencia no lo dice.
 DEFAULT_GROUP_TYPE = 'adulto'
 DEFAULT_EVENT_TYPE = 'comida'
+# Reunión 12/11 (3.2): el tipo de grupo decide el baremo del precio estimado (un escolar no es un adulto).
+GROUP_AUDIENCE = {'escolar': 'students', 'deportivo': 'athletes'}
 HOUR_RE = re.compile(r'^(\d{1,2})(?:[:.h](\d{2}))?$')
 EVENT_TYPE_XMLIDS = {
     'desayuno': 'restagrup_core.event_type_breakfast',
@@ -193,6 +195,8 @@ class CrmLead(models.Model):
                 'pax': data.get('num_pax'), 'tipo': None, 'notas': None,
             }
             events = [legacy] if any(legacy[key] for key in ('ciudad', 'fecha', 'pax')) else []
+        audience = GROUP_AUDIENCE.get((data.get('tipo_grupo') or '').strip().lower(), 'adults') \
+            if isinstance(data.get('tipo_grupo'), str) else 'adults'
         vals_list = []
         for event in events:
             if not isinstance(event, dict):
@@ -212,6 +216,7 @@ class CrmLead(models.Model):
                 'event_type_id': event_type_id,
                 # Siempre el total: «48 + chófer y guía» son 50 (ronda de ajustes 09/11).
                 'pax': pax + companions if pax else pax,
+                'audience': audience,
                 'budget_pp': self._restagrup_safe_price(event.get('precio_persona')),
                 'notes': (event.get('notas') or '') or False,
                 'state': 'draft',
