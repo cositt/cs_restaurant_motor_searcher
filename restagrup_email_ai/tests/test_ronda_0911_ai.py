@@ -51,7 +51,8 @@ class TestRonda0911Ai(TransactionCase):
         self.assertEqual(self._event(hora=None).event_time, 13.5)
 
     def test_default_hours_per_service(self):
-        expected = {'desayuno': 9.0, 'comida': 13.5, 'merienda': 17.0, 'cena': 21.0}
+        # Reunión 12/11 (6.7): el desayuno pasa a las 08:30.
+        expected = {'desayuno': 8.5, 'comida': 13.5, 'merienda': 17.0, 'cena': 21.0}
         for key, hour in expected.items():
             with self.subTest(service=key):
                 self.assertEqual(self._event(tipo=key, hora=None).event_time, hour)

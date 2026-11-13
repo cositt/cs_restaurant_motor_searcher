@@ -30,6 +30,9 @@ con los datos de la firma de quien escribe: "nombre" (la persona), "telefono", "
 Si un dato no aparece claramente en el texto, pon null -- nunca lo inventes."""
 
 MAX_EVENTS = 20
+# Reunión 12/11 (6.8): lo que se supone si la agencia no lo dice.
+DEFAULT_GROUP_TYPE = 'adulto'
+DEFAULT_EVENT_TYPE = 'comida'
 HOUR_RE = re.compile(r'^(\d{1,2})(?:[:.h](\d{2}))?$')
 EVENT_TYPE_XMLIDS = {
     'desayuno': 'restagrup_core.event_type_breakfast',
@@ -101,7 +104,8 @@ class CrmLead(models.Model):
             'restagrup_service_date': (
                 self._restagrup_safe_date(data.get('fecha_servicio')) or first.get('event_date') or False
             ),
-            'restagrup_group_type': (data.get('tipo_grupo') or '') or False,
+            # Reunión 12/11 (6.8): si la agencia no dice qué grupo es, es un grupo adulto.
+            'restagrup_group_type': (data.get('tipo_grupo') or '').strip() or DEFAULT_GROUP_TYPE,
             'restagrup_extraction_state': 'done',
             'restagrup_extraction_provider': provider,
         })
@@ -215,10 +219,10 @@ class CrmLead(models.Model):
         return vals_list[:MAX_EVENTS]
 
     def _restagrup_event_type_id(self, key):
-        """Clave del prompt (comida, cena…) -> tipo de evento. Sin clave: vacío (no se inventa);
-        clave desconocida: 'Otro'."""
-        if not key or not isinstance(key, str):
-            return False
+        """Clave del prompt (comida, cena…) -> tipo de evento. Sin clave: comida (reunión 12/11, 6.8: lo normal si
+        la agencia no dice nada); clave desconocida: 'Otro'."""
+        if not key or not isinstance(key, str) or not key.strip():
+            key = DEFAULT_EVENT_TYPE
         xmlid = EVENT_TYPE_XMLIDS.get(key.strip().lower(), EVENT_TYPE_XMLIDS['otro'])
         return self.env.ref(xmlid, raise_if_not_found=False).id or False
 

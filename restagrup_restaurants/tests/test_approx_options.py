@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
+from datetime import date
+
 from odoo.exceptions import UserError
 from odoo.tests.common import TransactionCase, tagged
+
+# Reunión 12/11 (8.2): el menú lleva el año de su temporada (sin servicio, el actual).
+THIS_YEAR = date.today().year
 
 
 @tagged('post_install', '-at_install')
@@ -152,7 +157,7 @@ class TestApproxOptions(TransactionCase):
         self.menu_taberna.write({'cost_price': 40.0, 'name': 'Menú nuevo'})
         option = self.pending.option_ids
         self.assertAlmostEqual(option.price_per_person, 31.20)
-        self.assertEqual(option.menu_name, 'Menú grupos')
+        self.assertEqual(option.menu_name, 'Menú grupos %s' % THIS_YEAR)
 
     # --- al aprobar ---
 

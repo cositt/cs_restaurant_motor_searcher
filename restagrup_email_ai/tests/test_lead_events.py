@@ -41,14 +41,15 @@ class TestLeadEvents(TransactionCase):
         self.assertEqual(events[0].event_type_id, self.env.ref('restagrup_core.event_type_lunch'))
         self.assertEqual(events[1].event_type_id, self.env.ref('restagrup_core.event_type_dinner'))
 
-    def test_unknown_event_type_falls_back_to_other_and_missing_one_stays_empty(self):
+    def test_unknown_event_type_falls_back_to_other_and_missing_one_is_lunch(self):
         data = {'eventos': [
             {'ciudad': 'Toledo', 'fecha': None, 'tipo': 'merienda-cena', 'pax': 10, 'notas': None},
             {'ciudad': 'Toledo', 'fecha': None, 'tipo': None, 'pax': 10, 'notas': None},
         ]}
         events = self._extract(data).restagrup_event_ids
         self.assertEqual(events[0].event_type_id, self.env.ref('restagrup_core.event_type_other'))
-        self.assertFalse(events[1].event_type_id, 'Sin tipo en el correo: no se inventa.')
+        # Reunión 12/11 (6.8): sin tipo en el correo, comida.
+        self.assertEqual(events[1].event_type_id, self.env.ref('restagrup_core.event_type_lunch'))
 
     def test_events_are_attached_to_the_lead_in_order(self):
         events = self._extract(THREE_EVENTS).restagrup_event_ids

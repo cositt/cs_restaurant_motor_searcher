@@ -2,7 +2,7 @@
 <odoo noupdate="1">
     <record id="event_type_breakfast" model="restagrup.event.type">
         <field name="name">Desayuno</field>
-        <field name="default_time">9.0</field>
+        <field name="default_time">8.5</field>
         <field name="sequence">10</field>
     </record>
     <record id="event_type_aperitif" model="restagrup.event.type">

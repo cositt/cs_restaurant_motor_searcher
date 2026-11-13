@@ -27,6 +27,16 @@ COURSE_ORDER = {key: index for index, (key, _label) in enumerate(COURSES)}
 INCLUDED_PATTERN = re.compile(
     r'\b(pan|panes|bebidas?|agua|vinos?|refrescos?|cervezas?|caf[eé]s?|infusi[oó]n(es)?|chupitos?|cava)\b',
     re.IGNORECASE)
+# Reunión 12/11 (8.2): el nombre del menú lleva siempre el año («Menú grupos lunes a viernes 2027»).
+YEAR_IN_NAME = re.compile(r'\b(19|20)\d{2}\b')
+
+
+def name_with_season(name, season):
+    """El nombre con el año de la temporada al final si no lleva ya un año."""
+    name = (name or '').strip()
+    if not name or not season or YEAR_IN_NAME.search(name):
+        return name
+    return '%s %s' % (name, season)
 
 
 class RestaurantMenu(models.Model):
@@ -191,6 +201,30 @@ class RestaurantMenu(models.Model):
             text += '\n' + _('Precio %(price)s %(symbol)s', price=formatLang(self.env, self.cost_price, digits=2),
                                symbol=self.currency_id.symbol or '')
         return text
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        default_season = fields.Date.context_today(self).year
+        return super().create([
+            dict(vals, name=name_with_season(vals['name'], vals.get('season') or default_season))
+            if vals.get('name') else vals
+            for vals in vals_list])
+
+    def write(self, vals):
+        if not vals.get('name'):
+            return super().write(vals)
+        for menu in self:
+            super(RestaurantMenu, menu).write(
+                dict(vals, name=name_with_season(vals['name'], vals.get('season') or menu.season)))
+        return True
+
+    @api.model
+    def _restagrup_add_season_to_names(self):
+        """Pone el año a los menús que ya existían sin él (migración de la reunión 12/11, 8.2)."""
+        menus = self.with_context(active_test=False).search([])
+        for menu in menus.filtered(lambda m: not YEAR_IN_NAME.search(m.name or '')):
+            menu.name = name_with_season(menu.name, menu.season)
+        return True
 
     def _restagrup_dish_lines(self):
         """Platos en orden de carta, sin las bebidas que ya nombra «Bebidas» (reunión 12/11, 7.2: «refresco» salía

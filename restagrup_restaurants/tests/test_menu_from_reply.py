@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 import io
 from collections import namedtuple
+from datetime import date
 from unittest.mock import patch
 
 from odoo import fields
 from odoo.tests.common import TransactionCase, tagged
+
+# Reunión 12/11 (8.2): el menú lleva el año de su temporada (sin servicio, el actual).
+THIS_YEAR = date.today().year
 
 LLM_PATH = 'odoo.addons.restagrup_core.models.llm_connector.RestagrupLlmConnector.extract_json'
 Attachment = namedtuple('Attachment', ['fname', 'content', 'info'])
@@ -60,7 +64,7 @@ class TestMenuFromReply(TransactionCase):
         self._reply(line, [MENU])
         menu = self._menus()
         self.assertEqual(len(menu), 1)
-        self.assertEqual(menu.name, 'Menú de paso')
+        self.assertEqual(menu.name, 'Menú de paso %s' % THIS_YEAR)
         self.assertEqual(menu.menu_type, 'almuerzo')
         self.assertEqual(menu.cost_price, 17.6, 'lo que cobra el restaurante es nuestro coste')
         self.assertGreater(menu.sale_price, menu.cost_price, 'el precio de venta sale con el margen')
@@ -97,7 +101,7 @@ class TestMenuFromReply(TransactionCase):
         line = self._line()
         dinner = dict(MENU, nombre='Menú cena', tipo='cena', precio_persona=24.0)
         self._reply(line, [MENU, dinner])
-        self.assertEqual(set(self._menus().mapped('name')), {'Menú de paso', 'Menú cena'})
+        self.assertEqual(set(self._menus().mapped('name')), {'Menú de paso %s' % THIS_YEAR, 'Menú cena %s' % THIS_YEAR})
 
     def test_reply_without_menu_creates_nothing(self):
         line = self._line()
@@ -112,7 +116,7 @@ class TestMenuFromReply(TransactionCase):
         self.assertTrue(line.partner_id.is_restaurant)
         self.assertEqual(line.partner_id.email, 'meson-ia@example.com')
         menu = self.Menu.search([('partner_id', '=', line.partner_id.id)])
-        self.assertEqual(menu.name, 'Menú de paso')
+        self.assertEqual(menu.name, 'Menú de paso %s' % THIS_YEAR)
         self.assertEqual(line.menu_id, menu)
         self.assertIn('añadido como contacto', ' '.join(self.search.message_ids.mapped('body')))
 

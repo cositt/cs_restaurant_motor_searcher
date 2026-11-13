@@ -7,3 +7,4 @@ from . import test_event_estimate
 from . import test_group_and_agency
 from . import test_ronda_0911_ai
 from . import test_ronda_1111_new_request
+from . import test_g2_defaults
