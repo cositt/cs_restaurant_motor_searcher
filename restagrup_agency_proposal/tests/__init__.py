@@ -28,3 +28,4 @@ from . import test_lead_paid_create
 from . import test_hallazgos_1211
 from . import test_g1_conversation
 from . import test_g3_reunion_1211
+from . import test_g4_dishes

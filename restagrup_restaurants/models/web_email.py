@@ -103,6 +103,12 @@ class RestaurantSearchLineWebEmail(models.Model):
                 _('%(name)s: email sacado de su web (%(web)s): %(email)s.', name=self.name, web=website, email=email))
         return email
 
+    def action_add_as_partner(self):
+        """Reunión 12/11 (8.1): al añadirlo como contacto también se busca el email en su web."""
+        for line in self.filtered(lambda l: not l.partner_id and not l.email):
+            line._restagrup_find_web_email()
+        return super().action_add_as_partner()
+
     def _get_quote_email_to(self):
         if not (self.partner_id.email or self.email or self._quote_contact_email()):
             self._restagrup_find_web_email()

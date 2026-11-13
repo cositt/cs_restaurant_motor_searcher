@@ -79,6 +79,13 @@ class TestRonda1111WebEmail(TransactionCase):
         self.assertEqual(self.line.etiqueta, 'solicitado')
         self.assertTrue(any('su web' in (m.body or '') for m in self.search.message_ids))
 
+    def test_add_as_contact_takes_the_email_from_the_web(self):
+        """Reunión 12/11 (8.1): también al «Añadir como contacto», no solo al pedir presupuesto."""
+        pages = {'https://www.flordesal.example/': '<a href="mailto:reservas@flordesal.example">Escríbenos</a>'}
+        with patch(REQUESTS_GET, side_effect=fake_web(pages)):
+            self.line.action_add_as_partner()
+        self.assertEqual(self.line.partner_id.email, 'reservas@flordesal.example')
+
     def test_without_web_email_it_still_says_so(self):
         with patch(REQUESTS_GET, side_effect=fake_web({}, website='')):
             with self.assertRaises(UserError):
