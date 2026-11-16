@@ -94,7 +94,13 @@ class CrmLead(models.Model):
 class RestaurantSearchLine(models.Model):
     _inherit = 'restagrup.restaurant.search.line'
 
+    restagrup_quote_alert_seen = fields.Boolean(
+        string='Aviso de respuesta visto', copy=False,
+        help='Se pulsó el aviso «presupuesto por confirmar»: deja de contar hasta que llegue otra respuesta.')
+
     def write(self, vals):
+        if ('quote_amount' in vals or 'quote_reply_date' in vals) and 'restagrup_quote_alert_seen' not in vals:
+            vals = dict(vals, restagrup_quote_alert_seen=False)  # respuesta nueva: vuelve a avisar
         res = super().write(vals)
         if any(field in vals for field in QUOTE_FIELDS):
             self.env['restagrup.alert.center']._ping('quote_to_confirm', self.mapped('search_id.user_id'))

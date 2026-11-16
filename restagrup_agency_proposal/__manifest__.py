@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Restagrup - Propuesta a agencias',
-    'version': '19.0.1.1.0',
+    'version': '19.0.1.2.0',
     'category': 'Custom',
     'summary': 'PDF de propuesta de restaurantes para la agencia, con link de portal',
     'description': '''
@@ -31,7 +31,13 @@
         'data/restaurant_payment_data.xml',
         'data/restaurant_invoice_data.xml',
         'views/restaurant_payment_views.xml',
+        'data/saved_filters_data.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'restagrup_agency_proposal/static/src/js/conversation_refresh.js',
+        ],
+    },
     'installable': True,
     'application': False,
     'auto_install': False,

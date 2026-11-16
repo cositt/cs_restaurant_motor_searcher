@@ -214,7 +214,7 @@ class SaleOrder(models.Model):
         return {
             'product_id': sale_line.product_id.id,
             'name': sale_line.name,
-            'product_qty': sale_line.product_uom_qty,
+            'product_qty': sale_line._restagrup_restaurant_qty(),
             'product_uom_id': sale_line.product_uom_id.id,
             'price_unit': self._restagrup_restaurant_cost(sale_line),
             'date_planned': planned or fields.Datetime.now(),

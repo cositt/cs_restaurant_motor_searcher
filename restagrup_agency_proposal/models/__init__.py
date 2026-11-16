@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from . import sale_order
 from . import sale_order_line
+from . import lead_event_gratuities
+from . import conversation_refresh
 from . import payment_settings
 from . import purchase_order
 from . import lead_firewall

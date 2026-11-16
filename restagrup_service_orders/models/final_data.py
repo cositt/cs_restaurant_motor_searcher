@@ -19,6 +19,10 @@ class RestagrupLeadEventFinalData(models.Model):
     _inherit = 'restagrup.lead.event'
 
     guide_contact = fields.Char(string='Contacto del guía')
+    gratuities = fields.Integer(
+        string='Gratuidades',
+        help='Comensales que no paga la agencia (chófer, guía…). Van DENTRO de los comensales: 55 con 2'
+             ' gratuidades son 53 que paga la agencia + 2; el restaurante cobra los 55 (reunión 13/11).')
     intolerances = fields.Text(string='Intolerancias / alergias')
     no_intolerances = fields.Boolean(
         string='Sin intolerancias', help='La agencia ha confirmado que no hay intolerancias ni alergias.')

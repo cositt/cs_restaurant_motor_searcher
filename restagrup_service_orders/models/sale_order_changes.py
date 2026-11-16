@@ -27,7 +27,7 @@ class SaleOrder(models.Model):
                 if kind in CONFIRM_KINDS:
                     return True
                 if kind == 'pax':
-                    old, new = line.product_qty, line.restagrup_sale_line_id.product_uom_qty
+                    old, new = line.product_qty, line.restagrup_sale_line_id._restagrup_restaurant_qty()
                     if not old or abs(new - old) / old * 100 > threshold:
                         return True
         return False
@@ -39,7 +39,7 @@ class SaleOrder(models.Model):
             texts += line._restagrup_change_texts()
             sale_line = line.restagrup_sale_line_id
             vals = {
-                'product_qty': sale_line.product_uom_qty,
+                'product_qty': sale_line._restagrup_restaurant_qty(),
                 'name': sale_line.name,
                 'date_planned': self._restagrup_planned_datetime(sale_line) or line.date_planned,
             }

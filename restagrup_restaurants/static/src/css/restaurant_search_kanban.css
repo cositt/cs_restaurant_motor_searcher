@@ -232,3 +232,17 @@
 /* Bloque plegable «Filtros» del buscador */
 .o_restagrup_filters > summary { cursor: pointer; font-weight: 600; color: #455a64; padding: 4px 0; }
 .o_restagrup_filters[open] > summary { margin-bottom: 6px; }
+
+/* Reunión 13/11 (P9): semáforo del precio frente al estimado */
+.o_restagrup_quote_amount.o_restagrup_price_ok { color: #1e8449; }
+.o_restagrup_quote_amount.o_restagrup_price_near { color: #b9770e; }
+.o_restagrup_quote_amount.o_restagrup_price_over { color: #c0392b; }
+.o_restagrup_price_over_band {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    background: #c0392b;
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin: 4px 0;
+}

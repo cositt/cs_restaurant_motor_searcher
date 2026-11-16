@@ -23,6 +23,29 @@
         </field>
     </record>
 
+    <!-- Reunión 13/11 (P4): botones de vencimiento; «Vencen hoy» incluye lo ya vencido -->
+    <record id="view_purchase_order_restaurant_payments_search" model="ir.ui.view">
+        <field name="name">purchase.order.search.restagrup.restaurant.payments</field>
+        <field name="model">purchase.order</field>
+        <field name="arch" type="xml">
+            <search string="Pagos a restaurantes">
+                <field name="partner_id" string="Restaurante"/>
+                <field name="restagrup_sale_order_id"/>
+                <field name="name"/>
+                <filter name="restagrup_due_today" string="Vencen hoy"
+                        domain="[('restagrup_payment_due_date', '&lt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="restagrup_due_48h" string="Vencen en 48 h"
+                        domain="[('restagrup_payment_due_date', '&lt;=', (context_today() + relativedelta(days=2)).strftime('%Y-%m-%d'))]"/>
+                <filter name="restagrup_due_72h" string="Vencen en 72 h"
+                        domain="[('restagrup_payment_due_date', '&lt;=', (context_today() + relativedelta(days=3)).strftime('%Y-%m-%d'))]"/>
+                <group>
+                    <filter name="group_restaurant" string="Restaurante" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_due_date" string="Toca pagar el" context="{'group_by': 'restagrup_payment_due_date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
     <!-- Condición de pago en la ficha del restaurante (respuesta de Conchita 2026-11-09) -->
     <record id="view_partner_form_restaurant_payment_terms" model="ir.ui.view">
         <field name="name">res.partner.form.restagrup.payment.terms</field>
@@ -40,6 +63,7 @@
         <field name="name">Pagos a restaurantes</field>
         <field name="res_model">purchase.order</field>
         <field name="domain">[('state', '!=', 'cancel'), ('restagrup_sale_order_id', '!=', False), ('restagrup_restaurant_paid', '=', False)]</field>
+        <field name="search_view_id" ref="view_purchase_order_restaurant_payments_search"/>
         <field name="view_ids" eval="[(5, 0, 0),
             (0, 0, {'view_mode': 'list', 'view_id': ref('view_purchase_order_restaurant_payments_list')}),
             (0, 0, {'view_mode': 'form', 'view_id': ref('purchase.purchase_order_form')})]"/>

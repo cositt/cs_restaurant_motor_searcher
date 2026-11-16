@@ -38,12 +38,14 @@
             <xpath expr="//header" position="inside">
                 <field name="restagrup_proposal_ready" invisible="1"/>
                 <field name="restagrup_quote_ready" invisible="1"/>
+                <field name="restagrup_has_open_services" invisible="1"/>
+                <!-- Reunión 13/11 (P7): en el expediente, para los servicios añadidos que aún no tienen presupuesto -->
                 <button name="action_open_proposal_wizard" type="object" string="Enviar propuesta a la agencia"
                         class="btn-primary"
-                        invisible="not restagrup_proposal_ready or restagrup_stage_key in ('expediente', 'cerrado')"/>
+                        invisible="not restagrup_proposal_ready or restagrup_stage_key == 'cerrado' or (restagrup_stage_key == 'expediente' and not restagrup_has_open_services)"/>
                 <button name="action_create_joint_quote" type="object" string="Crear presupuesto"
                         class="btn-primary"
-                        invisible="not restagrup_quote_ready or restagrup_stage_key in ('expediente', 'cerrado')"/>
+                        invisible="not restagrup_quote_ready or restagrup_stage_key == 'cerrado' or (restagrup_stage_key == 'expediente' and not restagrup_has_open_services)"/>
             </xpath>
             <!-- En el expediente un servicio nuevo se añade con «Añadir servicio», no con un presupuesto suelto -->
             <!-- Fuera «Nuevo presupuesto» en todas las fases (ronda de ajustes 09/11): el presupuesto sale de
@@ -57,6 +59,11 @@
                          invisible="restagrup_stage_key not in ('expediente', 'cerrado')">
                         Lo cerrado con la agencia: el restaurante elegido de cada servicio y su menú.
                     </div>
+                    <div class="alert alert-warning mb-2" role="status" invisible="not restagrup_has_open_services">
+                        Hay servicios añadidos sin cerrar: sus presupuestos salen abajo. Elige o envía la propuesta
+                        (solo con esos servicios) y pulsa «Crear presupuesto»: se hace un presupuesto adicional y lo
+                        ya confirmado no se toca.
+                    </div>
                     <div class="alert alert-info mb-2" role="status"
                          invisible="restagrup_stage_key in ('expediente', 'cerrado')">
                         Los restaurantes con presupuesto de cada servicio. Elige uno por servicio (o deja que la agencia
@@ -66,21 +73,30 @@
                         <list create="0" delete="0" default_group_by="search_id">
                             <field name="search_id" column_invisible="1"/>
                             <field name="is_chosen" column_invisible="1"/>
+                            <field name="restagrup_search_order_id" column_invisible="1"/>
+                            <field name="partner_id" column_invisible="1"/>
+                            <field name="price_level_status" column_invisible="1"/>
                             <field name="name" string="Restaurante" decoration-bf="is_chosen"
                                    decoration-success="is_chosen"/>
                             <field name="menu_id"/>
                             <button name="action_preview_menu" type="object" icon="fa-eye" title="Ver los platos"
                                     class="btn-link" invisible="not menu_id"/>
-                            <field name="quote_client_price_per_person" string="Agencia (€/pers.)"/>
+                            <field name="quote_client_price_per_person" string="Agencia (€/pers.)"
+                                   decoration-success="price_level_status == 'ok'"
+                                   decoration-warning="price_level_status == 'near'"
+                                   decoration-danger="price_level_status == 'over'"/>
                             <field name="quote_price_pp" string="Restaurante (€/pers.)" optional="show"/>
                             <field name="quote_notes" optional="hide"/>
                             <field name="agency_choice_notes" string="Pidió la agencia" optional="show"/>
-                            <button name="action_toggle_chosen" type="object" string="Elegir" icon="fa-check"
+                            <button name="action_offer_other_menu" type="object" string="Otro menú" icon="fa-plus"
+                                    class="btn-link" title="Ofrecer otro menú de este restaurante (de los guardados en su ficha)"
+                                    invisible="not partner_id or restagrup_search_order_id or parent.restagrup_stage_key == 'cerrado'"/>
+                            <button name="action_toggle_chosen" type="object" context="{'restagrup_price_check': True}" string="Elegir" icon="fa-check"
                                     class="btn-link"
-                                    invisible="is_chosen or parent.restagrup_stage_key in ('expediente', 'cerrado')"/>
-                            <button name="action_toggle_chosen" type="object" string="Quitar elegido" icon="fa-star"
+                                    invisible="is_chosen or restagrup_search_order_id or parent.restagrup_stage_key == 'cerrado'"/>
+                            <button name="action_toggle_chosen" type="object" context="{'restagrup_price_check': True}" string="Quitar elegido" icon="fa-star"
                                     class="btn-link text-success"
-                                    invisible="not is_chosen or parent.restagrup_stage_key in ('expediente', 'cerrado')"/>
+                                    invisible="not is_chosen or restagrup_search_order_id or parent.restagrup_stage_key == 'cerrado'"/>
                         </list>
                     </field>
                 </page>

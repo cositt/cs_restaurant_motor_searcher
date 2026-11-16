@@ -29,6 +29,9 @@ class TestOfferOtherMenu(TransactionCase):
             'quote_price_pp': 18.0, 'quote_received_date': '2026-11-12 10:00:00'})
 
     def _offer(self):
+        # Reunión 13/11 (P8): con menús guardados libres se elige uno de la lista; la tarjeta en blanco queda
+        # para cuando no hay ninguno libre (el otro menú no está en su ficha).
+        self.weekend.active = False
         action = self.line.action_offer_other_menu()
         self.assertEqual(action['res_model'], LINE)
         return self.env[LINE].browse(action['res_id'])

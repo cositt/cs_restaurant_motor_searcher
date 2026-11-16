@@ -48,8 +48,16 @@ export class RestagrupAlerts extends Component {
         this.state.alerts = alerts;
     }
 
-    open(alert) {
-        this.action.doAction(alert.action);
+    async open(alert) {
+        // Reunión 13/11 (P12): el servidor da por visto lo que toca y devuelve la acción; si falla, se abre igual.
+        let action = alert.action;
+        try {
+            action = (await this.orm.call("restagrup.alert.center", "open_alert", [alert.kind])) || alert.action;
+        } catch (error) {
+            console.warn("Restagrup: no se pudo marcar el aviso como visto", error);
+        }
+        await this.action.doAction(action);
+        this.load();
     }
 }
 

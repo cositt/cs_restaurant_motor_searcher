@@ -146,6 +146,35 @@ class TestAlerts(TransactionCase):
         line.etiqueta = 'presupuesto_recibido'
         self.assertNotIn('quote_to_confirm', self._alerts(self.ana))
 
+    def _quote_line(self, name):
+        search = self._search()
+        partner = self.env['res.partner'].create({'name': name, 'is_restaurant': True})
+        return self.env['restagrup.restaurant.search.line'].create({
+            'search_id': search.id, 'name': name, 'partner_id': partner.id, 'source': 'partner',
+            'etiqueta': 'solicitado', 'quote_amount': 500.0})
+
+    def test_opening_the_quote_alert_marks_it_seen(self):
+        """Reunión 13/11 (P12): la burbuja de presupuestos por confirmar se quita al abrir la lista."""
+        line = self._quote_line('Rest Visto')
+        self.assertEqual(self._alerts(self.ana)['quote_to_confirm']['count'], 1)
+        action = self.Center.with_user(self.ana).open_alert('quote_to_confirm')
+        self.assertEqual(action['res_model'], 'restagrup.restaurant.search')
+        self.assertIn(line.search_id.id, action['domain'][0][2])
+        self.assertNotIn('quote_to_confirm', self._alerts(self.ana))
+        self.assertEqual(line.etiqueta, 'solicitado')  # sigue por confirmar en la tarjeta
+
+    def test_a_new_reply_brings_the_quote_alert_back(self):
+        line = self._quote_line('Rest Vuelve')
+        self.Center.with_user(self.ana).open_alert('quote_to_confirm')
+        line.quote_reply_date = '2026-11-16 10:00:00'
+        self.assertEqual(self._alerts(self.ana)['quote_to_confirm']['count'], 1)
+
+    def test_opening_other_alerts_does_not_hide_them(self):
+        """Pagos, justificantes y demás siguen hasta resolverse."""
+        self._lead_with_pending(self.ana)
+        self.Center.with_user(self.ana).open_alert('pending_approval')
+        self.assertIn('pending_approval', self._alerts(self.ana))
+
     def test_client_choice_alerts_until_a_sale_order_exists(self):
         search = self._search()
         partner = self.env['res.partner'].create({'name': 'Rest Elegido', 'is_restaurant': True})

@@ -15,17 +15,35 @@
                        placeholder="Escribe el aviso. Variables: {restaurante}, {grupo}, {evento}, {fecha}, {comensales}"/>
                 <separator string="Restaurantes a avisar"/>
                 <field name="line_ids" nolabel="1">
-                    <list editable="bottom" create="false" delete="false">
+                    <!-- Reunión 13/11 (P6): pulsar una fila abre el correo de ese restaurante para retocarlo -->
+                    <list create="false" delete="false">
                         <field name="has_email" column_invisible="True"/>
                         <field name="selected" widget="boolean_toggle"/>
-                        <field name="restaurant_id" readonly="1"/>
-                        <field name="event_label" readonly="1"/>
+                        <field name="restaurant_id"/>
+                        <field name="event_label"/>
                         <field name="thread_label"/>
-                        <field name="has_email" string="Email" widget="boolean" readonly="1"/>
+                        <field name="has_email" string="Email" widget="boolean"/>
+                        <field name="personalized" widget="boolean"/>
+                        <field name="custom_subject" column_invisible="True"/>
+                        <field name="custom_body" column_invisible="True"/>
                     </list>
+                    <form string="Correo a este restaurante">
+                        <group>
+                            <field name="restaurant_id" readonly="1"/>
+                            <field name="event_label" readonly="1"/>
+                            <field name="selected"/>
+                            <field name="personalized"/>
+                            <field name="custom_subject" invisible="not personalized" required="personalized"/>
+                        </group>
+                        <field name="custom_body" invisible="not personalized"/>
+                        <p class="text-muted" invisible="personalized">
+                            Recibe el texto común. Marca «Personalizado» para escribirle uno propio (se parte del común
+                            ya rellenado con sus datos; si luego cambias el común, el suyo no se toca).
+                        </p>
+                    </form>
                 </field>
                 <p class="text-muted">
-                    Solo se avisa a los restaurantes marcados. La agencia no recibe este aviso. Las respuestas
+                    Pulsa un restaurante para retocar su correo. Solo se avisa a los restaurantes marcados. La agencia no recibe este aviso. Las respuestas
                     solo se enlazan si el restaurante contesta a este mismo correo.
                 </p>
                 <footer>
@@ -208,6 +226,7 @@
                 <field name="chosen_amount" optional="hide" readonly="1"/>
                 <field name="sale_order_id" optional="show" readonly="1"/>
                 <field name="sheet_state" optional="show" readonly="1"/>
+                <field name="gratuities" optional="show"/>
                 <field name="guide_contact" optional="hide"/>
                 <field name="intolerances" optional="hide"/>
                 <field name="no_intolerances" optional="hide"/>

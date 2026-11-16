@@ -33,7 +33,10 @@ KIND_SPECS = {
     'quote_to_confirm': {
         'model': 'restagrup.restaurant.search.line',
         # Reunión 12/11 (4.6): también si contestó sin un precio único (varios menús): alguien tiene que mirarlo.
-        'domain': [('etiqueta', '=', 'solicitado'), '|', ('quote_amount', '!=', 0), ('quote_reply_date', '!=', False)],
+        # Reunión 13/11 (P12): se quita al abrir la lista (seen_field); vuelve si llega otra respuesta.
+        'domain': [('etiqueta', '=', 'solicitado'), ('restagrup_quote_alert_seen', '=', False),
+                   '|', ('quote_amount', '!=', 0), ('quote_reply_date', '!=', False)],
+        'seen_field': 'restagrup_quote_alert_seen',
         'owner': [('search_id.user_id', '=', '{uid}')],
         'icon': 'fa-cutlery',
         'open_model': 'restagrup.restaurant.search',
@@ -126,29 +129,54 @@ class RestagrupAlertCenter(models.AbstractModel):
         """[{kind, icon, title, count, action}] de los avisos con algo pendiente para el usuario conectado."""
         subscription = self.env['restagrup.alert.subscription'].sudo().search([('user_id', '=', self.env.uid)], limit=1)
         alerts = []
-        for kind, spec in KIND_SPECS.items():
-            domain = self._domain_for(kind, subscription)
-            if domain is None:
-                continue
-            try:
-                records = self.env[spec['model']].search(domain)
-            except AccessError:
-                continue  # sin permiso sobre ese modelo: ese aviso no es para él
-            if not records:
-                continue
-            opened = spec.get('open_records', lambda recs: recs)(records)
-            title = self._title(kind, len(records))
-            list_view = self.env.ref(spec['list_view'], raise_if_not_found=False) if spec.get('list_view') else None
-            alerts.append({
-                'kind': kind, 'icon': spec['icon'], 'title': title, 'count': len(records),
-                'action': {
-                    'type': 'ir.actions.act_window', 'name': title,
-                    'res_model': spec.get('open_model', spec['model']),
-                    'views': [[list_view.id if list_view else False, 'list'], [False, 'form']],
-                    'domain': [('id', 'in', opened.ids)], 'target': 'current',
-                },
-            })
+        for kind in KIND_SPECS:
+            alert = self._alert_for(kind, subscription)
+            if alert:
+                alerts.append(alert[0])
         return alerts
+
+    @api.model
+    def _alert_for(self, kind, subscription):
+        """(aviso, registros contados) de este tipo para el usuario conectado, o None si no tiene nada."""
+        spec = KIND_SPECS[kind]
+        domain = self._domain_for(kind, subscription)
+        if domain is None:
+            return None
+        try:
+            records = self.env[spec['model']].search(domain)
+        except AccessError:
+            return None  # sin permiso sobre ese modelo: ese aviso no es para él
+        if not records:
+            return None
+        opened = spec.get('open_records', lambda recs: recs)(records)
+        title = self._title(kind, len(records))
+        list_view = self.env.ref(spec['list_view'], raise_if_not_found=False) if spec.get('list_view') else None
+        return {
+            'kind': kind, 'icon': spec['icon'], 'title': title, 'count': len(records),
+            'action': {
+                'type': 'ir.actions.act_window', 'name': title,
+                'res_model': spec.get('open_model', spec['model']),
+                'views': [[list_view.id if list_view else False, 'list'], [False, 'form']],
+                'domain': [('id', 'in', opened.ids)], 'target': 'current',
+            },
+        }, records
+
+    @api.model
+    def open_alert(self, kind):
+        """Pulsar un aviso: devuelve la acción que abre su lista. Los avisos con `seen_field` se dan por vistos
+        (reunión 13/11, P12); el resto sigue hasta resolverse."""
+        if kind not in KIND_SPECS:
+            return False
+        subscription = self.env['restagrup.alert.subscription'].sudo().search([('user_id', '=', self.env.uid)], limit=1)
+        result = self._alert_for(kind, subscription)
+        if not result:
+            return False
+        alert, records = result
+        seen_field = KIND_SPECS[kind].get('seen_field')
+        if seen_field:
+            records.sudo().write({seen_field: True})
+            self._ping(kind, self.env.user)
+        return alert['action']
 
     @api.model
     def _ping(self, kind, owners=None):

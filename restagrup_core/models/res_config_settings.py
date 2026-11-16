@@ -53,8 +53,13 @@ class ResConfigSettings(models.TransientModel):
     restagrup_system_sender = fields.Char(
         string='Remitente de los envíos del sistema', config_parameter='restagrup.system_sender',
         help='Dirección desde la que salen los correos que genera el sistema (recordatorios, peticiones de datos,'
-             ' avisos): la cuenta dedicada. Vacío = el correo del usuario. Debe poder enviar con tu servidor'
-             ' de correo saliente.',
+             ' avisos): la cuenta dedicada. Vacío = el buzón del servidor de correo saliente. Debe poder enviar'
+             ' con ese servidor.',
+    )
+    restagrup_sender_name = fields.Char(
+        string='Nombre del remitente', config_parameter='restagrup.sender_name',
+        help='Cómo ven agencias y restaurantes el remitente: «<este nombre> · <usuario>», siempre desde el buzón de'
+             ' salida (reunión 13/11). Vacío = «Restagrup».',
     )
     restagrup_reply_to = fields.Char(
         string='Buzón de respuestas', config_parameter='restagrup.reply_to',

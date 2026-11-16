@@ -26,21 +26,30 @@ class CrmLeadProposal(models.Model):
         compute='_compute_restagrup_proposal')
     restagrup_proposal_ready = fields.Boolean(compute='_compute_restagrup_proposal')
     restagrup_quote_ready = fields.Boolean(compute='_compute_restagrup_proposal')
+    restagrup_has_open_services = fields.Boolean(
+        string='Servicios sin cerrar', compute='_compute_restagrup_proposal',
+        help='Servicios añadidos en el expediente que aún no tienen presupuesto de venta: siguen su propio proceso'
+             ' (propuesta, elegir, presupuesto adicional) sin tocar lo cerrado (reunión 13/11, P7).')
 
     @api.depends('restagrup_restaurant_search_ids.line_ids.etiqueta',
                  'restagrup_restaurant_search_ids.line_ids.menu_id',
-                 'restagrup_restaurant_search_ids.chosen_line_id', 'stage_id.restagrup_stage_key')
+                 'restagrup_restaurant_search_ids.chosen_line_id', 'restagrup_restaurant_search_ids.sale_order_id',
+                 'stage_id.restagrup_stage_key')
     def _compute_restagrup_proposal(self):
         Menu = self.env['restagrup.restaurant.menu']
         for lead in self:
             lines = lead.restagrup_restaurant_search_ids.line_ids
             received = lines.filtered(lambda l: l.etiqueta == 'presupuesto_recibido' and l.quote_amount)
             candidates = lines.filtered(lambda l: l.partner_id and l.etiqueta not in ('descartado', 'cancelado'))
-            if lead.restagrup_stage_key in ('expediente', 'cerrado'):
-                # En el expediente solo lo cerrado con la agencia (notas de Conchita 05/11): el restaurante elegido
-                # de cada servicio y su menú; sin menú elegido, los menús de ese restaurante.
+            in_file = lead.restagrup_stage_key in ('expediente', 'cerrado')
+            open_searches = lead._restagrup_open_searches() if in_file else lead.restagrup_restaurant_search_ids
+            lead.restagrup_has_open_services = in_file and bool(open_searches)
+            if in_file:
+                # En el expediente, lo cerrado con la agencia (notas de Conchita 05/11): el restaurante elegido
+                # de cada servicio y su menú; sin menú elegido, los menús de ese restaurante. Y de los servicios
+                # añadidos después (sin presupuesto de venta), todos sus presupuestos (reunión 13/11, P7).
                 chosen = lead.restagrup_restaurant_search_ids.chosen_line_id
-                received = received & chosen
+                received = (received & chosen) | received.filtered(lambda l: l.search_id in open_searches)
                 menus = chosen.menu_id
                 without_menu = chosen.filtered(lambda l: not l.menu_id).partner_id
                 if without_menu:
@@ -57,10 +66,23 @@ class CrmLeadProposal(models.Model):
 
     # --- servicios de la propuesta ---
 
-    def _restagrup_proposal_searches(self):
-        """Una búsqueda por servicio, en el orden de los servicios (fecha y hora)."""
+    def _restagrup_open_searches(self):
+        """Servicios añadidos a un grupo con algo ya cerrado que aún no tienen presupuesto de venta. Sin ningún
+        servicio cerrado no hay «abiertos»: es el expediente normal."""
         self.ensure_one()
-        return self.restagrup_restaurant_search_ids.sorted(lambda s: (
+        searches = self.restagrup_restaurant_search_ids
+        if not searches.sale_order_id:
+            return searches.browse()
+        return searches.filtered(lambda s: not s.sale_order_id)
+
+    def _restagrup_proposal_searches(self):
+        """Una búsqueda por servicio, en el orden de los servicios (fecha y hora). En el expediente solo los
+        servicios sin cerrar: lo ya confirmado no vuelve a la agencia (reunión 13/11, P7)."""
+        self.ensure_one()
+        searches = self.restagrup_restaurant_search_ids
+        if self.restagrup_stage_key in ('expediente', 'cerrado'):
+            searches = self._restagrup_open_searches() or searches
+        return searches.sorted(lambda s: (
             s.event_id.event_date or fields.Date.today().replace(year=9999), s.event_id.event_time or 0.0, s.id))
 
     @api.model
@@ -109,15 +131,26 @@ class CrmLeadProposal(models.Model):
         if missing:
             raise UserError(_('Elige antes un restaurante para cada servicio. Falta en: %s.') % '; '.join(
                 self._restagrup_service_label(search) for search in missing))
-        for search in searches.filtered(lambda s: not s.sale_order_id):
+        pending = searches.filtered(lambda s: not s.sale_order_id)
+        for search in pending:
             result = search.action_create_sale_order()
             if isinstance(result, dict) and result.get('res_model') not in (None, 'sale.order'):
                 return result  # falta un paso (confirmar el precio o elegir el menú): se abre y se sigue luego
-        order = searches.sale_order_id.filtered(lambda o: o.state != 'cancel')[:1]
+        # Se abre el presupuesto recién hecho (en el expediente es uno adicional, no el ya confirmado).
+        orders = (pending.sale_order_id or searches.sale_order_id).filtered(lambda o: o.state != 'cancel')
+        order = orders.sorted('id')[-1:]
         return {
             'type': 'ir.actions.act_window', 'res_model': 'sale.order', 'res_id': order.id,
             'view_mode': 'form', 'views': [(False, 'form')], 'target': 'current',
         }
+
+
+class RestaurantSearchLineOrder(models.Model):
+    _inherit = 'restagrup.restaurant.search.line'
+
+    restagrup_search_order_id = fields.Many2one(
+        related='search_id.sale_order_id', string='Presupuesto del servicio',
+        help='Vacío mientras el servicio sigue abierto (se puede elegir y proponer).')
 
 
 class LeadProposalWizard(models.TransientModel):
