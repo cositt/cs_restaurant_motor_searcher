@@ -58,13 +58,14 @@ class SaleOrderQuoteReport(models.Model):
         restaurant = line.restaurant_id
         search_line = line.restagrup_search_line_id
         menu = search_line.menu_id
-        gratuities = line['restagrup_gratuities'] if 'restagrup_gratuities' in line._fields else 0
+        gratuities = (line['restagrup_gratuities'] if 'restagrup_gratuities' in line._fields else 0) or 0
         address = ', '.join(part for part in (restaurant.street, restaurant.zip, restaurant.city) if part)
+        paying = int(line.product_uom_qty)
+        pax = '%s (%s + %s gratuidades)' % (paying + gratuities, paying, gratuities) if gratuities else str(paying)
         return {
             'title': '%sº Servicio - %s - %s - PAX: %s' % (
                 index, search_line.search_id.city or restaurant.city or '',
-                line.service_date.strftime('%d/%m/%Y') if line.service_date else '',
-                int(line.product_uom_qty + (gratuities or 0))),
+                line.service_date.strftime('%d/%m/%Y') if line.service_date else '', pax),
             'restaurant': restaurant.name or '',
             'address': address,
             'service_type': line.service_event_type_id.name or '',

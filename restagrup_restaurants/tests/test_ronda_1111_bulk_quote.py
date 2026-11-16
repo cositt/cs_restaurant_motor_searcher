@@ -34,7 +34,7 @@ class TestRonda1111BulkQuote(TransactionCase):
         text = str(error.exception)
         self.assertIn('Flor De Sal Test', text)
         self.assertIn('Mesón Arcos Test', text)
-        self.assertIn('catálogo', text)
+        self.assertIn('cotización', text)  # correo de Conchita 16/11: «Cotización»
 
     def test_no_interested_mentions_the_catalogue_ones(self):
         self.google.etiqueta = 'descartado'

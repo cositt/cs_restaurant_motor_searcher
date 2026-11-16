@@ -64,6 +64,13 @@
         </div>
     </template>
 
+    <!-- Correo de Conchita 16/11: las gratuidades también en las opciones orientativas -->
+    <template id="report_approx_options_gratuities" inherit_id="restagrup_restaurants.report_approx_options_document">
+        <xpath expr="//t[@t-if='event.pax']" position="replace">
+            <t t-if="event.pax"> · <span t-out="event.pax"/> personas<t t-if="event.gratuities"> (<t t-out="event.pax - event.gratuities"/> + <t t-out="event.gratuities"/> gratuidades)</t></t>
+        </xpath>
+    </template>
+
     <template id="report_saleorder_raw_restagrup" inherit_id="sale.report_saleorder_raw">
         <xpath expr="//t[@t-call='sale.report_saleorder_document']" position="attributes">
             <attribute name="t-call">restagrup_service_orders.report_restagrup_quote_document</attribute>

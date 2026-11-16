@@ -24,6 +24,16 @@ class SaleOrderLine(models.Model):
         help='La referencia de la agencia para este servicio. Sale en la confirmación, en el bono y en la factura.',
     )
 
+    def restagrup_diners_text(self):
+        """«53 + 2 gratuidades» en el PDF de propuesta, junto a los comensales (correo de Conchita 16/11)."""
+        self.ensure_one()
+        qty = self.product_uom_qty
+        paying = int(qty) if float(qty).is_integer() else qty
+        if not self.restagrup_gratuities:
+            return str(paying)
+        return _('%(paying)s + %(gratuities)s gratuidades') % {
+            'paying': paying, 'gratuities': self.restagrup_gratuities}
+
     @api.model_create_multi
     def create(self, vals_list):
         """Una línea que sale de un servicio con gratuidades nace con ellas restadas de la cantidad (P3)."""

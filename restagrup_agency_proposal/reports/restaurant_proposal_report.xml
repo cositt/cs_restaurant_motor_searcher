@@ -44,7 +44,7 @@
                                 <tr t-foreach="lines" t-as="line">
                                     <td><span t-field="line.name"/></td>
                                     <td><span t-field="line.service_date"/></td>
-                                    <td class="text-end"><span t-field="line.product_uom_qty"/></td>
+                                    <td class="text-end"><span t-out="line.restagrup_diners_text()"/></td>
                                     <td class="text-end"><span t-field="line.price_unit"/></td>
                                 </tr>
                             </tbody>

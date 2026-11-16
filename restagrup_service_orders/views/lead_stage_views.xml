@@ -186,5 +186,5 @@
     <menuitem id="menu_expedientes" name="Expedientes" parent="restagrup_restaurants.menu_restagrup_root"
               action="action_expedientes" sequence="3"/>
     <menuitem id="menu_terminados" name="Terminados" parent="restagrup_restaurants.menu_restagrup_root"
-              action="action_terminados" sequence="4"/>
+              action="action_terminados" sequence="8"/>
 </odoo>

@@ -98,7 +98,7 @@
                                     <field name="email" optional="hide"/>
                                     <button name="action_view_menus" type="object" icon="fa-eye" title="Ver menús"
                                             class="btn-link" invisible="not partner_id"/>
-                                    <button name="action_quote_from_catalog" type="object" string="Precio de catálogo"
+                                    <button name="action_quote_from_catalog" type="object" string="Cotización"
                                             class="btn-link"
                                             invisible="not partner_menu_count or etiqueta in ('presupuesto_recibido', 'descartado')"/>
                                     <button name="action_toggle_chosen" type="object" context="{'restagrup_price_check': True}" string="Elegir" icon="fa-check"
@@ -244,7 +244,7 @@
                                                         <small class="o_restagrup_quote_cost d-block text-muted">coste <t t-esc="record.quote_price_pp.value"/> €/pers.</small>
                                                     </span>
                                                     <span class="badge text-bg-warning" t-if="record.quote_availability_pending.raw_value"
-                                                          title="Presupuesto con el precio del catálogo: el restaurante aún no ha confirmado que tenga sitio">Disponibilidad sin confirmar</span>
+                                                          title="Cotización con el menú de su ficha: el restaurante aún no ha confirmado que tenga sitio">Disponibilidad sin confirmar</span>
                                                     <span class="o_restagrup_stale_badge" t-if="record.quote_is_stale.raw_value">
                                                         ⚠ <t t-esc="record.quote_days_pending.raw_value"/> días sin respuesta
                                                     </span>
@@ -274,7 +274,7 @@
                                                                 title="Por correo, WhatsApp o teléfono: pega su respuesta o escribe el precio">Registrar menú</button>
                                                         <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido' and record.partner_menu_count.raw_value"
                                                                 name="action_quote_from_catalog" type="object" class="btn btn-outline-primary"
-                                                                title="Presupuesto con el menú de su ficha, sin esperar a que conteste (disponibilidad sin confirmar)">Precio de catálogo</button>
+                                                                title="Cotización con el menú de su ficha, sin esperar a que conteste (disponibilidad sin confirmar)">Cotización</button>
                                                         <button t-if="record.quote_availability_pending.raw_value"
                                                                 name="action_confirm_availability" type="object" class="btn btn-outline-success">Disponibilidad OK</button>
                                                         <button t-if="record.etiqueta.raw_value == 'solicitado' or record.etiqueta.raw_value == 'presupuesto_recibido'"

@@ -110,5 +110,5 @@
     <menuitem id="menu_restagrup_root" name="Restagrup" sequence="60"
               web_icon="restagrup_restaurants,static/description/icon.png"/>
     <menuitem id="menu_restaurant_list" name="Restaurantes" parent="menu_restagrup_root"
-              action="action_restaurant_list" sequence="10"/>
+              action="action_restaurant_list" sequence="5"/>
 </odoo>

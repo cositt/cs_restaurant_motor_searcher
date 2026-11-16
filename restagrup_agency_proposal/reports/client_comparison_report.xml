@@ -22,7 +22,7 @@
                 </table>
                 <h3 style="color: #222; font-weight: bold; text-decoration: underline; text-align: center;">
                     <span t-out="head['city']"/><t t-if="head['date']"> - <span t-out="head['date']"/></t>
-                    <t t-if="head['pax']"> - PAX: <span t-out="head['pax']"/></t>
+                    <t t-if="head['pax']"> - PAX: <span t-out="head['pax_text']"/></t>
                 </h3>
                 <p style="margin-bottom: 14px;">
                     <t t-if="head['service']">Tipo de servicio: <strong t-out="head['service']"/></t>

@@ -73,7 +73,8 @@ class TestReunion0511(TransactionCase):
         siblings = root.child_id.sorted(lambda m: (m.sequence, m.id))
         names = siblings.mapped('name')
         self.assertEqual(names.index('Restaurantes'), names.index('Agencias') + 1)
-        self.assertGreater(names.index('Agencias'), names.index('Terminados'))
+        # correo de Conchita 16/11: Agencias y Restaurantes van tras Expedientes (y antes de Terminados)
+        self.assertGreater(names.index('Agencias'), names.index('Expedientes'))
 
     def test_agencies_action_lists_only_agencies(self):
         action = self.env['res.partner'].restagrup_action_agencies()

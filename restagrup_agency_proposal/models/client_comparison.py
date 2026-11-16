@@ -38,6 +38,7 @@ class RestaurantSearchPortal(models.Model):
             'hour': '%02d:%02d' % (int(hour), round((hour % 1) * 60)) if hour else '',
             'service': event.event_type_id.name or '',
             'pax': event.pax or self.min_capacity or 0,
+            'pax_text': event.restagrup_pax_text() if event.pax else str(self.min_capacity or 0),
         }
 
     def _comparison_portal_url(self):
