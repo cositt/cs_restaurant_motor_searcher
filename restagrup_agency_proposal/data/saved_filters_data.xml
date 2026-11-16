@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reunión 13/11 (P5): búsquedas ya hechas, compartidas con todos. Se pueden editar o borrar desde «Favoritos». -->
+<odoo noupdate="1">
+    <record id="filter_orders_service_two_weeks" model="ir.filters">
+        <field name="name">Servicio esta semana y la que viene</field>
+        <field name="model_id">sale.order</field>
+        <field name="domain">[('restagrup_service_date', '&gt;=', context_today().strftime('%Y-%m-%d')), ('restagrup_service_date', '&lt;=', (context_today() + relativedelta(days=14)).strftime('%Y-%m-%d'))]</field>
+        <field name="sort">["restagrup_service_date asc"]</field>
+    </record>
+
+    <record id="filter_orders_unpaid_by_agency" model="ir.filters">
+        <field name="name">Sin cobrar a la agencia</field>
+        <field name="model_id">sale.order</field>
+        <field name="domain">[('state', '=', 'sale'), ('restagrup_paid', '=', False)]</field>
+        <field name="sort">["restagrup_service_date asc"]</field>
+    </record>
+
+    <record id="filter_orders_by_agency" model="ir.filters">
+        <field name="name">Por agencia</field>
+        <field name="model_id">sale.order</field>
+        <field name="context">{'group_by': ['partner_id']}</field>
+    </record>
+
+    <record id="filter_sheets_by_restaurant" model="ir.filters">
+        <field name="name">Por restaurante</field>
+        <field name="model_id">purchase.order</field>
+        <field name="context">{'group_by': ['partner_id', 'restagrup_service_date:day']}</field>
+    </record>
+</odoo>

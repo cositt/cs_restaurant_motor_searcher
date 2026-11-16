@@ -8,3 +8,4 @@ from . import system_mail
 from . import ai_log
 from . import price_baseline
 from . import res_partner
+from . import ir_mail_server

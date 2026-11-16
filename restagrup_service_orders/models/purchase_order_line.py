@@ -21,9 +21,10 @@ class PurchaseOrderLine(models.Model):
         if not sale_line:
             return []
         changes = []
-        if float_compare(sale_line.product_uom_qty, self.product_qty, precision_digits=2) != 0:
+        restaurant_qty = sale_line._restagrup_restaurant_qty()
+        if float_compare(restaurant_qty, self.product_qty, precision_digits=2) != 0:
             changes.append(('pax', _('Comensales %(old)g → %(new)g') % {
-                'old': self.product_qty, 'new': sale_line.product_uom_qty}))
+                'old': self.product_qty, 'new': restaurant_qty}))
         order = sale_line.order_id
         planned = order._restagrup_local_service_datetime(sale_line)
         current = order._restagrup_to_local(self.date_planned) if self.date_planned else False

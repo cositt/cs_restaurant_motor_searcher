@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Restagrup - Avisos',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.1.0',
     'category': 'Custom',
     'summary': 'Avisos con icono de lo que espera a alguien: pendientes de aprobar, peticiones nuevas, presupuestos por confirmar y elecciones del cliente',
     'description': '''

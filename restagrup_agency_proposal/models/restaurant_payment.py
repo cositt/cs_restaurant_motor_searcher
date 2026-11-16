@@ -88,7 +88,9 @@ class PurchaseOrder(models.Model):
         string='Queda por pagar', compute='_compute_restagrup_amounts', currency_field='currency_id',
         help='Total de la hoja menos la señal ya pagada.')
     restagrup_payment_due_date = fields.Date(
-        string='Toca pagar el', compute='_compute_restagrup_payment_due_date',
+        string='Toca pagar el', compute='_compute_restagrup_payment_due_date', store=True, index=True,
+        # Reunión 13/11 (P4): guardado para filtrar «Vencen hoy / 48 h / 72 h». Si se cambian las horas en Ajustes,
+        # las hojas ya creadas se recalculan al tocar su servicio o su condición de pago.
         help='48 h antes del servicio (en fin de semana, el viernes antes). Con pago inmediato o señal pendiente: ya.')
 
     @api.depends('amount_total', 'partner_id.commercial_partner_id.restagrup_payment_terms',
@@ -103,7 +105,8 @@ class PurchaseOrder(models.Model):
             sheet.restagrup_amount_to_pay = (
                 0.0 if sheet.restagrup_restaurant_paid else sheet.amount_total - sheet.restagrup_deposit_paid_amount)
 
-    @api.depends('restagrup_service_date', 'restagrup_payment_terms', 'restagrup_deposit_paid', 'create_date')
+    @api.depends('restagrup_service_date', 'partner_id.commercial_partner_id.restagrup_payment_terms',
+                 'restagrup_deposit_paid', 'create_date')
     def _compute_restagrup_payment_due_date(self):
         hours = self.env['restagrup.payment.settings'].value('restaurant_payment_hours')
         for sheet in self:

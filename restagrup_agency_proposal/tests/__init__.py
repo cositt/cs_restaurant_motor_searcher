@@ -30,3 +30,8 @@ from . import test_g1_conversation
 from . import test_g3_reunion_1211
 from . import test_g4_dishes
 from . import test_hallazgos_guia_1311
+from . import test_reunion_1311_gratuities
+from . import test_reunion_1311_new_service
+from . import test_reunion_1311_conversation_refresh
+from . import test_reunion_1311_payment_filters
+from . import test_reunion_1311_saved_filters

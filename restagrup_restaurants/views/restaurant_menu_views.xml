@@ -141,6 +141,28 @@
         </field>
     </record>
 
+    <!-- Reunión 13/11 (P8/P10): elegir otro menú guardado para la tarjeta -->
+    <record id="view_restaurant_menu_offer_list" model="ir.ui.view">
+        <field name="name">restagrup.restaurant.menu.offer.list</field>
+        <field name="model">restagrup.restaurant.menu</field>
+        <field name="priority">91</field>
+        <field name="arch" type="xml">
+            <list create="0" delete="0" edit="0">
+                <field name="name"/>
+                <field name="menu_type"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="company_currency_id" column_invisible="1"/>
+                <field name="cost_price" string="Coste (pers., su moneda)"/>
+                <field name="sale_price" string="Venta (€/pers.)"/>
+                <field name="min_pax" optional="show"/>
+                <field name="max_pax" optional="show"/>
+                <button name="action_preview_dishes" type="object" icon="fa-eye" title="Ver los platos" class="btn-link"/>
+                <button name="action_offer_this_menu" type="object" string="Ofrecer este menú" icon="fa-plus"
+                        class="btn-link"/>
+            </list>
+        </field>
+    </record>
+
     <!-- «Ojo» del menú (ronda de ajustes 09/11): nombre, precio y platos, sin salir de la lista -->
     <record id="view_restaurant_menu_preview_form" model="ir.ui.view">
         <field name="name">restagrup.restaurant.menu.preview.form</field>

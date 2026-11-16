@@ -5,6 +5,12 @@ from odoo import api, fields, models
 class SaleOrderLine(models.Model):
     _inherit = 'sale.order.line'
 
+    def _restagrup_restaurant_qty(self):
+        """Comensales que cobra el restaurante en su hoja (reunión 13/11, P3). Aquí, la cantidad de la línea;
+        restagrup_agency_proposal le suma las gratuidades."""
+        self.ensure_one()
+        return self.product_uom_qty
+
     def _restagrup_third_party_notes(self):
         """Notas del servicio para agencia y restaurante (reunión 12/11, 8.3). Nunca las internas del grupo."""
         self.ensure_one()

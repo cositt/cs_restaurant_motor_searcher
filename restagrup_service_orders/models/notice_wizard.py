@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+import re
+
 from markupsafe import Markup, escape
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools import html2plaintext
+
+PAX_SUFFIX = re.compile(r'\s*·\s*\d+\s*pax\s*$')
 
 
 class RestaurantNoticeWizard(models.TransientModel):
@@ -32,7 +36,7 @@ class RestaurantNoticeWizard(models.TransientModel):
             return False
         blocks = []
         for line in lines:
-            subject, body = line._render_notice(self.subject, self.body)
+            subject, body = line._final_notice(self.subject, self.body)
             blocks.append(_('Para: %(name)s <%(email)s> (%(event)s)\nAsunto: %(subject)s\n\n%(body)s') % {
                 'name': line.restaurant_id.name, 'email': (line.restaurant_id.email or '').strip() or '—',
                 'event': line.event_label or '—', 'subject': subject, 'body': html2plaintext(body).strip()})
@@ -48,8 +52,14 @@ class RestaurantNoticeWizard(models.TransientModel):
         lines = self.line_ids.filtered('selected')
         if not lines:
             raise UserError(_('Marca al menos un restaurante al que avisar.'))
-        if not self.subject or not html2plaintext(self.body or '').strip():
+        common = lines.filtered(lambda line: not line.personalized)
+        if common and (not self.subject or not html2plaintext(self.body or '').strip()):
             raise UserError(_('Escribe el asunto y el texto del aviso (o elige una plantilla).'))
+        empty = (lines - common).filtered(
+            lambda line: not line.custom_subject or not html2plaintext(line.custom_body or '').strip())
+        if empty:
+            raise UserError(_('El correo personalizado de %s no tiene asunto o texto.') % ', '.join(
+                empty.mapped('restaurant_id.name')))
         missing = lines.filtered(lambda line: not line.has_email)
         if missing:
             raise UserError(_('Estos restaurantes no tienen email: %s. Añádeselo o desmárcalos.') % ', '.join(
@@ -76,6 +86,24 @@ class RestaurantNoticeWizardLine(models.TransientModel):
     po_id = fields.Many2one('purchase.order', string='Hoja de servicio')
     has_email = fields.Boolean(string='Tiene email', compute='_compute_has_email')
     thread_label = fields.Char(string='Sale por', compute='_compute_thread_label')
+    # Reunión 13/11 (P6): el correo de un restaurante se puede retocar; si no, sale el común.
+    personalized = fields.Boolean(
+        string='Personalizado', help='Este restaurante recibe su propio asunto y texto, no el común.')
+    custom_subject = fields.Char(
+        string='Asunto propio', compute='_compute_custom_text', store=True, readonly=False)
+    custom_body = fields.Html(string='Texto propio', compute='_compute_custom_text', store=True, readonly=False)
+
+    @api.depends('personalized')
+    def _compute_custom_text(self):
+        """Al personalizar, se parte del texto común ya rellenado para este restaurante. Lo escrito a mano no se
+        pisa aunque luego cambie el texto común."""
+        for line in self:
+            written = line.custom_subject or html2plaintext(line.custom_body or '').strip()
+            if line.personalized and not written:
+                line.custom_subject, line.custom_body = line._render_notice(
+                    line.wizard_id.subject, line.wizard_id.body)
+            else:
+                line.custom_subject, line.custom_body = line.custom_subject, line.custom_body
 
     @api.depends('restaurant_id.email')
     def _compute_has_email(self):
@@ -94,7 +122,8 @@ class RestaurantNoticeWizardLine(models.TransientModel):
         return {
             '{restaurante}': self.restaurant_id.name or '',
             '{grupo}': self.wizard_id.lead_id.name or '',
-            '{evento}': self.event_label or '',
+            # Reunión 13/11 (P6): sin «· 55 pax», que ya va en {comensales}
+            '{evento}': PAX_SUFFIX.sub('', self.event_label or ''),
             '{fecha}': event.event_date.strftime('%d/%m/%Y') if event.event_date else '',
             '{comensales}': str((event.pax or search.min_capacity) or ''),
         }
@@ -108,11 +137,18 @@ class RestaurantNoticeWizardLine(models.TransientModel):
             rendered_body = rendered_body.replace(key, str(escape(value)))
         return rendered_subject, rendered_body
 
+    def _final_notice(self, subject, body):
+        """Lo que recibe de verdad este restaurante: su texto propio si está personalizado; si no, el común."""
+        self.ensure_one()
+        if self.personalized:
+            return self.custom_subject or '', self.custom_body or ''
+        return self._render_notice(subject, body)
+
     def _send_notice(self, subject, body):
         """Envía el aviso por el hilo de la hoja de servicio (o, si aún no hay, por el de la petición de
         presupuesto) para que las respuestas vuelvan enlazadas, y lo deja registrado para el seguimiento."""
         self.ensure_one()
-        rendered_subject, rendered_body = self._render_notice(subject, body)
+        rendered_subject, rendered_body = self._final_notice(subject, body)
         thread = self.po_id.sudo() if self.po_id else self.search_line_id
         user = self.env.user
         message = thread.message_post(

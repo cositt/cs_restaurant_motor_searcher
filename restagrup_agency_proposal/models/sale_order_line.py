@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from odoo import _, fields, models
+from odoo import _, api, fields, models
 
 
 class SaleOrderLine(models.Model):
@@ -13,14 +13,51 @@ class SaleOrderLine(models.Model):
 
     restagrup_gratuities = fields.Integer(
         string='Gratuidades', default=0,
-        help='Comensales que no pagan (p.ej. chófer y guía). La cantidad de la línea son los que pagan;'
-             ' en los documentos se muestra «pagan + gratuidades».',
+        help='Comensales que no paga la agencia (p.ej. chófer y guía). La cantidad de la línea son los que pagan;'
+             ' en los documentos se muestra «pagan + gratuidades». Al cambiarlas se ajusta la cantidad para que el'
+             ' total no varíe (reunión 13/11: los 55 que pide la agencia ya las incluyen). El restaurante cobra'
+             ' el total.',
     )
 
     restagrup_voucher = fields.Char(
         string='AV / voucher / localizador', copy=False,
         help='La referencia de la agencia para este servicio. Sale en la confirmación, en el bono y en la factura.',
     )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Una línea que sale de un servicio con gratuidades nace con ellas restadas de la cantidad (P3)."""
+        SearchLine = self.env['restagrup.restaurant.search.line']
+        new_vals_list = []
+        for vals in vals_list:
+            event = SearchLine.browse(vals.get('restagrup_search_line_id')).search_id.event_id
+            gratuities = event.gratuities if event else 0
+            if gratuities and 'restagrup_gratuities' not in vals and vals.get('product_uom_qty'):
+                vals = dict(vals, restagrup_gratuities=gratuities,
+                            product_uom_qty=max(vals['product_uom_qty'] - gratuities, 0))
+            new_vals_list.append(vals)
+        return super().create(new_vals_list)
+
+    def write(self, vals):
+        """Cambiar solo las gratuidades mueve comensales de «pagan» a «gratis»: el total se mantiene."""
+        if 'restagrup_gratuities' not in vals or 'product_uom_qty' in vals:
+            return super().write(vals)
+        new = vals['restagrup_gratuities'] or 0
+        for line in self:
+            qty = max(line.product_uom_qty - (new - line.restagrup_gratuities), 0)
+            super(SaleOrderLine, line).write(dict(vals, product_uom_qty=qty))
+        return True
+
+    @api.onchange('restagrup_gratuities')
+    def _onchange_restagrup_gratuities(self):
+        for line in self:
+            delta = (line.restagrup_gratuities or 0) - (line._origin.restagrup_gratuities or 0)
+            if delta:
+                line.product_uom_qty = max(line.product_uom_qty - delta, 0)
+
+    def _restagrup_restaurant_qty(self):
+        """El restaurante cobra todos los comensales, gratuidades incluidas (reunión 13/11, P3)."""
+        return super()._restagrup_restaurant_qty() + (self.restagrup_gratuities or 0)
 
     def _prepare_invoice_line(self, **optional_values):
         values = super()._prepare_invoice_line(**optional_values)

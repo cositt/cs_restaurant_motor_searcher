@@ -68,8 +68,46 @@
                                 <label for="sort_by" string="Ordenar por" class="mb-0"/>
                                 <field name="sort_by" nolabel="1" style="max-width:220px"/>
                                 <button name="action_apply_sort" type="object" string="Aplicar" class="btn-secondary btn-sm"/>
+                                <field name="results_view" nolabel="1" widget="radio" options="{'horizontal': true}"
+                                       class="ms-auto mb-0"/>
                             </div>
-                            <field name="line_ids">
+                            <!-- Reunión 13/11 (P2): los mismos resultados en tabla -->
+                            <field name="line_table_ids" invisible="results_view != 'table'" readonly="1">
+                                <list create="0" delete="0" default_order="sequence, id"
+                                      decoration-muted="etiqueta == 'descartado'" decoration-bf="is_chosen">
+                                    <field name="sequence" column_invisible="1"/>
+                                    <field name="is_chosen" column_invisible="1"/>
+                                    <field name="partner_id" column_invisible="1"/>
+                                    <field name="price_level_status" column_invisible="1"/>
+                                    <field name="name" string="Restaurante"/>
+                                    <field name="etiqueta" widget="badge"
+                                           decoration-info="etiqueta == 'solicitado'"
+                                           decoration-success="etiqueta == 'presupuesto_recibido'"
+                                           decoration-danger="etiqueta == 'descartado'"/>
+                                    <field name="known_price_pp" string="Agencia (€/pers.)"
+                                           decoration-success="price_level_status == 'ok'"
+                                           decoration-warning="price_level_status == 'near'"
+                                           decoration-danger="price_level_status == 'over'"/>
+                                    <field name="quote_price_pp" string="Restaurante (€/pers.)" optional="show"/>
+                                    <field name="menu_id" optional="show"/>
+                                    <field name="partner_menu_count" string="Menús en ficha" optional="show"/>
+                                    <field name="capacity" optional="show"/>
+                                    <field name="rating" optional="show"/>
+                                    <field name="price_label" string="Precio Google" optional="hide"/>
+                                    <field name="phone" optional="hide"/>
+                                    <field name="email" optional="hide"/>
+                                    <button name="action_view_menus" type="object" icon="fa-eye" title="Ver menús"
+                                            class="btn-link" invisible="not partner_id"/>
+                                    <button name="action_quote_from_catalog" type="object" string="Precio de catálogo"
+                                            class="btn-link"
+                                            invisible="not partner_menu_count or etiqueta in ('presupuesto_recibido', 'descartado')"/>
+                                    <button name="action_toggle_chosen" type="object" context="{'restagrup_price_check': True}" string="Elegir" icon="fa-check"
+                                            class="btn-link" invisible="is_chosen or etiqueta != 'presupuesto_recibido'"/>
+                                    <button name="action_toggle_chosen" type="object" context="{'restagrup_price_check': True}" string="Quitar elegido"
+                                            icon="fa-star" class="btn-link text-success" invisible="not is_chosen"/>
+                                </list>
+                            </field>
+                            <field name="line_ids" invisible="results_view == 'table'">
                                 <kanban class="o_restagrup_rest_kanban" create="false">
                                     <field name="name"/>
                                     <field name="source"/>
@@ -95,6 +133,7 @@
                                     <field name="quote_days_pending"/>
                                     <field name="quote_is_stale"/>
                                     <field name="quote_availability_pending"/>
+                                    <field name="menu_id"/>
                                     <field name="partner_menu_count"/>
                                     <field name="partner_restaurant_rating"/>
                                     <field name="is_chosen"/>
@@ -106,6 +145,7 @@
                                     <field name="quote_pending_confirmation"/>
                                     <field name="google_maps_url"/>
                                     <field name="price_warning"/>
+                                    <field name="price_level_status"/>
                                     <field name="known_price_pp"/>
                                     <templates>
                                         <t t-name="card">
@@ -141,7 +181,8 @@
                                                     <span class="tag" t-if="record.suitable_school.raw_value">Escolar</span>
                                                     <span class="tag" t-if="record.suitable_family.raw_value">Familiar</span>
                                                 </div>
-                                                <div class="o_restagrup_rest_warning" t-if="record.price_warning.raw_value">
+                                                <div t-if="record.price_warning.raw_value" class="o_restagrup_price_over_band"
+                                                     title="Reunión 13/11: al elegirlo se pide confirmación">
                                                     💶 <t t-esc="record.price_warning.value"/>
                                                 </div>
                                                 <div class="o_restagrup_rest_warning" t-if="record.warnings_text.raw_value">
@@ -191,7 +232,7 @@
                                                     <span t-else="" t-attf-class="badge-etiqueta etiqueta-{{record.etiqueta.raw_value}}">
                                                         <t t-esc="record.etiqueta.value"/>
                                                     </span>
-                                                    <span class="o_restagrup_quote_amount"
+                                                    <span t-attf-class="o_restagrup_quote_amount o_restagrup_price_{{record.price_level_status.raw_value or 'none'}}"
                                                           t-if="record.quote_price_pp.raw_value and !record.quote_pending_confirmation.raw_value"
                                                           title="Precio por persona a la agencia, con nuestra comisión. Debajo, lo que cobra el restaurante.">
                                                         💶 <t t-esc="record.quote_client_price_per_person.value"/> €/pers.
@@ -211,7 +252,11 @@
                                                         <button t-if="!['solicitado', 'presupuesto_recibido'].includes(record.etiqueta.raw_value)"
                                                                 name="action_mark_interesado" type="object" class="btn btn-outline-secondary">Interesado</button>
                                                         <button t-if="record.etiqueta.raw_value != 'descartado'"
-                                                                name="action_mark_descartado" type="object" class="btn btn-outline-secondary">Descartar</button>
+                                                                name="action_mark_descartado" type="object" class="btn btn-outline-secondary"
+                                                                title="Quita el restaurante de esta búsqueda">Descartar restaurante</button>
+                                                        <button t-if="record.menu_id.raw_value and record.etiqueta.raw_value != 'descartado'"
+                                                                name="action_remove_menu" type="object" class="btn btn-outline-secondary"
+                                                                title="Quita este menú y deja el restaurante para ofrecer otro">Quitar este menú</button>
                                                         <button t-if="record.etiqueta.raw_value == 'descartado' and record.quote_received_date.raw_value and record.quote_price_pp.raw_value"
                                                                 name="action_recover_quote" type="object" class="btn btn-outline-primary"
                                                                 title="Vuelve con el presupuesto que ya dio, sin pedirlo otra vez">Recuperar</button>
@@ -234,7 +279,7 @@
                                                                 name="action_confirm_availability" type="object" class="btn btn-outline-success">Disponibilidad OK</button>
                                                         <button t-if="record.etiqueta.raw_value == 'solicitado' or record.etiqueta.raw_value == 'presupuesto_recibido'"
                                                                 name="action_view_conversation" type="object" class="btn btn-outline-secondary">Ver conversación</button>
-                                                        <button name="action_toggle_chosen" type="object" class="btn btn-outline-success">
+                                                        <button name="action_toggle_chosen" type="object" context="{'restagrup_price_check': True}" class="btn btn-outline-success">
                                                             <t t-if="record.is_chosen.raw_value">Quitar elegido</t>
                                                             <t t-else="">Elegir</t>
                                                         </button>
@@ -261,9 +306,9 @@
                                     <field name="quote_notes"/>
                                     <button name="action_register_quote" type="object" string="Confirmar menú"
                                             class="btn-primary" invisible="not quote_pending_confirmation"/>
-                                    <button name="action_toggle_chosen" type="object" string="Elegir"
+                                    <button name="action_toggle_chosen" type="object" context="{'restagrup_price_check': True}" string="Elegir"
                                             class="btn-outline-success" invisible="is_chosen"/>
-                                    <button name="action_toggle_chosen" type="object" string="Quitar elegido"
+                                    <button name="action_toggle_chosen" type="object" context="{'restagrup_price_check': True}" string="Quitar elegido"
                                             class="btn-outline-secondary" invisible="not is_chosen"/>
                                     <button name="action_view_conversation" type="object" string="Ver conversación"
                                             class="btn-link"/>
@@ -349,4 +394,21 @@
               action="restagrup_core.action_restagrup_event_type" sequence="90"/>
     <menuitem id="menu_restagrup_price_baselines" name="Baremos de precio estimado" parent="menu_restagrup_root"
               action="restagrup_core.action_restagrup_price_baseline" sequence="92"/>
+    <!-- Reunión 13/11 (P9): elegir un restaurante que se pasa del precio estimado -->
+    <record id="view_choose_over_budget_form" model="ir.ui.view">
+        <field name="name">restagrup.choose.over.budget.form</field>
+        <field name="model">restagrup.choose.over.budget</field>
+        <field name="arch" type="xml">
+            <form string="¿Elegir igualmente?">
+                <div class="alert alert-danger" role="alert">
+                    <field name="message" readonly="1"/>
+                </div>
+                <p>Puedes elegirlo igualmente: quedará anotado en el historial del grupo.</p>
+                <footer>
+                    <button name="action_confirm" type="object" string="Elegir igualmente" class="btn-danger"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
 </odoo>
