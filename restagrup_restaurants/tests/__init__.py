@@ -33,3 +33,4 @@ from . import test_hallazgos_guia_1311
 from . import test_reunion_1311_other_menu
 from . import test_reunion_1311_price_level
 from . import test_reunion_1311_results_table
+from . import test_conchita_1611_cotizacion

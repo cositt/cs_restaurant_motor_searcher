@@ -49,7 +49,7 @@ class RestaurantSearch(models.Model):
         if not pending:
             return ''
         return '\n\n' + _(
-            'Ya tienen presupuesto con el precio del catálogo (no se les vuelve a pedir): %s. Falta que confirmen'
+            'Ya tienen cotización con el menú de su ficha (no se les vuelve a pedir): %s. Falta que confirmen'
             ' la disponibilidad: pregúntaselo y pulsa «Disponibilidad OK» en su tarjeta.'
         ) % ', '.join(pending.mapped('name'))
 

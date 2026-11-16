@@ -13,7 +13,7 @@ class RestaurantSearchLineCatalogQuote(models.Model):
 
     quote_availability_pending = fields.Boolean(
         string='Disponibilidad sin confirmar', copy=False,
-        help='El presupuesto sale del precio del menú en el catálogo: el restaurante aún no ha confirmado que'
+        help='Cotización con el precio del menú de su ficha: el restaurante aún no ha confirmado que'
              ' tenga sitio para el grupo ese día.')
     partner_menu_count = fields.Integer(related='partner_id.restaurant_menu_count', string='Menús en su ficha')
 
@@ -31,7 +31,7 @@ class RestaurantSearchLineCatalogQuote(models.Model):
         menu = self.menu_id if self.menu_id in menus else (menus if len(menus) == 1 else False)
         if not menu:
             action = self.action_open_quote_form()
-            action['name'] = _('Presupuesto con precio de catálogo')
+            action['name'] = _('Cotización con el menú de su ficha')
             action['context'] = dict(action.get('context') or {}, restagrup_from_catalog=True)
             return action
         self._apply_catalog_quote(menu)
@@ -46,7 +46,7 @@ class RestaurantSearchLineCatalogQuote(models.Model):
             'quote_availability_pending': True,
         })
         self.search_id.message_post_if_exists(_(
-            '%(name)s: presupuesto con el precio del catálogo (%(menu)s, %(price)s) — disponibilidad sin'
+            '%(name)s: cotización con el menú de su ficha (%(menu)s, %(price)s) — disponibilidad sin'
             ' confirmar.') % {'name': self.name, 'menu': menu.name, 'price': self._quote_price_text()})
 
     @api.onchange('menu_id')
@@ -60,7 +60,7 @@ class RestaurantSearchLineCatalogQuote(models.Model):
         if self.env.context.get('restagrup_from_catalog'):
             self.ensure_one()
             if not self.menu_id:
-                raise UserError(_('Elige el menú del catálogo.'))
+                raise UserError(_('Elige el menú de su ficha.'))
             self._apply_catalog_quote(self.menu_id)
             if self.env.context.get('choose_after_register'):
                 self._choose_line()

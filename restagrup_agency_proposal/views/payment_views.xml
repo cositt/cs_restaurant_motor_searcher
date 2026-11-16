@@ -96,5 +96,5 @@
     </record>
 
     <menuitem id="menu_pending_payments" name="Pagos pendientes" parent="restagrup_restaurants.menu_restagrup_root"
-              action="action_pending_payments" sequence="5"/>
+              action="action_pending_payments" sequence="6"/>
 </odoo>

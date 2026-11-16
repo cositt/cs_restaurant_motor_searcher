@@ -70,5 +70,5 @@
     </record>
 
     <menuitem id="menu_restaurant_payments" name="Pagos a restaurantes" parent="restagrup_restaurants.menu_restagrup_root"
-              action="action_restaurant_payments" sequence="6"/>
+              action="action_restaurant_payments" sequence="7"/>
 </odoo>

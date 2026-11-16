@@ -30,6 +30,14 @@ class RestagrupLeadEventFinalData(models.Model):
         string='Comensales definitivos', help='El número de comensales ya es el definitivo.')
     final_missing = fields.Char(string='Datos por cerrar', compute='_compute_final_missing')
 
+    def restagrup_pax_text(self):
+        """«55 (53 + 2 gratuidades)» para los presupuestos; sin gratuidades, solo «55» (correo de Conchita 16/11)."""
+        self.ensure_one()
+        if not self.gratuities:
+            return str(self.pax or 0)
+        return _('%(total)s (%(paying)s + %(gratuities)s gratuidades)') % {
+            'total': self.pax, 'paying': max(self.pax - self.gratuities, 0), 'gratuities': self.gratuities}
+
     @api.depends(
         'guide_contact', 'intolerances', 'no_intolerances', 'pax_final', 'search_ids.chosen_line_id.menu_id',
         'search_ids.sale_order_id.order_line.restaurant_id',
