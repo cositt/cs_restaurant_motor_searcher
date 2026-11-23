@@ -73,6 +73,7 @@
         <field name="arch" type="xml">
             <list string="Pagos pendientes" default_order="restagrup_first_service_date asc">
                 <field name="name"/>
+                <field name="opportunity_id" string="Grupo"/>
                 <field name="partner_id" string="Agencia"/>
                 <field name="restagrup_first_service_date"/>
                 <field name="restagrup_payment_request_date"/>

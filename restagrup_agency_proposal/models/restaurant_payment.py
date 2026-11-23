@@ -76,6 +76,8 @@ class PurchaseOrder(models.Model):
     restagrup_payment_receipt_sent_date = fields.Datetime(
         string='Justificante enviado al restaurante', copy=False, readonly=True)
     restagrup_has_bank = fields.Boolean(string='Tenemos su cuenta', compute='_compute_restagrup_has_bank')
+    restagrup_group_name = fields.Char(
+        string='Grupo', compute='_compute_restagrup_group_name', search='_search_restagrup_group_name')
     restagrup_payment_terms = fields.Selection(
         related='partner_id.commercial_partner_id.restagrup_payment_terms', string='Condición de pago')
     restagrup_deposit_amount = fields.Monetary(
@@ -123,6 +125,22 @@ class PurchaseOrder(models.Model):
         for sheet in self:
             dates = [d for d in sheet.order_line.mapped('restagrup_sale_line_id.service_date') if d]
             sheet.restagrup_service_date = min(dates) if dates else False
+
+    @api.depends('restagrup_sale_order_id.opportunity_id.name')
+    def _compute_restagrup_group_name(self):
+        for sheet in self:
+            sheet.restagrup_group_name = sheet.restagrup_sale_order_id.opportunity_id.name or False
+
+    def _search_restagrup_group_name(self, operator, value):
+        return [('restagrup_sale_order_id.opportunity_id.name', operator, value)]
+
+    def action_open_restaurant(self):
+        """Abre la ficha del restaurante (para completar su cuenta u otros datos)."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window', 'res_model': 'res.partner', 'res_id': self.partner_id.commercial_partner_id.id,
+            'view_mode': 'form', 'views': [(False, 'form')], 'target': 'current',
+        }
 
     @api.depends('partner_id.commercial_partner_id.bank_ids')
     def _compute_restagrup_has_bank(self):

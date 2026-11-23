@@ -36,3 +36,4 @@ from . import test_reunion_1311_conversation_refresh
 from . import test_reunion_1311_payment_filters
 from . import test_reunion_1311_saved_filters
 from . import test_conchita_1611
+from . import test_ronda_2011

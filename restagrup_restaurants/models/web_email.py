@@ -109,7 +109,7 @@ class RestaurantSearchLineWebEmail(models.Model):
             line._restagrup_find_web_email()
         return super().action_add_as_partner()
 
-    def _get_quote_email_to(self):
+    def _get_quote_email_to(self, required=True):
         if not (self.partner_id.email or self.email or self._quote_contact_email()):
             self._restagrup_find_web_email()
-        return super()._get_quote_email_to()
+        return super()._get_quote_email_to(required=required)

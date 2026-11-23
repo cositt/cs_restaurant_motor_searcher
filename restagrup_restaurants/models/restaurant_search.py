@@ -930,9 +930,11 @@ class RestaurantSearchLine(models.Model):
             'quote_requested_date': fields.Datetime.now(),
             'quote_reminder_sent_date': False,
         })
-        search.message_post_if_exists(_(
-            'Presupuesto solicitado a %(name)s (%(email)s).'
-        ) % {'name': self.name, 'email': email_to})
+        # Ronda 20/11 (1b): el Chatter del grupo lleva también lo que se escribió, no solo que se pidió.
+        sent = Markup('<p>%s</p><p><b>%s</b></p><p>%s</p>') % (
+            _('Presupuesto solicitado a %(name)s (%(email)s).') % {'name': self.name, 'email': email_to},
+            subject, body_html)
+        search.message_post_if_exists(sent)
 
     def _quote_request_content(self, values=None):
         """(asunto, texto) de la petición de presupuesto con la plantilla, sin enviar."""
@@ -943,7 +945,7 @@ class RestaurantSearchLine(models.Model):
     def action_open_quote_request(self):
         """Reunión 12/11 (4.1/3.6/3.7): ventana para revisar el correo y elegir a quién va antes de enviarlo."""
         self.ensure_one()
-        self._get_quote_email_to()  # sin ningún email, el aviso de siempre antes de abrir nada
+        # Ronda 20/11 (1a): sin email la ventana se abre igual y se escribe en «Otros emails» (restaurantes de Google).
         subject, body_text = self._quote_request_content()
         return self.env['restagrup.send.wizard']._open_for(
             self, subject, body_text, partner=self.partner_id, title=_('Pedir presupuesto a %s') % self.name)
@@ -951,12 +953,15 @@ class RestaurantSearchLine(models.Model):
     def _restagrup_send_reviewed(self, subject, body_text, emails, attachments=None):
         """Lo que hace la ventana «Revisar y enviar» al pulsar Enviar."""
         self.ensure_one()
+        if not (self.partner_id.email or self.email or '').strip() and emails:
+            self.email = emails[0]  # ronda 20/11 (1a): el email escrito en la ventana queda en la tarjeta
         return self.action_request_quote(subject=subject, body_text=body_text, email_to=', '.join(emails))
 
     def _restagrup_default_send_emails(self):
         """Emails a los que va por defecto: los de la ficha y, si no tiene, el del contacto."""
         self.ensure_one()
-        return [self._get_quote_email_to()]
+        email = self._get_quote_email_to(required=False)
+        return [email] if email else []
 
     def _mail_values(self, signer_name):
         """Marcadores de las plantillas de los correos a este restaurante."""
@@ -990,10 +995,10 @@ class RestaurantSearchLine(models.Model):
                 _('Hola,\n\nSomos %(empresa)s y estamos organizando un evento en %(ciudad)s para %(pax)s personas.'
                   ' ¿Podríais enviarnos vuestro presupuesto?\n\nGracias,\n%(firma)s') % values)
 
-    def _get_quote_email_to(self):
+    def _get_quote_email_to(self, required=True):
         self.ensure_one()
         email_to = (self.partner_id.email or self.email or self._quote_contact_email() or '').strip()
-        if not email_to:
+        if not email_to and required:
             raise UserError(_(
                 'Este resultado no tiene email de contacto. Añádelo como contacto'
                 ' (o edítalo en la ficha) antes de pedir presupuesto.'
@@ -1307,6 +1312,14 @@ class RestaurantSearchLine(models.Model):
         proposal = self._quote_price_vals(output if isinstance(output, dict) else {})
         proposed_pp = proposal.get('quote_price_pp') or proposal.get('quote_amount', 0.0) / self._quote_pax()
         log._close('confirmed' if abs(proposed_pp - self.quote_price_pp) < 0.005 else 'corrected')
+
+    def action_open_restaurant(self):
+        """Abre la ficha del restaurante desde su fila (propuesta, resultados)."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window', 'res_model': 'res.partner', 'res_id': self.partner_id.id,
+            'view_mode': 'form', 'views': [(False, 'form')], 'target': 'current',
+        }
 
     def action_toggle_chosen(self):
         self.ensure_one()

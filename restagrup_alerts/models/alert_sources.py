@@ -3,6 +3,11 @@
 from odoo import api, fields, models
 
 QUOTE_FIELDS = ('quote_amount', 'etiqueta', 'quote_reply_date')
+REPLY_MODELS = ('crm.lead', 'sale.order', 'purchase.order')
+REPLY_FLAGS = {
+    'restaurant_reply': 'restagrup_restaurant_reply_unseen',
+    'agency_reply': 'restagrup_agency_reply_unseen',
+}
 
 
 class RestagrupPendingMail(models.Model):
@@ -35,6 +40,12 @@ class CrmLead(models.Model):
         string='Petición sin abrir', default=False, copy=False, index=True,
         help='Llegó por correo y aún no la ha abierto nadie del equipo.',
     )
+    restagrup_restaurant_reply_unseen = fields.Boolean(
+        string='Respuesta de restaurante sin ver', default=False, copy=False, index=True,
+        help='Un restaurante contestó a la confirmación de reserva y aún no se ha abierto el grupo.')
+    restagrup_agency_reply_unseen = fields.Boolean(
+        string='Respuesta de agencia sin ver', default=False, copy=False, index=True,
+        help='La agencia contestó en el grupo o en su pedido y aún no se ha abierto el grupo.')
     restagrup_assigned_unseen = fields.Boolean(
         string='Asignada sin abrir', default=False, copy=False, index=True,
         help='Otra persona se la ha asignado al responsable y él aún no ha abierto la ficha.',
@@ -74,12 +85,20 @@ class CrmLead(models.Model):
         if reassigned:
             center._ping('assigned', previous_owners | reassigned.user_id)
             center._ping('unassigned')
+        for kind, field in REPLY_FLAGS.items():
+            if field in vals:
+                center._ping(kind, self.user_id)
         return res
 
     def web_read(self, specification):
         # Solo la ficha de la petición pide este campo (va invisible en el formulario): abrirla la da por vista.
         # Leer el lead desde otro registro (su nombre en un campo relacionado) no cuenta.
         opened = len(self) == 1 and 'restagrup_unseen' in specification and not self.env.user.share
+        form_opened = len(self) == 1 and not self.env.user.share and any(
+            field in specification for field in ('restagrup_unseen', *REPLY_FLAGS.values()))
+        replies = self.filtered(lambda lead: any(lead[field] for field in REPLY_FLAGS.values())) if form_opened else self.browse()
+        if replies:
+            replies.sudo().write({field: False for field in REPLY_FLAGS.values()})
         unseen = self.filtered('restagrup_unseen') if opened else self.browse()
         if unseen:
             unseen.sudo().restagrup_unseen = False
@@ -149,3 +168,35 @@ class PurchaseOrder(models.Model):
         if 'restagrup_invoice_proof_state' in vals:
             center._ping('restaurant_invoice', self.restagrup_sale_order_id.user_id)
         return res
+
+
+class MailMessageReplyAlert(models.Model):
+    _inherit = 'mail.message'
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        messages = super().create(vals_list)
+        messages._restagrup_flag_replies()
+        return messages
+
+    def _restagrup_flag_replies(self):
+        """Un correo que entra (no el nuestro) en la hoja de un restaurante, en el grupo o en su pedido marca el
+        grupo para avisar a su responsable. El primer correo de una petición nueva ya lo avisa «petición nueva»."""
+        root = self.env.ref('base.partner_root', raise_if_not_found=False)
+        for message in self.sudo():
+            if message.message_type != 'email' or message.model not in REPLY_MODELS or not message.res_id:
+                continue
+            author = message.author_id
+            if author == root or any(not user.share for user in author.with_context(active_test=False).user_ids):
+                continue  # lo mandamos nosotros
+            record = self.env[message.model].sudo().browse(message.res_id).exists()
+            if not record:
+                continue
+            if message.model == 'purchase.order':
+                lead, kind = record.restagrup_sale_order_id.opportunity_id, 'restaurant_reply'
+            else:
+                lead = record.opportunity_id if message.model == 'sale.order' else record
+                kind = 'agency_reply'
+            if not lead or (kind == 'agency_reply' and lead.restagrup_unseen):
+                continue
+            lead.sudo().write({REPLY_FLAGS[kind]: True})

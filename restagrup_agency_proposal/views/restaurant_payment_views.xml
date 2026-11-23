@@ -9,6 +9,7 @@
                   decoration-danger="restagrup_payment_due">
                 <field name="name"/>
                 <field name="partner_id" string="Restaurante"/>
+                <field name="restagrup_group_name"/>
                 <field name="restagrup_sale_order_id"/>
                 <field name="restagrup_service_date"/>
                 <field name="restagrup_payment_due_date"/>

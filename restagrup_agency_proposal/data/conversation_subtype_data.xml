@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Ronda 20/11 (1e): lo que elige la agencia desde el enlace es conversación (sale en su pestaña), no una nota
+         interna. Oculto y sin suscripción por defecto: no se manda por correo a nadie. -->
+    <record id="subtype_agency_choice" model="mail.message.subtype">
+        <field name="name">Elección de la agencia</field>
+        <field name="internal" eval="False"/>
+        <field name="hidden" eval="True"/>
+        <field name="default" eval="False"/>
+    </record>
+</odoo>

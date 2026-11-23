@@ -17,12 +17,19 @@ class RestaurantSearchLineDishWarning(models.Model):
                     '«%s»' % dish for dish in unknown), menu=line.menu_id.name, restaurant=line.name))
         return texts
 
+    def _restagrup_missing_courses_texts(self):
+        texts = [line._restagrup_missing_courses_text() for line in self.filtered('menu_id')]
+        return [text for text in texts if text]
+
     def _restagrup_dish_firewall_message(self):
         texts = self._restagrup_dishes_not_in_menu_text()
-        if not texts:
-            return False
-        return _('Platos elegidos que no están en el menú: %s. Confírmalo con la agencia y el restaurante.') % (
-            '; '.join(texts))
+        missing = self._restagrup_missing_courses_texts()
+        parts = []
+        if texts:
+            parts.append(_('Platos elegidos que no están en el menú: %s. Confírmalo con la agencia y el restaurante.') % (
+                '; '.join(texts)))
+        parts.extend(missing)
+        return ' '.join(parts) or False
 
 
 class SaleOrderDishFirewall(models.Model):

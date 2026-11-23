@@ -25,6 +25,7 @@
         'views/lead_proposal_views.xml',
         'views/restaurant_search_views.xml',
         'views/close_checklist_views.xml',
+        'data/conversation_subtype_data.xml',
         'data/firewall_close_data.xml',
         'data/firewall_dishes_data.xml',
         'data/agency_payment_data.xml',

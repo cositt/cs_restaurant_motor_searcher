@@ -34,10 +34,13 @@ class RestaurantSearch(models.Model):
             line._restagrup_find_web_email()  # ronda 11/11: los de Google, con el email de su web
         with_email = interested.filtered(lambda line: (line.partner_id.email or line.email or '').strip())
         skipped = interested - with_email
+        if len(skipped) == 1 and not with_email:
+            return skipped.action_open_quote_request()  # ronda 20/11 (1a): se escribe su email en la ventana
         if not with_email:
             raise UserError(_(
-                'Ninguno de los interesados tiene email de contacto (%s). Añádelos como contacto'
-                ' o edita su email antes de pedir presupuesto.') % ', '.join(skipped.mapped('name'))
+                'Ninguno de los interesados tiene email de contacto (%s). Abre la tarjeta de cada uno, pulsa'
+                ' «Pedir presupuesto» y escribe su email en «Otros emails» (queda guardado), o añádelos como'
+                ' contacto.') % ', '.join(skipped.mapped('name'))
                 + catalogue_note)
         return with_email._restagrup_open_common_quote_request(skipped)
 

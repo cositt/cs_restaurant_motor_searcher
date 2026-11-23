@@ -29,3 +29,4 @@ from . import test_ronda_1111_service
 from . import test_punto6_price_pp
 from . import test_reunion_1211_service
 from . import test_reunion_1311_notice_custom
+from . import test_ronda_2011_notes
