@@ -70,6 +70,11 @@
                 <field name="restagrup_payment_due" widget="boolean_toggle" readonly="1" invisible="not restagrup_payment_due"
                        decoration-danger="restagrup_payment_due"/>
                 <field name="restagrup_has_bank" readonly="1" invisible="not restagrup_sale_order_id"/>
+                <div colspan="2" invisible="not restagrup_sale_order_id or restagrup_has_bank">
+                    <button name="action_open_restaurant" type="object" class="btn-link p-0" icon="fa-external-link"
+                            string="Falta su cuenta: abrir la ficha del restaurante"
+                            help="Para completar su número de cuenta."/>
+                </div>
                 <field name="restagrup_bank_request_date" readonly="1" invisible="not restagrup_bank_request_date"/>
                 <field name="restagrup_payment_receipt_sent_date" readonly="1" invisible="not restagrup_payment_receipt_sent_date"/>
                 <field name="restagrup_invoice_received" readonly="1" invisible="not restagrup_sale_order_id"/>
@@ -90,7 +95,7 @@
         <field name="inherit_id" ref="crm.crm_lead_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//notebook" position="inside">
-                <page string="Cierre" name="restagrup_close"
+                <page string="Pendiente para cerrar" name="restagrup_close"
                       invisible="restagrup_stage_key not in ('expediente', 'cerrado')">
                     <div class="alert alert-success" role="status" invisible="not restagrup_close_ready">
                         Todo listo: ya se puede cerrar el expediente.

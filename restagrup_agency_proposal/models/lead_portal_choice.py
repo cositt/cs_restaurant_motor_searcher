@@ -11,6 +11,7 @@ from odoo import _, fields, models
 MAX_NOTES = 2000
 # Reunión 12/11 (8.5): parecido mínimo para dar por buena una errata («sopa de fidos» -> «Sopa de fideos»).
 DISH_MATCH_RATIO = 0.75
+CHOOSABLE_COURSES = ('entrante', 'principal', 'postre')
 BULLET = re.compile(r'^\s*(?:[-*•·]|\d+[.)])\s*')
 
 
@@ -68,6 +69,36 @@ class RestaurantSearchLineChosenDishes(models.Model):
             lines.append(prefix + written)
         return '\n'.join(lines), fixed, unknown
 
+    def _restagrup_missing_courses(self):
+        """Tipos de plato (entrante, principal, postre) en los que el menú da a elegir entre varios y no hay ninguno
+        elegido (ronda 20/11, 2a: el postre se quedó sin elegir y nadie lo vio). Sin menú detallado, nada."""
+        self.ensure_one()
+        menu_lines = self.menu_id.line_ids.filtered(lambda l: l.course in CHOOSABLE_COURSES)
+        if not menu_lines:
+            return []
+        dishes = menu_lines.mapped('name')
+        chosen = set()
+        for raw in (self.agency_choice_notes or '').replace('\r', '\n').split('\n'):
+            written = BULLET.sub('', raw, count=1).strip()
+            dish = self._restagrup_match_dish(written, dishes) if written else None
+            if dish:
+                chosen.add(dish)
+        missing = []
+        for course in CHOOSABLE_COURSES:
+            options = set(menu_lines.filtered(lambda l: l.course == course).mapped('name'))
+            if len(options) > 1 and not options & chosen:
+                missing.append(course)
+        return missing
+
+    def _restagrup_missing_courses_text(self):
+        """«Falta elegir: postre (Casa Y)»; vacío si no falta nada."""
+        self.ensure_one()
+        labels = dict(self.env['restagrup.restaurant.menu.line']._fields['course'].selection)
+        missing = [labels[course].lower() for course in self._restagrup_missing_courses()]
+        if not missing:
+            return ''
+        return _('Falta elegir: %(courses)s (%(restaurant)s).', courses=', '.join(missing), restaurant=self.name)
+
 
 class CrmLeadPortalChoice(models.Model):
     _inherit = 'crm.lead'
@@ -93,8 +124,15 @@ class CrmLeadPortalChoice(models.Model):
                                 name=line.name, service=self._restagrup_service_label(search))
         if notes:
             body += Markup('<br/>%s <i>%s</i>') % (_('Escribió:'), notes)
-        self.message_post(body=body, message_type='notification', subtype_xmlid='mail.mt_note')
+        # Conversación y no nota interna (ronda 20/11, 1e): firma la agencia y no avisa por correo a nadie.
+        self.message_post(body=body, message_type='comment',
+                          subtype_xmlid='restagrup_agency_proposal.subtype_agency_choice',
+                          author_id=self.partner_id.id or False)
         self._restagrup_note_dish_check(line, fixed, unknown)
+        missing = line._restagrup_missing_courses_text()
+        if missing:
+            self.message_post(body=missing + ' ' + _('Confírmalo con la agencia antes de enviar la confirmación.'),
+                              subtype_xmlid='mail.mt_note')
         return True
 
     def _restagrup_note_dish_check(self, line, fixed, unknown):

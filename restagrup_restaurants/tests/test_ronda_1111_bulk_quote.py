@@ -29,6 +29,9 @@ class TestRonda1111BulkQuote(TransactionCase):
             'search_id': cls.search.id, 'source': 'google', 'name': 'Flor De Sal Test', 'etiqueta': 'interesado'})
 
     def test_message_explains_no_email_and_catalogue_quote(self):
+        # Ronda 20/11 (1a): con un solo interesado sin email se abre su ventana; el aviso sale con varios.
+        self.env[LINE].create({
+            'search_id': self.search.id, 'source': 'google', 'name': 'Otro Sin Correo Test', 'etiqueta': 'interesado'})
         with self.assertRaises(UserError) as error:
             self.search.action_request_quote_interested()
         text = str(error.exception)

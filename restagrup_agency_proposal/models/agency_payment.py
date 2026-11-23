@@ -30,6 +30,7 @@ LEGACY_PAYMENT_TEXTS = {
         'poder enviaros el bono de agencia.')),
 }
 AMOUNT_TOLERANCE = 0.01
+AGENCY_REPORT = 'restagrup_agency_proposal.action_report_booking_confirmation'  # la proforma de la agencia
 
 PAYMENT_PROOF_PROMPT = """Eres un asistente de una agencia de grupos de restauración.
 Te paso un correo de una agencia de viajes que nos debe el pago de una reserva, con el nombre de sus adjuntos y el
@@ -133,8 +134,13 @@ class SaleOrder(models.Model):
             email_from=self.env['restagrup.system.mail'].email_from(self.user_id.email or self.env.user.email),
             email_add_signature=False,  # el texto ya lleva {firma}
             outgoing_email_to=email_to,
+            attachments=[self._restagrup_agency_proforma()],  # ronda 20/11 (5e): la proforma va con la petición
         )
         self.write({PAYMENT_KINDS[kind]: fields.Datetime.now()})
+
+    def _restagrup_agency_proforma(self):
+        pdf, _kind = self.env['ir.actions.report']._render_qweb_pdf(AGENCY_REPORT, self.ids)
+        return 'Confirmacion-Agencia-%s.pdf' % self.name, pdf
 
     # --- el justificante ---
 

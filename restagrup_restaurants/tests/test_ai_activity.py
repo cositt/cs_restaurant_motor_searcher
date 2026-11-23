@@ -68,11 +68,11 @@ class TestAiActivityRestaurants(TransactionCase):
 
     def test_quote_proposal_asks_the_search_owner_to_confirm_and_clears_when_registered(self):
         self._reply(self.line, {'importe': 1200})
-        log = self._logs('quote_extraction', self.line)
-        self.assertEqual(log.activity_ids.user_id, self.owner)
-        self.assertIn('1.200,00 €', log.activity_ids.summary)
+        activity = self.lead.activity_ids  # el aviso cuelga de la petición: desde «Mis actividades» se abre directo
+        self.assertEqual(activity.user_id, self.owner)
+        self.assertIn('1.200,00 €', activity.summary)
         self.line.action_register_quote()
-        self.assertFalse(log.activity_ids)
+        self.assertFalse(self.lead.activity_ids)
 
     # --- datos de ficha ---
 

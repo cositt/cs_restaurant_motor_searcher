@@ -78,6 +78,8 @@
                             <field name="price_level_status" column_invisible="1"/>
                             <field name="name" string="Restaurante" decoration-bf="is_chosen"
                                    decoration-success="is_chosen"/>
+                            <button name="action_open_restaurant" type="object" icon="fa-external-link"
+                                    title="Abrir la ficha del restaurante" class="btn-link" invisible="not partner_id"/>
                             <field name="menu_id"/>
                             <button name="action_preview_menu" type="object" icon="fa-eye" title="Ver los platos"
                                     class="btn-link" invisible="not menu_id"/>

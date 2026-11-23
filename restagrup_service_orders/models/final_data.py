@@ -14,6 +14,12 @@ FINAL_DATA_DAYS_PARAM = 'restagrup.final_data_days'
 DEFAULT_FINAL_DATA_DAYS = 7
 REMINDER_SUMMARY = 'Datos pendientes antes del servicio'
 
+# Ronda 20/11 (6): estas líneas de «Notas para agencia y restaurante» las escribe el sistema a partir de los datos del grupo.
+GUIDE_PREFIX = 'Contacto del guía:'
+INTOLERANCES_PREFIX = 'Intolerancias:'
+NO_INTOLERANCES_LINE = 'Sin intolerancias ni alergias'
+NOTES_SYNCED_FIELDS = frozenset({'guide_contact', 'intolerances', 'no_intolerances'})
+
 
 class RestagrupLeadEventFinalData(models.Model):
     _inherit = 'restagrup.lead.event'
@@ -29,6 +35,38 @@ class RestagrupLeadEventFinalData(models.Model):
     pax_final = fields.Boolean(
         string='Comensales definitivos', help='El número de comensales ya es el definitivo.')
     final_missing = fields.Char(string='Datos por cerrar', compute='_compute_final_missing')
+
+    def _restagrup_synced_notes(self):
+        """Las notas con las líneas del guía y de las intolerancias al día; el resto de lo escrito se respeta."""
+        self.ensure_one()
+        kept = [line for line in (self.notes or '').splitlines()
+                if not line.startswith((GUIDE_PREFIX, INTOLERANCES_PREFIX)) and line.strip() != NO_INTOLERANCES_LINE]
+        managed = []
+        if (self.guide_contact or '').strip():
+            managed.append('%s %s' % (GUIDE_PREFIX, ' '.join(self.guide_contact.split())))
+        if (self.intolerances or '').strip():
+            managed.append('%s %s' % (INTOLERANCES_PREFIX, ' '.join(self.intolerances.split())))
+        elif self.no_intolerances:
+            managed.append(NO_INTOLERANCES_LINE)
+        return '\n'.join(kept + managed) or False
+
+    def _restagrup_sync_notes(self):
+        for event in self:
+            notes = event._restagrup_synced_notes()
+            if notes != (event.notes or False):
+                event.notes = notes
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        events = super().create(vals_list)
+        events.filtered(lambda e: e.guide_contact or e.intolerances or e.no_intolerances)._restagrup_sync_notes()
+        return events
+
+    def write(self, vals):
+        result = super().write(vals)
+        if NOTES_SYNCED_FIELDS & set(vals):
+            self._restagrup_sync_notes()
+        return result
 
     def restagrup_pax_text(self):
         """«55 (53 + 2 gratuidades)» para los presupuestos; sin gratuidades, solo «55» (correo de Conchita 16/11)."""

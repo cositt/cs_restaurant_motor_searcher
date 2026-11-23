@@ -6,7 +6,7 @@
         <field name="arch" type="xml">
             <form string="Antes de continuar">
                 <div class="alert alert-warning" role="alert" invisible="is_review">
-                    Esto es lo que falta o no cuadra. Puedes continuar de todos modos: quedará anotado en el chatter.
+                    Esto no es un error: es un aviso para que lo revises antes de seguir. Si ya lo tienes controlado, pulsa «Continuar de todos modos» y quedará anotado en el chatter; si no, pulsa «Volver a revisar».
                 </div>
                 <div class="alert alert-info" role="alert" invisible="not is_review">
                     Revisa lo que se va a enviar. Si todo está bien, continúa: quedará anotado en el chatter.

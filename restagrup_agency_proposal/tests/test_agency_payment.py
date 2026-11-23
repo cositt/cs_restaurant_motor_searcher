@@ -102,6 +102,16 @@ class TestAgencyPayment(TransactionCase):
         self.assertEqual(mail.state, 'sent')
         self.assertEqual(self._emails(order).outgoing_email_to, 'pagos@example.com')
 
+    def test_payment_request_and_claim_carry_the_proforma(self):
+        """Ronda 20/11 (5e): el correo de pago a la agencia lleva la proforma (confirmación) adjunta."""
+        for days, kind in ((6, 'agency_payment_request'), (2, 'agency_payment_urgent')):
+            order = self._order(days)
+            self._cron()
+            self._mails(order, kind).action_approve()
+            names = self._emails(order).attachment_ids.mapped('name')
+            self.assertTrue(any(name.startswith('Confirmacion-Agencia-') and name.endswith('.pdf') for name in names),
+                            '%s sin proforma: %s' % (kind, names))
+
     def test_a_request_that_no_longer_applies_is_discarded(self):
         order = self._order(6)
         self._cron()

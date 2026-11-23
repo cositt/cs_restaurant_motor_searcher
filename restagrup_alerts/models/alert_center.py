@@ -74,6 +74,24 @@ KIND_SPECS = {
         'owner': [('restagrup_sale_order_id.user_id', '=', '{uid}')],
         'icon': 'fa-file-text-o',
     },
+    # Ronda 20/11 (4): respuestas de restaurantes (a la confirmación) y de agencias. Se quitan al pulsarlas o al abrir
+    # el grupo (`clear_field`); otra respuesta nueva vuelve a avisar.
+    'restaurant_reply': {
+        'model': 'crm.lead',
+        'domain': [('restagrup_restaurant_reply_unseen', '=', True)],
+        'clear_field': 'restagrup_restaurant_reply_unseen',
+        'owner': [('user_id', '=', '{uid}')],
+        'icon': 'fa-reply',
+        'list_view': GROUPS_LIST,
+    },
+    'agency_reply': {
+        'model': 'crm.lead',
+        'domain': [('restagrup_agency_reply_unseen', '=', True)],
+        'clear_field': 'restagrup_agency_reply_unseen',
+        'owner': [('user_id', '=', '{uid}')],
+        'icon': 'fa-comments-o',
+        'list_view': GROUPS_LIST,
+    },
     'assigned': {
         'model': 'crm.lead',
         'domain': [('restagrup_assigned_unseen', '=', True)],
@@ -108,6 +126,9 @@ class RestagrupAlertCenter(models.AbstractModel):
             'restaurant_payment': (_('1 restaurante por pagar'), _('%s restaurantes por pagar')),
             'restaurant_invoice': (_('1 factura de restaurante por revisar'),
                                    _('%s facturas de restaurante por revisar')),
+            'restaurant_reply': (_('1 restaurante ha respondido a la confirmación'),
+                                 _('%s restaurantes han respondido a la confirmación')),
+            'agency_reply': (_('1 agencia ha respondido'), _('%s agencias han respondido')),
             'assigned': (_('1 petición asignada a ti sin abrir'), _('%s peticiones asignadas a ti sin abrir')),
         }
         singular, plural = titles[kind]
@@ -173,9 +194,12 @@ class RestagrupAlertCenter(models.AbstractModel):
             return False
         alert, records = result
         seen_field = KIND_SPECS[kind].get('seen_field')
+        clear_field = KIND_SPECS[kind].get('clear_field')
         if seen_field:
             records.sudo().write({seen_field: True})
             self._ping(kind, self.env.user)
+        elif clear_field:
+            records.sudo().write({clear_field: False})  # el aviso se pinga desde el write del grupo
         return alert['action']
 
     @api.model

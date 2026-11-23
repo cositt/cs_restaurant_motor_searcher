@@ -175,6 +175,26 @@ class RestagrupAiLog(models.Model):
         return _('Grupo nuevo por revisar: %s') % label, (_('Ciudad: %(city)s · Comensales: %(pax)s') % {
             'city': city, 'pax': data.get('num_pax') or '?'} if city else False)
 
+    def _review_target(self, source):
+        """Dónde cuelga la actividad de «revisar»: en la petición del grupo si el origen la tiene (el aviso de
+        «Mis actividades» lleva directo a ella, ronda del 20/11) y, si no, en este registro."""
+        self.ensure_one()
+        lead = source.sudo().lead_id if source is not None and 'lead_id' in source._fields else False
+        return lead or self.sudo()
+
+    def _review_activities(self):
+        """Las actividades de «revisar» de estos registros, estén donde estén."""
+        activities = self.sudo().activity_ids
+        for log in self.sudo():
+            if not (log.source_model and log.source_res_id and log.source_model in self.env):
+                continue
+            source = self.env[log.source_model].sudo().browse(log.source_res_id).exists()
+            target = log._review_target(source) if source else log
+            if target != log:
+                summary = log._review_text()[0]
+                activities |= target.activity_ids.filtered(lambda act, text=summary: act.summary == text)
+        return activities
+
     def _notify_review(self):
         """Avisa de que hay algo de la IA que mirar. Pendiente de revisión: actividad (que desaparece al revisarlo)
         y aviso emergente. Informativo sin revisión (respuesta de una hoja de servicio): solo el aviso emergente.
@@ -188,7 +208,7 @@ class RestagrupAiLog(models.Model):
                 continue
             summary, note = log._review_text()
             if log.state == 'pending':
-                log.sudo().activity_schedule(
+                log._review_target(source).activity_schedule(
                     'mail.mail_activity_data_todo', summary=summary, note=note or '', user_id=user.id)
             self._toast(user, summary, note, sticky=log.state == 'pending')
 
@@ -219,7 +239,7 @@ class RestagrupAiLog(models.Model):
         """Cierra los registros que sigan pendientes con el resultado de la revisión humana."""
         pending = self.sudo().filtered(lambda log: log.state == 'pending')
         pending.write({'state': state, 'reviewed_by': self.env.user.id, 'reviewed_date': fields.Datetime.now()})
-        pending.activity_ids.unlink()  # la actividad de «revisar» ya no hace falta
+        pending._review_activities().unlink()  # la actividad de «revisar» ya no hace falta
 
     def action_open_source(self):
         self.ensure_one()
