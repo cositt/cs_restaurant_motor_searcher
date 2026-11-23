@@ -70,7 +70,7 @@
                         elija con el enlace) y pulsa «Crear presupuesto».
                     </div>
                     <field name="restagrup_proposal_line_ids" nolabel="1" readonly="1">
-                        <list create="0" delete="0" default_group_by="search_id">
+                        <list create="0" delete="0" no_open="1" default_group_by="search_id">
                             <field name="search_id" column_invisible="1"/>
                             <field name="is_chosen" column_invisible="1"/>
                             <field name="restagrup_search_order_id" column_invisible="1"/>
@@ -90,6 +90,9 @@
                             <field name="quote_price_pp" string="Restaurante (€/pers.)" optional="show"/>
                             <field name="quote_notes" optional="hide"/>
                             <field name="agency_choice_notes" string="Pidió la agencia" optional="show"/>
+                            <button name="action_edit_chosen_menu" type="object" icon="fa-pencil" class="btn-link"
+                                    title="Editar el menú elegido (platos, postre, cambios)"
+                                    invisible="not is_chosen and not agency_choice_notes"/>
                             <button name="action_offer_other_menu" type="object" string="Otro menú" icon="fa-plus"
                                     class="btn-link" title="Ofrecer otro menú de este restaurante (de los guardados en su ficha)"
                                     invisible="not partner_id or restagrup_search_order_id or parent.restagrup_stage_key == 'cerrado'"/>
