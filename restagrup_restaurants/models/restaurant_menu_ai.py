@@ -16,6 +16,9 @@ MENU_TYPE_KEYS = {key for key, _label in MENU_TYPES}
 COURSE_KEYS = {key for key, _label in COURSES}
 MAX_ATTACHMENT_CHARS = 6000
 COMBINED_PLATE = re.compile(r'\bplatos? combinados?\b', re.IGNORECASE)
+# Reunión 23/11: desde este parecido entre los platos se avisa de que ya hay un menú casi igual en la ficha.
+DUPLICATE_DISH_OVERLAP = 0.5
+DEFAULT_MENU_NAME = 'menu grupos'
 
 
 def _normalized(name):
@@ -122,9 +125,70 @@ class RestaurantSearchLine(models.Model):
         self.search_id.message_post_if_exists(note % {'restaurant': self.name, 'menu': menu.name})
         return menu
 
-    def _restagrup_menus_from_reply(self, menus):
-        """Guarda los menús que trae la respuesta y asigna el primero a la línea si aún no tiene."""
+    # --- menús que ya existen (reunión 23/11) ---
+
+    menu_name = fields.Char(
+        related='menu_id.name', readonly=False, string='Nombre del menú',
+        help='Corrígelo aquí si la IA no encontró el nombre del menú en la respuesta.')
+    menu_name_is_default = fields.Boolean(
+        compute='_compute_menu_name_is_default',
+        help='El menú lo creó la IA sin nombre propio y lleva el nombre por defecto.')
+
+    @api.depends('menu_id.name', 'menu_id.ai_pending_review')
+    def _compute_menu_name_is_default(self):
+        for line in self:
+            menu = line.menu_id
+            line.menu_name_is_default = bool(
+                menu and menu.ai_pending_review and _normalized(menu.name).startswith(DEFAULT_MENU_NAME))
+
+    @staticmethod
+    def _normalized_dish(name):
+        return _normalized(name)
+
+    @staticmethod
+    def _restagrup_data_dishes(data):
+        return {_normalized(d.get('nombre')) for d in (data.get('platos') or [])
+                if isinstance(d, dict) and (d.get('nombre') or '').strip()}
+
+    def _restagrup_menu_match(self, data, menu):
+        """(es idéntico, se parece) de un menú de la respuesta con uno que ya está en la ficha. Se parece si lleva el
+        mismo nombre o comparte la mitad de los platos."""
+        season = self._restagrup_menu_season()
+        name = _normalized(name_with_season((data.get('nombre') or '').strip() or _('Menú grupos'), season))
+        dishes = self._restagrup_data_dishes(data)
+        menu_dishes = {_normalized(line.name) for line in menu.line_ids}
+        union = dishes | menu_dishes
+        overlap = len(dishes & menu_dishes) / len(union) if union else 0.0
+        same_name = _normalized(menu.name) == name
+        identical = (same_name and round(menu.cost_price, 2) == round(_number(data.get('precio_persona')), 2)
+                     and dishes == menu_dishes)
+        return identical, (same_name or overlap >= DUPLICATE_DISH_OVERLAP), overlap
+
+    def _restagrup_menu_matches(self, menus):
+        """[(posición, menú de la ficha, idéntico)] con el menú más parecido de cada uno de la respuesta, solo de los
+        que ya tienen uno igual o casi igual."""
         self.ensure_one()
+        menus = [m for m in (menus or []) if isinstance(m, dict)]
+        if not self.partner_id:
+            return []
+        stored = self.env['restagrup.restaurant.menu'].search([('partner_id', '=', self.partner_id.id)])
+        matches = []
+        for index, data in enumerate(menus):
+            scored = []
+            for menu in stored:
+                identical, similar, overlap = self._restagrup_menu_match(data, menu)
+                if similar:
+                    scored.append((identical, overlap, menu))
+            if scored:
+                identical, _overlap, menu = max(scored, key=lambda row: (row[0], row[1]))
+                matches.append((index, menu, identical))
+        return matches
+
+    def _restagrup_menus_from_reply(self, menus, reuse=None):
+        """Guarda los menús que trae la respuesta y asigna el primero a la línea si aún no tiene.
+        `reuse` ({posición: menú}) son los que la persona decidió no duplicar."""
+        self.ensure_one()
+        reuse = reuse or {}
         menus = [m for m in (menus or []) if isinstance(m, dict)]
         if not menus:
             return self.env['restagrup.restaurant.menu']
@@ -134,8 +198,8 @@ class RestaurantSearchLine(models.Model):
             self.search_id.message_post_if_exists(_(
                 '%s mandó su menú y se ha añadido como contacto para guardarlo en su ficha.') % self.name)
         stored = self.env['restagrup.restaurant.menu']
-        for data in menus:
-            stored |= self._restagrup_store_menu(data)
+        for index, data in enumerate(menus):
+            stored |= reuse.get(index) or self._restagrup_store_menu(data)
         if not self.menu_id:
             self.menu_id = stored[:1]
         self._restagrup_ask_missing_menu_data(menus)

@@ -153,12 +153,10 @@
                 <button name="action_send_restaurant_confirmations" type="object"
                         string="Enviar confirmación a restaurantes" class="btn-secondary"
                         invisible="restagrup_stage_key != 'expediente'"/>
-                <button name="action_download_agency_confirmation" type="object" string="Conf. agencia"
-                        icon="fa-download" class="btn-secondary" invisible="restagrup_stage_key not in ('expediente', 'cerrado')"/>
-                <button name="action_download_restaurant_confirmation" type="object" string="Conf. restaurante"
-                        icon="fa-download" class="btn-secondary" invisible="restagrup_stage_key not in ('expediente', 'cerrado')"/>
-                <button name="action_download_voucher" type="object" string="Bono agencia"
-                        icon="fa-download" class="btn-secondary" invisible="restagrup_stage_key not in ('expediente', 'cerrado')"/>
+                <!-- Reunión 23/11: las tres descargas y la propuesta, en un solo botón amarillo -->
+                <button name="action_open_print_wizard" type="object" string="Imprimir" icon="fa-print"
+                        class="btn-warning"
+                        help="Descarga sin enviar: propuesta/presupuesto, confirmación de la agencia, del restaurante y bono."/>
             </xpath>
         </field>
     </record>

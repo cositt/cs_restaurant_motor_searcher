@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Reunión 23/11: «Imprimir» reúne los cuatro PDF de Restagrup -->
+    <record id="view_restagrup_print_wizard_form" model="ir.ui.view">
+        <field name="name">restagrup.print.wizard.form</field>
+        <field name="model">restagrup.print.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Imprimir">
+                <div class="alert alert-info" role="status">
+                    Descarga el PDF sin enviarlo a nadie. Los de confirmación y bono existen cuando el grupo ya tiene
+                    pedido; el bono, cuando el pago está recibido.
+                </div>
+                <field name="lead_id" invisible="1"/>
+                <div class="d-grid gap-2">
+                    <button name="action_print_proposal" type="object" string="Propuesta / presupuesto a la agencia"
+                            icon="fa-file-pdf-o" class="btn-secondary text-start"/>
+                    <button name="action_print_agency" type="object" string="Confirmación de la agencia"
+                            icon="fa-file-pdf-o" class="btn-secondary text-start"/>
+                    <button name="action_print_restaurant" type="object" string="Confirmación del restaurante"
+                            icon="fa-file-pdf-o" class="btn-secondary text-start"/>
+                    <button name="action_print_voucher" type="object" string="Bono de la agencia"
+                            icon="fa-file-pdf-o" class="btn-secondary text-start"/>
+                </div>
+                <footer>
+                    <button string="Cerrar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

@@ -18,8 +18,19 @@
     overflow: hidden;
 }
 
-.o_restagrup_rest_kanban .o_kanban_record.o_restagrup_chosen {
-    border: 2px solid #27ae60;
+/* Reunión 23/11: borde llamativo en los restaurantes en los que hay interés (interesado, solicitado o con
+   presupuesto); el elegido, en verde. La tarjeta lleva una marca oculta porque la clase del registro no se puede
+   cambiar desde la plantilla. */
+.o_restagrup_rest_kanban .o_kanban_record:has(.o_restagrup_interested_marker) {
+    border: 3px solid #f39c12;
+    box-shadow: 0 0 0 3px rgba(243, 156, 18, 0.25), 0 2px 8px rgba(0, 0, 0, 0.06);
+    background: #fffaf0;
+}
+
+.o_restagrup_rest_kanban .o_kanban_record:has(.o_restagrup_chosen_marker) {
+    border: 3px solid #27ae60;
+    box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.25), 0 2px 8px rgba(0, 0, 0, 0.06);
+    background: #f4fbf6;
 }
 
 .o_restagrup_rest_card_header {

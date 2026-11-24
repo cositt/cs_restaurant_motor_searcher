@@ -3,3 +3,4 @@ access_restagrup_client_comparison_wizard,restagrup.client.comparison.wizard,mod
 access_restagrup_lead_proposal_wizard,restagrup.lead.proposal.wizard,model_restagrup_lead_proposal_wizard,base.group_user,1,1,1,1
 access_restagrup_chosen_menu_wizard,restagrup.chosen.menu.wizard,model_restagrup_chosen_menu_wizard,base.group_user,1,1,1,1
 access_restagrup_chosen_menu_wizard_line,restagrup.chosen.menu.wizard.line,model_restagrup_chosen_menu_wizard_line,base.group_user,1,1,1,1
+access_restagrup_print_wizard,restagrup.print.wizard,model_restagrup_print_wizard,base.group_user,1,1,1,1

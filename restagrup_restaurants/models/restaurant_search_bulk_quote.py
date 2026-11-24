@@ -81,11 +81,24 @@ class RestaurantSearchLineBulkQuote(models.Model):
         return self.env['restagrup.send.wizard']._open_for(
             self, subject, body_text, title=_('Pedir presupuesto a %s interesados') % len(self), summary=summary)
 
+    def _restagrup_bulk_chatter_note(self, summary):
+        """Reunión 23/11: un único mensaje en el Chatter con a cuántos y a cuáles se pidió (con su email), y el asunto y
+        el texto una sola vez. El correo completo de cada restaurante queda en su propia conversación."""
+        rows = Markup('').join(
+            Markup('<li>%s — %s</li>') % (line.name, line._get_quote_email_to(required=False)) for line in self)
+        sample = self[:1].message_ids.filtered(lambda m: m.message_type == 'email')[:1]
+        text = Markup('')
+        if sample:
+            text = Markup('<p><b>%s</b></p>%s<p><i>%s</i></p>') % (
+                sample.subject or '', sample.body or Markup(''),
+                _('Mismo texto para todos: el nombre y el menú cambian en cada restaurante.'))
+        return Markup('<p><b>%s</b></p><ul>%s</ul>%s') % (summary, rows, text)
+
     def _restagrup_after_multi_send(self):
         search = self.search_id[:1]
         skipped = search._interested_lines() - self  # los enviados ya están como «Solicitado»
         message = search._bulk_quote_summary(self, skipped)
-        search.message_post_if_exists(Markup('<p>%s</p>') % message)
+        search.message_post_if_exists(self._restagrup_bulk_chatter_note(message))
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',

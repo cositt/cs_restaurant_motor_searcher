@@ -14,6 +14,7 @@ from odoo.tools import email_normalize, email_split
 
 # Marcadores que, en un envío a varios, se rellenan con los datos de cada destinatario.
 PER_RECORD_PLACEHOLDERS = ('restaurante', 'menu')
+MENU_RECORD = 'restagrup.restaurant.search.line'
 EMAIL_SEPARATORS = re.compile(r'[,;\s]+')
 
 
@@ -35,6 +36,12 @@ class RestagrupSendWizard(models.TransientModel):
     body = fields.Text(string='Mensaje', required=True)
     attachment_ids = fields.Many2many(
         'ir.attachment', 'restagrup_send_wizard_attachment_rel', 'wizard_id', 'attachment_id', string='Adjuntos')
+    menu_partner_id = fields.Many2one(
+        'res.partner', readonly=True, help='Restaurante cuyos menús se pueden elegir (solo al pedir presupuesto a uno).')
+    has_menus = fields.Boolean(compute='_compute_has_menus')
+    menu_id = fields.Many2one(
+        'restagrup.restaurant.menu', string='Menú a ofrecer', domain="[('partner_id', '=', menu_partner_id)]",
+        help='Sus platos y su precio de coste salen donde la plantilla pone {menu}. Sin elegir, ese hueco queda vacío.')
     recipients_summary = fields.Text(string='Destinatarios', readonly=True)
     chain_res_ids = fields.Char(readonly=True, help='Lista JSON de los registros que envían después (uno por ventana).')
     chain_method = fields.Char(readonly=True, help='Método que abre la ventana del siguiente registro de la cadena.')
@@ -63,6 +70,8 @@ class RestagrupSendWizard(models.TransientModel):
         }
         if not is_multi:
             values.update(self._recipient_defaults(records, partner))
+            if records._name == MENU_RECORD and records.partner_id:
+                values.update(menu_partner_id=records.partner_id.id, menu_id=records.menu_id.id or False)
         wizard = self.create(values)
         return {
             'type': 'ir.actions.act_window',
@@ -95,6 +104,23 @@ class RestagrupSendWizard(models.TransientModel):
         return self.env['ir.attachment'].create({
             'name': name, 'raw': raw, 'res_model': 'mail.compose.message', 'res_id': 0,
         })
+
+    @api.depends('menu_partner_id')
+    def _compute_has_menus(self):
+        for wizard in self:
+            wizard.has_menus = bool(wizard.menu_partner_id) and bool(self.env['restagrup.restaurant.menu'].search_count([
+                ('partner_id', '=', wizard.menu_partner_id.id)]))
+
+    @api.onchange('menu_id')
+    def _onchange_menu_id(self):
+        """Reunión 23/11: al elegir el menú se vuelve a escribir el mensaje con la plantilla, con ese menú en {menu}."""
+        if self.is_multi or self.res_model != MENU_RECORD or not self.menu_partner_id:
+            return
+        line = self._records()[:1].with_context(restagrup_menu_override=self.menu_id.id or False)
+        if not line:
+            return
+        subject, body = line._quote_request_content()
+        self.subject, self.body = subject, body
 
     # --- envío ---
 
@@ -132,13 +158,15 @@ class RestagrupSendWizard(models.TransientModel):
             raise UserError(_('Escribe el asunto y el mensaje.'))
         if self.is_multi:
             for record in records:
-                record._restagrup_send_reviewed(
+                record.with_context(restagrup_bulk_send=True)._restagrup_send_reviewed(
                     self._fill_for(self.subject, record), self._fill_for(self.body, record),
                     record._restagrup_default_send_emails(), self.attachment_ids)
             return self._after_multi_send(records)
         emails = self._chosen_emails()
         if not emails:
             raise UserError(_('Elige al menos un destinatario con email o escribe uno en «Otros emails».'))
+        if self.menu_partner_id and self.menu_id and records._name == MENU_RECORD:
+            records.menu_id = self.menu_id  # reunión 23/11: el menú ofrecido queda en la tarjeta
         result = records._restagrup_send_reviewed(self.subject, self.body, emails, self.attachment_ids)
         following = self._open_next_in_chain()
         if following:
