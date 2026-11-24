@@ -23,3 +23,4 @@ from . import lead_paid
 from . import invoice_report
 from . import firewall_dishes
 from . import chosen_menu_wizard
+from . import print_wizard

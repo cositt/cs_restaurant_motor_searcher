@@ -12,7 +12,8 @@ from odoo.addons.restagrup_agency_proposal.models.payment_dates import restauran
 
 SEARCH_VIEW = 'restagrup_agency_proposal.view_purchase_order_restaurant_payments_search'
 ACTION = 'restagrup_agency_proposal.action_restaurant_payments'
-FILTERS = {'restagrup_due_today': 0, 'restagrup_due_48h': 2, 'restagrup_due_72h': 3}
+# Reunión 23/11: + «Vencen en 1 semana»
+FILTERS = {'restagrup_due_today': 0, 'restagrup_due_48h': 2, 'restagrup_due_72h': 3, 'restagrup_due_7d': 7}
 
 
 @tagged('post_install', '-at_install')

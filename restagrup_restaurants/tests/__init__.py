@@ -35,3 +35,8 @@ from . import test_reunion_1311_other_menu
 from . import test_reunion_1311_price_level
 from . import test_reunion_1311_results_table
 from . import test_conchita_1611_cotizacion
+from . import test_reunion_2311_cards
+from . import test_reunion_2311_bulk_chatter
+from . import test_reunion_2311_menu_choice
+from . import test_reunion_2311_menu_dup
+from . import test_reunion_2411_whatsapp

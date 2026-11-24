@@ -19,8 +19,16 @@
                            options="{'no_create': True}"/>
                     <field name="extra_emails" invisible="is_multi" placeholder="otro@restaurante.com, ..."/>
                     <field name="recipients_summary" invisible="not is_multi"/>
+                    <field name="menu_partner_id" invisible="1"/>
+                    <field name="has_menus" invisible="1"/>
+                    <field name="menu_id" invisible="is_multi or not has_menus" options="{'no_create': True}"
+                           placeholder="Sin menú: el hueco {menu} queda vacío"/>
                     <field name="subject"/>
                 </group>
+                <div class="text-muted small mb-2" invisible="is_multi or not has_menus">
+                    Al elegir un menú, el mensaje se vuelve a escribir con la plantilla (se pierden los cambios a mano).
+                    Los platos y el precio de coste salen donde pone {menu}.
+                </div>
                 <field name="body" nolabel="1" class="o_restagrup_send_body" style="min-height: 18em;"/>
                 <field name="attachment_ids" widget="many2many_binary" invisible="not attachment_ids"/>
                 <footer>

@@ -39,6 +39,8 @@
                         domain="[('restagrup_payment_due_date', '&lt;=', (context_today() + relativedelta(days=2)).strftime('%Y-%m-%d'))]"/>
                 <filter name="restagrup_due_72h" string="Vencen en 72 h"
                         domain="[('restagrup_payment_due_date', '&lt;=', (context_today() + relativedelta(days=3)).strftime('%Y-%m-%d'))]"/>
+                <filter name="restagrup_due_7d" string="Vencen en 1 semana"
+                        domain="[('restagrup_payment_due_date', '&lt;=', (context_today() + relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
                 <group>
                     <filter name="group_restaurant" string="Restaurante" context="{'group_by': 'partner_id'}"/>
                     <filter name="group_due_date" string="Toca pagar el" context="{'group_by': 'restagrup_payment_due_date:day'}"/>

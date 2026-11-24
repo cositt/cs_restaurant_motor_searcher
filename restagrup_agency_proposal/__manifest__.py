@@ -24,6 +24,7 @@
         'views/portal_templates.xml',
         'views/lead_proposal_views.xml',
         'views/chosen_menu_wizard_views.xml',
+        'views/print_wizard_views.xml',
         'views/restaurant_search_views.xml',
         'views/close_checklist_views.xml',
         'data/conversation_subtype_data.xml',

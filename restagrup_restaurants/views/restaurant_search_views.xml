@@ -149,9 +149,16 @@
                                     <field name="known_price_pp"/>
                                     <templates>
                                         <t t-name="card">
+                                            <!-- Reunión 23/11: borde llamativo (lo pone el CSS) en los restaurantes en los que hay interés -->
+                                            <span t-if="['interesado', 'solicitado', 'presupuesto_recibido'].includes(record.etiqueta.raw_value)"
+                                                  class="o_restagrup_interested_marker d-none"/>
+                                            <span t-if="record.is_chosen.raw_value" class="o_restagrup_chosen_marker d-none"/>
                                             <div class="o_restagrup_rest_card_header">
                                                 <h4>
-                                                    <t t-esc="record.name.value"/>
+                                                    <!-- Reunión 23/11: el nombre abre la ficha del restaurante (si está en Odoo) -->
+                                                    <a t-if="record.partner_id.raw_value" name="action_open_restaurant" type="object"
+                                                       class="text-reset" title="Abrir la ficha del restaurante"><t t-esc="record.name.value"/></a>
+                                                    <t t-else="" t-esc="record.name.value"/>
                                                     <span t-if="record.is_chosen.raw_value" class="o_restagrup_chosen_star" title="Elegido"> ★</span>
                                                 </h4>
                                                 <span t-attf-class="o_restagrup_rest_source_badge source_{{record.source.raw_value}}">
@@ -210,12 +217,18 @@
                                                        target="_blank" role="button" class="btn btn-outline-secondary btn-sm">Maps</a>
                                                     <a t-if="record.phone.raw_value" t-attf-href="tel:{{record.phone.raw_value}}"
                                                        role="button" class="btn btn-outline-secondary btn-sm"><t t-esc="record.phone.value"/></a>
+                                                    <!-- Conchita 24/11: WhatsApp con el teléfono de la tarjeta (módulo cositt_quick_whatsapp) -->
+                                                    <button t-if="record.phone.raw_value" name="action_open_whatsapp" type="object"
+                                                            class="btn btn-outline-success btn-sm" title="Abrir WhatsApp">
+                                                        <i class="fa fa-whatsapp"/> WhatsApp</button>
                                                     <a t-if="record.email.raw_value" t-attf-href="mailto:{{record.email.raw_value}}"
                                                        role="button" class="btn btn-outline-secondary btn-sm">Email</a>
                                                     <button t-if="!record.partner_id.raw_value" name="action_add_as_partner" type="object"
                                                             class="btn btn-link btn-sm">Añadir como contacto</button>
+                                                    <!-- Reunión 23/11: coloreado si el restaurante tiene menús, apagado si no -->
                                                     <button t-if="record.partner_id.raw_value" name="action_view_menus" type="object"
-                                                            class="btn btn-outline-secondary btn-sm" title="Menús del restaurante: coste, venta y pedir uno concreto">👁 Ver menús</button>
+                                                            t-attf-class="btn btn-sm #{record.partner_menu_count.raw_value ? 'btn-success' : 'btn-outline-secondary opacity-50'}"
+                                                            title="Menús del restaurante: coste, venta y pedir uno concreto">👁 Ver menús</button>
                                                     <button t-if="record.partner_id.raw_value and record.etiqueta.raw_value == 'presupuesto_recibido'"
                                                             name="action_offer_other_menu" type="object" class="btn btn-outline-secondary btn-sm"
                                                             title="Otra tarjeta de este restaurante para registrar otro menú con su precio: en la propuesta salen los dos">+ Otro menú</button>
@@ -269,8 +282,8 @@
                                                                 name="action_open_quote_request" type="object" class="btn btn-outline-primary">Reenviar petición</button>
                                                         <button t-if="record.quote_pending_confirmation.raw_value"
                                                                 name="action_register_quote" type="object" class="btn btn-primary">Confirmar menú</button>
-                                                        <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido'"
-                                                                name="action_open_quote_form" type="object" class="btn btn-outline-primary"
+                                                        <!-- Reunión 23/11: se queda también con presupuesto, para registrar varios menús -->
+                                                        <button name="action_open_quote_form" type="object" class="btn btn-outline-primary"
                                                                 title="Por correo, WhatsApp o teléfono: pega su respuesta o escribe el precio">Registrar menú</button>
                                                         <button t-if="record.etiqueta.raw_value != 'presupuesto_recibido' and record.partner_menu_count.raw_value"
                                                                 name="action_quote_from_catalog" type="object" class="btn btn-outline-primary"
@@ -348,6 +361,12 @@
                     <field name="quote_amount" string="Total del grupo (€)" readonly="1"/>
                     <field name="partner_id" invisible="1"/>
                     <field name="menu_id" invisible="not partner_id" options="{'no_create': True}"/>
+                    <field name="menu_name" invisible="not menu_id"/>
+                    <field name="menu_name_is_default" invisible="1"/>
+                    <div class="alert alert-warning" role="status" colspan="2" invisible="not menu_name_is_default">
+                        Este menú no traía nombre y se llama «Menú grupos». Ponle uno que lo distinga
+                        (por ejemplo «Menú peregrino»): el año se añade solo.
+                    </div>
                     <field name="quote_notes"/>
                 </group>
                 <footer>

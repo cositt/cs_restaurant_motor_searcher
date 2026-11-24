@@ -116,8 +116,8 @@ class TestRonda0911File(TransactionCase):
 
     def test_file_header_has_the_document_buttons(self):
         arch = self.env['crm.lead'].get_view(view_type='form')['arch'].split('</header>', 1)[0]
-        for name in ('action_send_agency_confirmation', 'action_download_agency_confirmation',
-                     'action_download_restaurant_confirmation', 'action_download_voucher',
+        # Reunión 23/11: las tres descargas pasan a un solo botón «Imprimir» (action_open_print_wizard)
+        for name in ('action_send_agency_confirmation', 'action_open_print_wizard',
                      'action_send_restaurant_confirmations'):
             self.assertIn('name="%s"' % name, arch)
 

@@ -13,7 +13,8 @@
         los datos del restaurante (aforo, cocina, precio, parking, apto para...).
     ''',
     'author': 'Cositt Technology',
-    'depends': ['mail', 'contacts', 'crm', 'restagrup_core', 'restagrup_email_ai', 'base_geolocalize'],
+    'depends': ['mail', 'contacts', 'crm', 'restagrup_core', 'restagrup_email_ai', 'base_geolocalize',
+                'cositt_quick_whatsapp'],
     'data': [
         'security/ir.model.access.csv',
         'views/res_partner_views.xml',
@@ -23,6 +24,7 @@
         'views/pending_mail_views.xml',
         'views/approx_options_wizard_views.xml',
         'views/send_wizard_views.xml',
+        'views/menu_duplicate_wizard_views.xml',
         'reports/approx_options_report.xml',
         'views/inbox_mail_views.xml',
         'views/ai_log_views.xml',

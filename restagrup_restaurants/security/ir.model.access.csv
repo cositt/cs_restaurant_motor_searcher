@@ -12,3 +12,4 @@ access_restagrup_mail_template_user,restagrup.mail.template user,model_restagrup
 access_restagrup_mail_template_manager,restagrup.mail.template manager,model_restagrup_mail_template,sales_team.group_sale_manager,1,1,0,0
 access_restagrup_send_wizard,restagrup.send.wizard,model_restagrup_send_wizard,base.group_user,1,1,1,1
 access_restagrup_choose_over_budget,restagrup.choose.over.budget,model_restagrup_choose_over_budget,base.group_user,1,1,1,1
+access_restagrup_menu_duplicate_wizard,restagrup.menu.duplicate.wizard,model_restagrup_menu_duplicate_wizard,base.group_user,1,1,1,1

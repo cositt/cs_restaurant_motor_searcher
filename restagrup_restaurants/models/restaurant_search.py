@@ -931,10 +931,12 @@ class RestaurantSearchLine(models.Model):
             'quote_reminder_sent_date': False,
         })
         # Ronda 20/11 (1b): el Chatter del grupo lleva también lo que se escribió, no solo que se pidió.
-        sent = Markup('<p>%s</p><p><b>%s</b></p><p>%s</p>') % (
-            _('Presupuesto solicitado a %(name)s (%(email)s).') % {'name': self.name, 'email': email_to},
-            subject, body_html)
-        search.message_post_if_exists(sent)
+        # Reunión 23/11: en el envío a varios, un solo mensaje al final (_restagrup_after_multi_send), no uno por restaurante.
+        if not self.env.context.get('restagrup_bulk_send'):
+            sent = Markup('<p>%s</p><p><b>%s</b></p><p>%s</p>') % (
+                _('Presupuesto solicitado a %(name)s (%(email)s).') % {'name': self.name, 'email': email_to},
+                subject, body_html)
+            search.message_post_if_exists(sent)
 
     def _quote_request_content(self, values=None):
         """(asunto, texto) de la petición de presupuesto con la plantilla, sin enviar."""
@@ -963,6 +965,13 @@ class RestaurantSearchLine(models.Model):
         email = self._get_quote_email_to(required=False)
         return [email] if email else []
 
+    def _restagrup_menu_for_mail(self):
+        """Menú que rellena {menu}: el elegido en la ventana (contexto) o el de la tarjeta."""
+        self.ensure_one()
+        if 'restagrup_menu_override' in self.env.context:
+            return self.env['restagrup.restaurant.menu'].browse(self.env.context['restagrup_menu_override'] or [])
+        return self.menu_id
+
     def _mail_values(self, signer_name):
         """Marcadores de las plantillas de los correos a este restaurante."""
         self.ensure_one()
@@ -980,7 +989,9 @@ class RestaurantSearchLine(models.Model):
             'hora': _format_hour(event.event_time) if event.event_time else '',
             'ciudad': search.city or event.city or '',
             'pax': event.pax or search.min_capacity or '?',
-            'menu': self.menu_id._render_text_for_restaurant() if self.menu_id else '',
+            # Reunión 23/11: el desplegable de «Revisar y enviar» elige el menú sin tocar aún la tarjeta
+            'menu': self._restagrup_menu_for_mail()._render_text_for_restaurant()
+            if self._restagrup_menu_for_mail() else '',
             # Reunión 12/11 (8.3): también las notas del servicio para agencia y restaurante.
             'notas': '\n'.join(part for part in ((search.notes or '').strip(), (event.notes or '').strip()) if part),
             'empresa': self.env.company.name,
@@ -1191,10 +1202,14 @@ class RestaurantSearchLine(models.Model):
         if notes:
             vals['quote_notes'] = notes
         self.write(vals)
-        self._restagrup_menus_from_reply(data.get('menus'))
         self.search_id.message_post_if_exists(_(
             '%(name)s: precio extraído por IA (%(provider)s) — revisa antes de registrar.'
         ) % {'name': self.name, 'provider': provider} + self._restagrup_vat_note(data))
+        menus = data.get('menus')
+        # Reunión 23/11: si la ficha ya tiene un menú igual o casi igual, se pregunta ANTES de crear otro.
+        if self._restagrup_menu_matches(menus):
+            return self.env['restagrup.menu.duplicate.wizard']._open_for(self, menus)
+        self._restagrup_menus_from_reply(menus)
         return self.action_open_quote_form()
 
     def _quote_price_text(self):
@@ -1312,6 +1327,17 @@ class RestaurantSearchLine(models.Model):
         proposal = self._quote_price_vals(output if isinstance(output, dict) else {})
         proposed_pp = proposal.get('quote_price_pp') or proposal.get('quote_amount', 0.0) / self._quote_pax()
         log._close('confirmed' if abs(proposed_pp - self.quote_price_pp) < 0.005 else 'corrected')
+
+    def action_open_whatsapp(self):
+        """Abre WhatsApp (wa.me) con el teléfono de la tarjeta (Conchita 24/11).
+
+        Reutiliza la normalización y los avisos de cositt_quick_whatsapp sobre un contacto
+        temporal en memoria, de modo que sirve también para resultados de Google sin ficha.
+        """
+        self.ensure_one()
+        if not self.phone:
+            raise UserError(_('Este restaurante no tiene teléfono.'))
+        return self.env['res.partner'].new({'phone': self.phone}).action_open_whatsapp()
 
     def action_open_restaurant(self):
         """Abre la ficha del restaurante desde su fila (propuesta, resultados)."""
