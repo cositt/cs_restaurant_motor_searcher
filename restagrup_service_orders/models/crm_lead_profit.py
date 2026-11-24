@@ -30,6 +30,12 @@ class CrmLeadProfit(models.Model):
         help='Beneficio con el cambio de hoy menos el de la reserva. En negativo, la moneda del restaurante ha'
              ' subido: avisar a la agencia.')
 
+    restagrup_profit = fields.Float(
+        string='Beneficio', compute='_compute_restagrup_profit_stored', store=True, digits='Product Price',
+        help='Lo facturado a la agencia menos lo que cobran los restaurantes, sin contar presupuestos cancelados.'
+             ' Se guarda para poder sumarlo por día, comercial o agencia en gráficas y tableros; en los tableros'
+             ' se cuenta desde la fecha «Pasó a expediente».')
+
     def _restagrup_profit_orders(self):
         self.ensure_one()
         orders = self.sudo().order_ids | self.restagrup_restaurant_search_ids.sudo().sale_order_id
@@ -53,6 +59,16 @@ class CrmLeadProfit(models.Model):
             lead.restagrup_fx_booked_profit = booked
             lead.restagrup_fx_current_profit = booked + delta
             lead.restagrup_fx_delta = round(delta, 2)
+
+    @api.depends('order_ids.state', 'order_ids.order_line.restagrup_unit_cost',
+                 'order_ids.order_line.product_uom_qty', 'order_ids.order_line.price_subtotal',
+                 'order_ids.order_line.display_type', 'restagrup_restaurant_search_ids.sale_order_id.state',
+                 'restagrup_restaurant_search_ids.sale_order_id.order_line.restagrup_unit_cost',
+                 'restagrup_restaurant_search_ids.sale_order_id.order_line.product_uom_qty',
+                 'restagrup_restaurant_search_ids.sale_order_id.order_line.price_subtotal')
+    def _compute_restagrup_profit_stored(self):
+        for lead in self:
+            lead.restagrup_profit = sum(lead._restagrup_profit_orders().mapped('restagrup_margin_total'))
 
     def action_restagrup_refresh_fx(self):
         """«Actualizar cambio»: trae el cambio de hoy del BCE para las monedas de los restaurantes del grupo."""
