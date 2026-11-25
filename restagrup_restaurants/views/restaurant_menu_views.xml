@@ -47,6 +47,7 @@
                                         icon="fa-exchange" class="btn-secondary btn-sm"/>
                             </div>
                             <field name="cost_price_eur" invisible="not is_foreign_currency"/>
+                            <field name="price_summary" invisible="not is_foreign_currency" class="fw-bold"/>
                             <label for="sale_price"/>
                             <div class="d-flex align-items-center gap-2">
                                 <field name="sale_price" class="oe_inline"/>
@@ -130,6 +131,7 @@
                 <field name="currency_id" column_invisible="1"/>
                 <field name="company_currency_id" column_invisible="1"/>
                 <field name="cost_price" string="Coste (pers., su moneda)"/>
+                <field name="cost_price_eur" string="Coste (€)" optional="show"/>
                 <field name="sale_price" string="Venta (€/pers.)"/>
                 <field name="min_pax" optional="show"/>
                 <field name="max_pax" optional="show"/>
@@ -153,6 +155,7 @@
                 <field name="currency_id" column_invisible="1"/>
                 <field name="company_currency_id" column_invisible="1"/>
                 <field name="cost_price" string="Coste (pers., su moneda)"/>
+                <field name="cost_price_eur" string="Coste (€)" optional="show"/>
                 <field name="sale_price" string="Venta (€/pers.)"/>
                 <field name="min_pax" optional="show"/>
                 <field name="max_pax" optional="show"/>
@@ -178,6 +181,7 @@
                         <field name="currency_id" invisible="1"/>
                         <field name="sale_price" readonly="1" string="Venta (€/pers.)"/>
                         <field name="cost_price" readonly="1" string="Coste (pers.)"/>
+                        <field name="price_summary" readonly="1" string="Precio" class="fw-bold"/>
                     </group>
                     <field name="display_text" readonly="1" nolabel="1" class="text-break" style="white-space: pre-line;"/>
                 </sheet>

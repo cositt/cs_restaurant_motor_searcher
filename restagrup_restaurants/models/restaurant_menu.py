@@ -31,6 +31,11 @@ INCLUDED_PATTERN = re.compile(
 YEAR_IN_NAME = re.compile(r'\b(19|20)\d{2}\b')
 
 
+def _format_amount(value):
+    """1234.5 -> '1.234,50' (formato español, sin depender del idioma del usuario)."""
+    return '{:,.2f}'.format(value or 0.0).replace(',', '_').replace('.', ',').replace('_', '.')
+
+
 def name_with_season(name, season):
     """El nombre con el año de la temporada al final si no lleva ya un año."""
     name = (name or '').strip()
@@ -101,6 +106,10 @@ class RestaurantMenu(models.Model):
     notes = fields.Text(string='Observaciones')
     line_ids = fields.One2many('restagrup.restaurant.menu.line', 'menu_id', string='Platos', copy=True)
     display_text = fields.Text(string='Texto del menú', compute='_compute_display_text')
+    price_summary = fields.Char(
+        string='Precio', compute='_compute_price_summary',
+        help='Coste en la moneda del restaurante (con su nombre), el mismo en euros y la venta.',
+    )
 
     @api.constrains('partner_id')
     def _check_partner_is_restaurant(self):
@@ -183,6 +192,23 @@ class RestaurantMenu(models.Model):
     def _compute_display_text(self):
         for menu in self:
             menu.display_text = menu._render_text()
+
+    @api.depends('cost_price', 'currency_id', 'exchange_rate', 'cost_price_eur', 'sale_price')
+    def _compute_price_summary(self):
+        for menu in self:
+            menu.price_summary = menu._build_price_summary()
+
+    def _build_price_summary(self):
+        """«Coste 20,00 GBP (= 25,00 €) · Venta 31,25 €»: la moneda local con su nombre y los euros al lado."""
+        self.ensure_one()
+        if not self.is_foreign_currency:
+            return _('Coste %(cost)s € · Venta %(sale)s €', cost=_format_amount(self.cost_price),
+                     sale=_format_amount(self.sale_price))
+        local = '%s %s' % (_format_amount(self.cost_price), self.currency_id.name)
+        if not self.exchange_rate:
+            return _('Coste %(local)s (sin convertir a euros) · Venta sin calcular', local=local)
+        return _('Coste %(local)s (= %(eur)s €) · Venta %(sale)s €', local=local,
+                 eur=_format_amount(self.cost_price_eur), sale=_format_amount(self.sale_price))
 
     def action_preview_dishes(self):
         """El «ojo»: nombre, precio y platos del menú en una ventana, sin salir de la lista."""
