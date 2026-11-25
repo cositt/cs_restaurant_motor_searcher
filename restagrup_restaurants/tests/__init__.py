@@ -40,3 +40,4 @@ from . import test_reunion_2311_bulk_chatter
 from . import test_reunion_2311_menu_choice
 from . import test_reunion_2311_menu_dup
 from . import test_reunion_2411_whatsapp
+from . import test_menu_price_summary
